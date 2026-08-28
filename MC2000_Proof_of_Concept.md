@@ -5,7 +5,7 @@
 **Stack prevista:** C++ proprietario + JUCE + foleys_gui_magic + CMake  
 **Formato plug-in principale:** VST3 tramite JUCE  
 **Stato del documento:** POC tecnico basato su documentazione, ricerca algoritmica e misure black-box eseguite in DAW  
-**Data:** 2026-08-18
+**Data:** 2026-08-28
 
 ---
 
@@ -1583,7 +1583,18 @@ Auto:
 
 ## 24.2 Stato
 
-**[TODO]** nel primo test pack Auto non è stato caratterizzato in modo sufficiente.
+**[MEASURED]/[LIMITED]** il test pack aggiuntivo contiene render Auto con
+Attack/Release manuali al minimo e al massimo: i due render sono
+sample-identical, confermando che i controlli manuali vengono ignorati.
+
+Quei render non permettono però di fittare la traiettoria Auto: a regime sono
+sostanzialmente neutri anche nei casi in cui il setup scritto (`T=-24 dB`,
+`R=10:1`) richiederebbe una forte compressione. Il dataset è quindi
+incoerente con la propria specifica per il solo valore assoluto di GR.
+
+Il DSP mantiene una fallback **[CANDIDATE]** peak/RMS dipendente dal programma.
+Non sostituirla con un bypass sulla base di questi render; servono nuovi
+reference render controllati con parametri effettivi registrati.
 
 ---
 
@@ -1647,6 +1658,31 @@ capire se Auto dipende principalmente da:
 - event density;
 - envelope history;
 - altra feature.
+
+---
+
+## 26.1 Sidechain esterno
+
+**[IMPLEMENTED]/[LIMITED]** il VST3 espone un bus Sidechain opzionale mono o
+stereo. Quando è attivo:
+
+```text
+Key input
+    ↓
+stesso crossover LR4 del programma
+    ↓
+max(abs(L), abs(R)) per ciascuna banda
+    ↓
+detector della banda (in sostituzione del detector del programma)
+```
+
+Il key non entra mai nel percorso audio udibile e non viene sommato al
+programma. Type-1, Type-2 e Auto ricevono il detector esterno senza cambiare
+la topologia di gain reduction.
+
+Il pacchetto finale fornisce i segnali Program/Key ma non render di riferimento
+corrispondenti: il comportamento è testato funzionalmente, mentre la
+corrispondenza esatta con l'originale resta **[TODO]**.
 
 ---
 
@@ -2041,6 +2077,9 @@ Una o più bande possono essere solo contemporaneamente.
 
 Il solo deve agire dopo crossover e processing della banda.
 
+**[IMPLEMENTED]** le transizioni Solo usano un crossfade di 5 ms per banda;
+non vengono effettuati mute istantanei durante automazione o cambio di stato.
+
 ---
 
 # 39. GUI — parametri e mapping JUCE
@@ -2271,13 +2310,16 @@ Possibilità:
 
 Per preservare stabilità e assenza di zipper:
 
-POC:
+Implementazione POC attuale:
 
 ```text
-frequency smoothing 10-30 ms
+one-pole frequency smoothing: 20 ms, per sample
+refresh coefficienti LR4: ogni 16 sample durante il movimento
 ```
 
-ma verificare il comportamento originale con automation rapida.
+Questo evita salti dipendenti dalla dimensione del buffer senza ricalcolare i
+coefficienti ad ogni sample. Il comportamento originale con automation rapida
+rimane da confrontare con render controllati.
 
 ---
 
@@ -2762,13 +2804,12 @@ Fittare:
 
 ## Fase 10 — Auto
 
-Generare secondo test pack.
-
-Implementare prima:
+Il secondo test pack è disponibile. Implementare e mantenere:
 
 - crest-factor auto model.
 
-Poi sostituire/fittare con black-box data.
+Sostituirlo/fittarlo solo con black-box data controllati: i render min/max
+attuali validano l'indipendenza dai controlli manuali ma non la GR assoluta.
 
 ---
 
@@ -3026,16 +3067,13 @@ Zero-latency e phase behavior originale hanno priorità.
 
 ## Critici
 
-1. Attack exact law.
-2. Type-2 exact function.
-3. Auto.
-4. BITE intermediate values.
-5. BITE frequency test isolato.
-6. bande interne MC303/MC404.
-7. comportamento dei crossover durante overlap.
-8. linking exact parameter scaling.
-9. behavior IN bypass della banda.
-10. sample-rate dependence.
+1. Traiettoria Auto controllata, inclusa GR a regime.
+2. Semantica esatta del sidechain esterno dell'originale.
+3. Comportamento dell'automazione originale (crossover, Solo e IN) a buffer
+   differenti.
+4. Linking exact parameter scaling.
+5. Behavior IN bypass della banda.
+6. Sample-rate dependence dell'originale.
 
 ## Secondari
 
@@ -3307,6 +3345,7 @@ Il POC è considerato completato quando:
 - [ ] Type-2 coincide.
 - [ ] BITE coincide su test sintetici.
 - [ ] Auto è stato caratterizzato e implementato.
+- [x] VST3 espone un sidechain esterno per-banda; matching dell'originale ancora da validare.
 - [ ] band linking funziona.
 - [ ] Solo/In funzionano.
 - [ ] meter completi.
@@ -3356,8 +3395,10 @@ Non serve aspettare Auto/BITE per costruire l'80% dell'infrastruttura.
 | Attack | DATI PRESENTI, FIT PENDING |
 | Type-1 release | MODELLO EMPIRICO DISPONIBILE |
 | Type-2 | MODELLO EMPIRICO V1 DISPONIBILE |
-| Auto | DA MISURARE |
+| Auto | FALLBACK CREST-FACTOR IMPLEMENTATA; FIT CONTROLLATO PENDENTE |
 | BITE | TOPOLOGIA PROBABILE, FIT PENDING |
+| Sidechain esterno | IMPLEMENTATO PER-BANDA; REFERENCE FIT PENDENTE |
+| Automazione crossover/Solo | SMOOTHING IMPLEMENTATO; MATCHING ORIGINALE PENDENTE |
 | band linking | DOCUMENTATO |
 | master controls | DOCUMENTATI |
 | GUI | SPECIFICATA |
