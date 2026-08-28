@@ -13,6 +13,10 @@ Auto and isolated four-band internal phase.
 `MC2000` remains the internal research codename. The public product name and
 plug-in identity are `Ponte MBC4`, avoiding third-party product identity.
 
+`Research/NEXT_VALIDATION_AUDIT.md` records the latest Auto, BITE, stereo and
+sample-rate render audit. `MC2000NextPackAnalysis` is the companion executable
+for rerunning it against a clean validation-pack root.
+
 Build on Windows. A standalone clone downloads the pinned JUCE 9.0.1 source
 during the first configure; inside the PonteDSP monorepo it reuses the local
 JUCE checkout. An out-of-tree build path is recommended:

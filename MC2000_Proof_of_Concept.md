@@ -1624,6 +1624,22 @@ Questa è una **reference implementation scientifica** utile finché il black-bo
 
 ---
 
+## 25.1 Validazione pack successivo
+
+**[MEASURED]** Nel pack `MC2000_Next_DSP_Validation_Pack` i 39 confronti
+min/max (13 sorgenti per MC202, MC303 e MC404) fanno null a precisione
+numerica. Questo consolida una proprietà del POC: `Auto` ignora Attack e
+Release manuali in tutti i modelli e nei segnali step, continuo, pulse,
+crest-factor e noise del pack.
+
+La stessa matrice non identifica ancora una formula unica per le traiettorie
+Auto. Con BITE=5 e `All`, Auto è più attenuato di Type-1 all'inizio dei pulse
+(circa -2.20 dB a 5 ms, -0.50 dB a 95 ms); il fallback crest-factor rimane
+quindi **[CANDIDATE]**, non un fit dichiarato. Vedi
+`Research/NEXT_VALIDATION_AUDIT.md` per misure e limiti del dataset.
+
+---
+
 # 26. Test futuri per Auto
 
 Creare segnali con:
@@ -1794,6 +1810,20 @@ input ─┬─ HPF dry path ─────┐
        │                    ├─ sum
        └─ compressor ───────┘
 ```
+
+---
+
+## 30.1 Pack successivo: matrice BITE
+
+**[MEASURED]** Con tutte le bande attive, BITE 5 rispetto a BITE 1 lascia
+passare in media `+0.127 dB` a 5 ms e `+0.008 dB` a 95 ms; BITE 10 produce
+`+0.538 dB` e `+0.031 dB` negli stessi punti. La risposta è breve, ordinata e
+compatibile con il relief fast/slow già implementato.
+
+Le passate Solo low/mid non formano invece una curva monotona unica fra BITE 5
+e 10. Non devono essere usate per cambiare globalmente la scala BITE fino a un
+fit che distingua l'interazione per banda dal controllo globale. Dettagli e
+numeri completi: `Research/NEXT_VALIDATION_AUDIT.md`.
 
 ---
 
@@ -3395,8 +3425,8 @@ Non serve aspettare Auto/BITE per costruire l'80% dell'infrastruttura.
 | Attack | DATI PRESENTI, FIT PENDING |
 | Type-1 release | MODELLO EMPIRICO DISPONIBILE |
 | Type-2 | MODELLO EMPIRICO V1 DISPONIBILE |
-| Auto | FALLBACK CREST-FACTOR IMPLEMENTATA; FIT DEI RENDER ESISTENTI PENDENTE |
-| BITE | TOPOLOGIA PROBABILE, FIT PENDING |
+| Auto | MANUAL CONTROLS IGNORATI VERIFICATO; FALLBACK CREST-FACTOR, FIT TRAIETTORIA PENDENTE |
+| BITE | TOPOLOGIA FAST/SLOW SUPPORTATA DA ALL; FIT SOLO-PER-BANDA PENDENTE |
 | Sidechain esterno | IMPLEMENTATO PER-BANDA; REFERENCE FIT PENDENTE |
 | Automazione crossover/Solo | SMOOTHING IMPLEMENTATO; MATCHING ORIGINALE PENDENTE |
 | band linking | DOCUMENTATO |
