@@ -172,7 +172,7 @@ public:
         const auto transientNorm = std::clamp(
             transient / std::max(0.487 * referencePeak, 1.0e-12), 0.0, 1.0);
         lastTransientNormalised = transientNorm;
-        const auto biteNorm = std::clamp((biteValue - 1.0) / 49.0, 0.0, 1.0);
+        const auto biteNorm = controlShape(biteValue);
         const auto requestedRelief = std::min(normalGainReductionDb,
                                               3.2 * transientShape(transientNorm));
         const auto memoryRelease = coefficient(0.018);
@@ -210,6 +210,29 @@ private:
         if (value <= 0.867) return interpolate(value, 0.824, 0.867, 0.114, 0.396);
         if (value <= 0.973) return interpolate(value, 0.867, 0.973, 0.396, 1.0);
         return 1.0;
+    }
+
+    static double controlShape(const double biteValue) noexcept
+    {
+        const auto interpolate = [] (const double x, const double x0, const double x1,
+                                     const double y0, const double y1)
+        {
+            const auto t = std::clamp((x - x0) / (x1 - x0), 0.0, 1.0);
+            const auto smooth = t * t * (3.0 - 2.0 * t);
+            return y0 + (y1 - y0) * smooth;
+        };
+        const auto normalised = std::clamp((biteValue - 1.0) / 49.0, 0.0, 1.0);
+        constexpr double biteFive = 4.0 / 49.0;
+        constexpr double biteTen = 9.0 / 49.0;
+        // The Low/Mid BITE retest resolves the earlier inconsistent BITE-5
+        // exports: measured onset relief is about 0.20 dB at BITE=5 and
+        // 0.82 dB at BITE=10, with the established 3.2 dB BITE=50 ceiling.
+        // A linear 1..50 map cannot satisfy both calibrated points.
+        if (normalised <= biteFive)
+            return interpolate(normalised, 0.0, biteFive, 0.0, 0.062);
+        if (normalised <= biteTen)
+            return interpolate(normalised, biteFive, biteTen, 0.062, 0.256);
+        return interpolate(normalised, biteTen, 1.0, 0.256, 1.0);
     }
 
     double sampleRate { 48000.0 };

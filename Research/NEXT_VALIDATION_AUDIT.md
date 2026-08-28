@@ -42,7 +42,7 @@ than a static gain change. Averaged over the three specified events:
 | BITE 10 minus BITE 1 | +0.538 dB | +0.416 dB | +0.120 dB | +0.063 dB | +0.031 dB |
 
 This supports the existing fast/slow envelope relief topology and its neutral
-steady state. It does not justify changing its constants globally.
+steady state.
 
 The Solo passes do not yield one monotonic cross-band BITE curve: some low and
 mid-band BITE-5 observations are materially larger than their BITE-10
@@ -50,6 +50,21 @@ counterparts, while the high and upper-mid observations remain close to the
 `All` result. This may be a real band-dependent interaction, but it conflicts
 with a single global control law. It is recorded as an unresolved fit rather
 than used to overfit the production DSP.
+
+### Low/Mid retest
+
+The later Studio One Low/Mid retest resolves the BITE-5 ambiguity.  For the
+carrier that belongs to the selected Solo band, the measured BITE-5 relief is
+`+0.218 dB` (Low) and `+0.177 dB` (Mid) at 5 ms; BITE-10 is `+0.829 dB` and
+`+0.808 dB`.  The new BITE-10 stems null the historical BITE-10 renders,
+whereas several historical BITE-5 stems do not.  The latter are therefore not
+used as calibration anchors.
+
+The production BITE control map is updated accordingly: it uses smooth anchors
+of 0 at BITE 1, 0.062 at BITE 5, 0.256 at BITE 10, and 1 at BITE 50 while
+retaining the established 3.2 dB maximum transient-relief ceiling.  This gives
+the required nonlinear low-range control response without changing the
+fast/slow detector, its decay, or steady-state neutrality.
 
 With BITE fixed to 5 and `All` selected, Type-2 differs only slightly from
 Type-1 over the measured event windows (about -0.007 to -0.132 dB), while Auto
@@ -85,9 +100,8 @@ therefore retained and tested functionally, not fitted to the original.
 
 ## Implementation decision
 
-No production DSP coefficient was changed by this audit. The new renders
-validate the current absolute stereo link and Auto-manual-control separation;
-the remaining BITE Solo and sample-rate inconsistencies do not support a safe
-global retune. `MC2000NextPackAnalysis` is added so future clean render sets
-can be evaluated with the same associations, including the historical
-`solomdi`/`solomid` label correction and Windows `(2)` duplicate suffix.
+The BITE control map was changed after the Low/Mid retest, while Auto and
+stereo retain their validated implementation. `MC2000NextPackAnalysis` is
+added so future clean render sets can be evaluated with the same associations,
+including the historical `solomdi`/`solomid` label correction and Windows `(2)`
+duplicate suffix.

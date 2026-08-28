@@ -299,6 +299,59 @@ void analyseBite(const juce::File& directory)
     print("BITE_TIME_CONSTANT_DELTA", modes);
 }
 
+void analyseBiteRetest(const juce::File& referenceDirectory, const juce::File& retestDirectory)
+{
+    struct BiteStats { int pairs {}; std::array<Stats, 5> relief; };
+    std::map<std::string, BiteStats> relief;
+    std::map<std::string, Stats> previousErrors;
+    for (const auto& file : wavFiles(retestDirectory))
+    {
+        RenderName render;
+        if (!splitRenderName(file, render)) continue;
+        const auto prefix = lower(render.prefix);
+        const auto biteFive = prefix == "retest-bite5-sololow" || prefix == "retest-bite5-solomid";
+        const auto biteTen = prefix == "retest-bite10-sololow" || prefix == "retest-bite10-solomid";
+        if (!biteFive && !biteTen) continue;
+
+        const auto low = prefix.ends_with("sololow");
+        const auto sourceName = lower(render.sourceName);
+        // A Solo low/mid render is useful for the corresponding carrier only.
+        if (low ? sourceName.find("_f100hz_") == std::string::npos
+                : sourceName.find("_f1000hz_") == std::string::npos)
+            continue;
+
+        const std::string solo = low ? "sololow" : "solomid";
+        const std::string historicalSolo = low ? "sololow" : "solomdi";
+        const std::string bite = biteFive ? "bite5" : "bite10";
+        const auto originalOne = referenceDirectory.getChildFile(
+            "bite1,type1," + juce::String(historicalSolo) + " - " + juce::String(render.sourceName));
+        const auto originalSame = referenceDirectory.getChildFile(
+            juce::String(bite) + ",type1," + juce::String(solo) + " - " + juce::String(render.sourceName));
+        if (!originalOne.existsAsFile() || !originalSame.existsAsFile())
+            throw std::runtime_error("Missing historical BITE pair for " + render.sourceName);
+
+        const auto retest = readAudio(file);
+        const auto one = readAudio(originalOne);
+        const auto response = eventRatios(retest, one);
+        const auto label = bite + "_vs_bite1," + solo;
+        auto& values = relief[label];
+        ++values.pairs;
+        for (auto index = 0U; index < response.size(); ++index)
+            values.relief[index].add(response[index]);
+        previousErrors[bite + "_retest_vs_previous," + solo].add(errorDb(retest, readAudio(originalSame)));
+    }
+
+    std::cout << "\nBITE_RETEST_TRANSIENT,comparison,pairs,at_5ms_db,at_10ms_db,at_25ms_db,at_50ms_db,at_95ms_db\n";
+    for (const auto& [label, values] : relief)
+    {
+        std::cout << label << ',' << values.pairs;
+        for (const auto& point : values.relief) std::cout << ',' << point.mean();
+        std::cout << '\n';
+    }
+    std::cout << "BITE_RETEST_PREVIOUS_ERROR,comparison,pairs,min_error_db,max_error_db,mean_error_db\n";
+    for (const auto& [label, values] : previousErrors) printStats(label, values);
+}
+
 void analyseStereo(const juce::File& directory)
 {
     std::map<std::string, Stats> difference;
@@ -354,15 +407,26 @@ int main(int argc, char** argv)
 {
     try
     {
-        if (argc < 2 || argc > 3)
+        if (argc < 2 || argc > 4)
         {
-            std::cerr << "Usage: MC2000NextPackAnalysis <next-pack-root> [auto|bite|stereo|sample]\n";
+            std::cerr << "Usage: MC2000NextPackAnalysis <next-pack-root> [auto|bite|stereo|sample]\n"
+                         "   or: MC2000NextPackAnalysis <next-pack-root> retest-bite <retest-directory>\n";
             return 2;
         }
         const juce::File root(juce::String::fromUTF8(argv[1]));
         if (!root.isDirectory()) throw std::runtime_error("Argument must be the next validation pack root");
-        const auto section = argc == 3 ? lower(argv[2]) : std::string("all");
+        const auto section = argc >= 3 ? lower(argv[2]) : std::string("all");
+        if (argc == 4 && section != "retest-bite")
+            throw std::runtime_error("A third argument is only valid for retest-bite");
         std::cout << std::fixed << std::setprecision(6);
+        if (section == "retest-bite")
+        {
+            if (argc != 4) throw std::runtime_error("retest-bite requires a retest directory");
+            const juce::File retestDirectory(juce::String::fromUTF8(argv[3]));
+            if (!retestDirectory.isDirectory()) throw std::runtime_error("Retest directory is invalid");
+            analyseBiteRetest(root.getChildFile("02_BITE"), retestDirectory);
+            return 0;
+        }
         if (section == "all" || section == "auto") analyseAuto(root.getChildFile("01_AUTO_CROSSOVER"));
         if (section == "all" || section == "bite") analyseBite(root.getChildFile("02_BITE"));
         if (section == "all" || section == "stereo") analyseStereo(root.getChildFile("05_STEREO_DETECTOR"));

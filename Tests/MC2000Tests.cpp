@@ -183,7 +183,7 @@ void testBallisticsModels()
     }
 }
 
-double maximumBiteRelief(const double riseSeconds)
+double maximumBiteRelief(const double riseSeconds, const double biteValue = 50.0)
 {
     using namespace pontedsp::mc2000::dsp;
     constexpr double sampleRate = 48000.0;
@@ -195,7 +195,7 @@ double maximumBiteRelief(const double riseSeconds)
     {
         const auto detector = riseSamples == 0 ? 1.0
             : std::min(1.0, static_cast<double>(n + 1) / riseSamples);
-        maximum = std::max(maximum, 6.0 - bite.process(6.0, detector, 50.0));
+        maximum = std::max(maximum, 6.0 - bite.process(6.0, detector, biteValue));
     }
     return maximum;
 }
@@ -209,6 +209,10 @@ void testBiteModel()
                "minimum BITE is exactly neutral");
     const auto step = maximumBiteRelief(0.0);
     expect(step <= 3.2 + 1.0e-12, "BITE relief respects calibrated onset ceiling");
+    const auto biteFive = maximumBiteRelief(0.0, 5.0);
+    const auto biteTen = maximumBiteRelief(0.0, 10.0);
+    expect(biteTen > biteFive * 4.0,
+           "BITE 10 follows the validated nonlinear low-range control response");
     for (int n = 0; n < 48000; ++n)
         bite.process(6.0, 1.0, 50.0);
     expectNear(bite.process(6.0, 1.0, 50.0), 6.0, 0.001,

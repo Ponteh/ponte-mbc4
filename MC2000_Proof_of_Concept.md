@@ -1820,10 +1820,11 @@ passare in media `+0.127 dB` a 5 ms e `+0.008 dB` a 95 ms; BITE 10 produce
 `+0.538 dB` e `+0.031 dB` negli stessi punti. La risposta è breve, ordinata e
 compatibile con il relief fast/slow già implementato.
 
-Le passate Solo low/mid non formano invece una curva monotona unica fra BITE 5
-e 10. Non devono essere usate per cambiare globalmente la scala BITE fino a un
-fit che distingua l'interazione per banda dal controllo globale. Dettagli e
-numeri completi: `Research/NEXT_VALIDATION_AUDIT.md`.
+Il retest successivo Low/Mid chiarisce l'anomalia dei vecchi render BITE 5:
+misura circa `+0.20 dB` a BITE 5 e `+0.82 dB` a BITE 10 a 5 ms. Il POC usa ora
+una scala BITE non lineare con ancore 1/5/10/50, mantenendo il tetto di relief
+da 3.2 dB e il detector fast/slow. Dettagli e numeri completi:
+`Research/NEXT_VALIDATION_AUDIT.md`.
 
 ---
 
@@ -3426,7 +3427,7 @@ Non serve aspettare Auto/BITE per costruire l'80% dell'infrastruttura.
 | Type-1 release | MODELLO EMPIRICO DISPONIBILE |
 | Type-2 | MODELLO EMPIRICO V1 DISPONIBILE |
 | Auto | MANUAL CONTROLS IGNORATI VERIFICATO; FALLBACK CREST-FACTOR, FIT TRAIETTORIA PENDENTE |
-| BITE | TOPOLOGIA FAST/SLOW SUPPORTATA DA ALL; FIT SOLO-PER-BANDA PENDENTE |
+| BITE | FAST/SLOW E SCALA 1/5/10/50 CALIBRATI; FIT FINE PER-BANDA PENDENTE |
 | Sidechain esterno | IMPLEMENTATO PER-BANDA; REFERENCE FIT PENDENTE |
 | Automazione crossover/Solo | SMOOTHING IMPLEMENTATO; MATCHING ORIGINALE PENDENTE |
 | band linking | DOCUMENTATO |
