@@ -10,6 +10,7 @@ void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlock
     preparedBlockSize = std::max(1, maxBlockSize);
     preparedChannels = std::clamp(numChannels, 1, maxChannels);
     crossover.prepare(sampleRate, preparedChannels);
+    detectorCrossover.prepare(sampleRate, maxChannels);
     for (auto& state : ballistics) state.prepare(sampleRate);
     for (auto& bite : biteProcessors) bite.prepare(sampleRate);
     inputGainCurrent = decibelsToGain(currentParameters.inputGainDb);
@@ -19,16 +20,21 @@ void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlock
         const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
         bandGainCurrent[static_cast<std::size_t>(band)] = decibelsToGain(p.gainDb);
         enabledMixCurrent[static_cast<std::size_t>(band)] = p.enabled ? 1.0 : 0.0;
+        soloMixCurrent[static_cast<std::size_t>(band)] = 1.0;
     }
     crossoverCurrent = currentParameters.crossoverHz;
     crossover.setBandCount(currentParameters.numBands);
     crossover.setFrequencies(crossoverCurrent);
+    detectorCrossover.setBandCount(currentParameters.numBands);
+    detectorCrossover.setFrequencies(crossoverCurrent);
+    crossoverUpdateCountdown = 0;
     reset();
 }
 
 void MultiBandCompressor::reset() noexcept
 {
     crossover.reset();
+    detectorCrossover.reset();
     for (auto& state : ballistics) state.reset();
     for (auto& bite : biteProcessors) bite.reset();
 }
@@ -56,6 +62,7 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
         band.tcMode = static_cast<TCMode>(mode);
     }
     crossover.setBandCount(currentParameters.numBands);
+    detectorCrossover.setBandCount(currentParameters.numBands);
 }
 
 double MultiBandCompressor::smoothGain(const double current, const double target,
@@ -67,25 +74,33 @@ double MultiBandCompressor::smoothGain(const double current, const double target
 void MultiBandCompressor::process(float** channels, const int channelCount,
                                   const int sampleCount) noexcept
 {
+    process(channels, channelCount, nullptr, 0, sampleCount);
+}
+
+void MultiBandCompressor::process(float** channels, const int channelCount,
+                                  const float* const* detectorChannels,
+                                  const int detectorChannelCount,
+                                  const int sampleCount) noexcept
+{
     if (channels == nullptr || channelCount <= 0 || sampleCount <= 0)
         return;
     const auto channelsToProcess = std::clamp(channelCount, 1, preparedChannels);
     for (int channel = 0; channel < channelsToProcess; ++channel)
         if (channels[channel] == nullptr) return;
+
+    const auto useExternalDetector = detectorChannels != nullptr && detectorChannelCount > 0;
+    const auto detectorChannelsToProcess = useExternalDetector
+        ? std::clamp(detectorChannelCount, 1, maxChannels) : 0;
+    if (useExternalDetector)
+        for (int channel = 0; channel < detectorChannelsToProcess; ++channel)
+            if (detectorChannels[channel] == nullptr) return;
+
     const auto bandsToProcess = currentParameters.numBands;
     const auto inputTarget = decibelsToGain(currentParameters.inputGainDb);
     const auto outputTarget = decibelsToGain(currentParameters.outputGainDb);
     const auto smoothing = std::exp(-1.0 / (sampleRate * 0.02));
     const auto bypassSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
-    const auto crossoverSmoothing = 1.0 - std::exp(-static_cast<double>(sampleCount)
-                                                   / (sampleRate * 0.02));
-    for (int index = 0; index < 3; ++index)
-        crossoverCurrent[static_cast<std::size_t>(index)] += crossoverSmoothing
-            * (currentParameters.crossoverHz[static_cast<std::size_t>(index)]
-               - crossoverCurrent[static_cast<std::size_t>(index)]);
-    crossoverCurrent[1] = std::max(crossoverCurrent[1], crossoverCurrent[0] + 1.0);
-    crossoverCurrent[2] = std::max(crossoverCurrent[2], crossoverCurrent[1] + 1.0);
-    crossover.setFrequencies(crossoverCurrent);
+    const auto crossoverSmoothing = 1.0 - std::exp(-1.0 / (sampleRate * 0.02));
     const auto anySolo = [&]
     {
         for (int band = 0; band < bandsToProcess; ++band)
@@ -103,6 +118,19 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         inputGainCurrent = smoothGain(inputGainCurrent, inputTarget, smoothing);
         outputGainCurrent = smoothGain(outputGainCurrent, outputTarget, smoothing);
 
+        for (int index = 0; index < 3; ++index)
+            crossoverCurrent[static_cast<std::size_t>(index)] += crossoverSmoothing
+                * (currentParameters.crossoverHz[static_cast<std::size_t>(index)]
+                   - crossoverCurrent[static_cast<std::size_t>(index)]);
+        crossoverCurrent[1] = std::max(crossoverCurrent[1], crossoverCurrent[0] + 1.0);
+        crossoverCurrent[2] = std::max(crossoverCurrent[2], crossoverCurrent[1] + 1.0);
+        if (--crossoverUpdateCountdown <= 0)
+        {
+            crossover.setFrequencies(crossoverCurrent);
+            detectorCrossover.setFrequencies(crossoverCurrent);
+            crossoverUpdateCountdown = 16;
+        }
+
         std::array<std::array<double, maxChannels>, maxBands> bandSamples {};
         for (int channel = 0; channel < channelsToProcess; ++channel)
         {
@@ -116,12 +144,30 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                     splitBands[static_cast<std::size_t>(band)];
         }
 
+        std::array<std::array<double, maxChannels>, maxBands> detectorBandSamples {};
+        if (useExternalDetector)
+        {
+            for (int channel = 0; channel < detectorChannelsToProcess; ++channel)
+            {
+                std::array<double, maxBands> splitBands {};
+                const auto rawDetector = static_cast<double>(detectorChannels[channel][sample]);
+                const auto finiteDetector = std::isfinite(rawDetector) ? rawDetector : 0.0;
+                detectorCrossover.processSample(channel, finiteDetector, splitBands);
+                for (int band = 0; band < bandsToProcess; ++band)
+                    detectorBandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] =
+                        splitBands[static_cast<std::size_t>(band)];
+            }
+        }
+
         for (int band = 0; band < bandsToProcess; ++band)
         {
             auto detector = 0.0;
-            for (int channel = 0; channel < channelsToProcess; ++channel)
+            const auto detectorChannelTotal = useExternalDetector
+                ? detectorChannelsToProcess : channelsToProcess;
+            for (int channel = 0; channel < detectorChannelTotal; ++channel)
                 detector = std::max(detector, std::abs(static_cast<double>(
-                    bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)])));
+                    (useExternalDetector ? detectorBandSamples : bandSamples)
+                        [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)])));
             inputPeaks[static_cast<std::size_t>(band)] = std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
 
             const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
@@ -139,13 +185,14 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                 maximumGr[static_cast<std::size_t>(band)], appliedGr);
             auto& bandGain = bandGainCurrent[static_cast<std::size_t>(band)];
             bandGain = smoothGain(bandGain, decibelsToGain(p.gainDb), smoothing);
-            const auto appliedBandGain = bandGain * decibelsToGain(-appliedGr);
-            const auto audible = !anySolo || p.solo;
+            auto& soloMix = soloMixCurrent[static_cast<std::size_t>(band)];
+            soloMix = smoothGain(soloMix, !anySolo || p.solo ? 1.0 : 0.0, bypassSmoothing);
+            const auto appliedBandGain = bandGain * decibelsToGain(-appliedGr) * soloMix;
 
             for (int channel = 0; channel < channelsToProcess; ++channel)
             {
                 auto& value = bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)];
-                value = audible ? value * appliedBandGain : 0.0;
+                value *= appliedBandGain;
                 outputPeaks[static_cast<std::size_t>(band)] = std::max(
                     outputPeaks[static_cast<std::size_t>(band)], std::abs(value));
             }

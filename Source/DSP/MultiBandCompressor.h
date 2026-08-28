@@ -50,6 +50,12 @@ public:
     void reset() noexcept;
     void setParameters(const GlobalParameters& parameters) noexcept;
     void process(float** channels, int numChannels, int numSamples) noexcept;
+    // The optional detector is an external, band-split key signal.  Its level
+    // controls gain reduction only; program audio is always taken from
+    // `channels`.  A null or empty detector uses normal program detection.
+    void process(float** channels, int numChannels,
+                 const float* const* detectorChannels, int detectorNumChannels,
+                 int numSamples) noexcept;
 
     double getStaticOutputDb(int band, double inputDb) const noexcept;
     double getBandMagnitudeDb(int band, double frequency) const noexcept;
@@ -72,6 +78,7 @@ private:
                        const std::array<double, 2>& outputPeaksMaster) noexcept;
 
     CrossoverNetwork crossover;
+    CrossoverNetwork detectorCrossover;
     GainComputer gainComputer;
     std::array<Ballistics, maxBands> ballistics;
     std::array<BiteProcessor, maxBands> biteProcessors;
@@ -83,7 +90,9 @@ private:
     double outputGainCurrent { 1.0 };
     std::array<double, maxBands> bandGainCurrent { 1.0, 1.0, 1.0, 1.0 };
     std::array<double, maxBands> enabledMixCurrent { 1.0, 1.0, 1.0, 1.0 };
+    std::array<double, maxBands> soloMixCurrent { 1.0, 1.0, 1.0, 1.0 };
     std::array<double, 3> crossoverCurrent { 100.0, 1000.0, 10000.0 };
+    int crossoverUpdateCountdown {};
     int preparedBlockSize {};
     int preparedChannels { 2 };
 };

@@ -255,6 +255,110 @@ void testStereoDetectorAndFiniteOutput()
            "stereo max detector triggers compression without antiphase cancellation");
 }
 
+void testExternalSidechain()
+{
+    using namespace pontedsp::mc2000::dsp;
+    constexpr auto sampleRate = 48000.0;
+    constexpr auto blockSize = 512;
+    GlobalParameters parameters;
+    parameters.numBands = 2;
+    parameters.crossoverHz = { 100.0, 1000.0, 10000.0 };
+    for (auto& band : parameters.bands)
+    {
+        band.thresholdDb = -24.0;
+        band.ratio = 10.0;
+        band.attackMs = 0.03;
+        band.releaseMs = 250.0;
+        band.bite = 1.0;
+    }
+
+    MultiBandCompressor internalDetector;
+    MultiBandCompressor externalDetector;
+    internalDetector.setParameters(parameters);
+    externalDetector.setParameters(parameters);
+    internalDetector.prepare(sampleRate, blockSize, 2);
+    externalDetector.prepare(sampleRate, blockSize, 2);
+
+    std::vector<float> quietLeft(blockSize), quietRight(blockSize);
+    std::vector<float> keyedLeft(blockSize), keyedRight(blockSize);
+    std::vector<float> keyLeft(blockSize), keyRight(blockSize);
+    std::array<float*, 2> quiet { quietLeft.data(), quietRight.data() };
+    std::array<float*, 2> keyed { keyedLeft.data(), keyedRight.data() };
+    std::array<const float*, 2> key { keyLeft.data(), keyRight.data() };
+    auto quietEnergy = 0.0;
+    auto keyedEnergy = 0.0;
+
+    for (int block = 0; block < 300; ++block)
+    {
+        for (int sample = 0; sample < blockSize; ++sample)
+        {
+            const auto phase = 2.0 * 3.14159265358979323846 * 100.0
+                             * (block * blockSize + sample) / sampleRate;
+            const auto program = static_cast<float>(0.02 * std::sin(phase));
+            const auto sidechain = static_cast<float>(0.8 * std::sin(phase));
+            quietLeft[static_cast<std::size_t>(sample)] = program;
+            quietRight[static_cast<std::size_t>(sample)] = -program;
+            keyedLeft[static_cast<std::size_t>(sample)] = program;
+            keyedRight[static_cast<std::size_t>(sample)] = -program;
+            keyLeft[static_cast<std::size_t>(sample)] = sidechain;
+            keyRight[static_cast<std::size_t>(sample)] = -sidechain;
+        }
+        internalDetector.process(quiet.data(), 2, blockSize);
+        externalDetector.process(keyed.data(), 2, key.data(), 2, blockSize);
+        if (block >= 200)
+            for (int sample = 0; sample < blockSize; ++sample)
+            {
+                quietEnergy += quietLeft[static_cast<std::size_t>(sample)]
+                             * quietLeft[static_cast<std::size_t>(sample)];
+                keyedEnergy += keyedLeft[static_cast<std::size_t>(sample)]
+                             * keyedLeft[static_cast<std::size_t>(sample)];
+            }
+    }
+
+    expect(keyedEnergy < quietEnergy * 0.2,
+           "external sidechain replaces program detection and compresses the program");
+    expect(externalDetector.getBandMeter(0).gainReductionDb > 1.0f
+           || externalDetector.getBandMeter(1).gainReductionDb > 1.0f,
+           "external sidechain publishes per-band gain reduction");
+}
+
+void testSoloSmoothing()
+{
+    using namespace pontedsp::mc2000::dsp;
+    constexpr auto blockSize = 512;
+    MultiBandCompressor compressor;
+    GlobalParameters parameters;
+    parameters.numBands = 2;
+    parameters.crossoverHz = { 1000.0, 5000.0, 10000.0 };
+    compressor.setParameters(parameters);
+    compressor.prepare(48000.0, blockSize, 2);
+
+    std::vector<float> left(blockSize, 0.1f), right(blockSize, 0.1f);
+    std::array<float*, 2> channels { left.data(), right.data() };
+    for (int block = 0; block < 30; ++block)
+    {
+        std::fill(left.begin(), left.end(), 0.1f);
+        std::fill(right.begin(), right.end(), 0.1f);
+        compressor.process(channels.data(), 2, blockSize);
+    }
+
+    parameters.bands[1].solo = true;
+    compressor.setParameters(parameters);
+    left[0] = right[0] = 0.1f;
+    compressor.process(channels.data(), 2, 1);
+    expect(left[0] > 0.08f && right[0] > 0.08f,
+           "Solo automation crossfades instead of muting a band on one sample");
+
+    for (int block = 0; block < 4; ++block)
+    {
+        std::fill(left.begin(), left.end(), 0.1f);
+        std::fill(right.begin(), right.end(), 0.1f);
+        compressor.process(channels.data(), 2, blockSize);
+    }
+    expect(std::abs(left.back()) < 0.01f && std::abs(right.back()) < 0.01f,
+           "Solo crossfade reaches the selected band after its smoothing interval");
+}
+
 void testArbitraryBlocksAndInvalidInput()
 {
     using namespace pontedsp::mc2000::dsp;
@@ -284,6 +388,8 @@ int main()
     testBallisticsModels();
     testBiteModel();
     testStereoDetectorAndFiniteOutput();
+    testExternalSidechain();
+    testSoloSmoothing();
     testArbitraryBlocksAndInvalidInput();
     if (failures == 0)
         std::cout << "All Ponte MC2000 DSP tests passed\n";

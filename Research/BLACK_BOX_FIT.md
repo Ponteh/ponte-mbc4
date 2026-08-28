@@ -35,15 +35,24 @@ with the product.
 
 ## Remaining empirical limits
 
-- The supplied pack contains no Auto renders. Auto therefore remains the
-  documented crest-factor, peak/RMS program-dependent fallback; manual Attack
-  and Release are ignored in this mode.
-- Separate MC404 Band 2 and Band 3 impulse renders are not present. The
-  four-band implementation uses a compensated LR4 tree with unity-magnitude
-  recombination, but its internal-band phase cannot yet be claimed identical.
+- The additional pack includes Auto `min`/`max` renders, and the two variants
+  are sample-identical.  However, their steady-state gain is effectively
+  neutral even where the written test setup calls for Threshold `-24 dB` and
+  Ratio `10:1`.  Those files therefore confirm that manual Attack/Release are
+  ignored, but do not provide a controlled Auto gain trajectory from which to
+  fit a replacement timing law.  Auto remains the documented crest-factor,
+  peak/RMS program-dependent fallback until controlled reference renders are
+  available.
+- The additional suite supplies separate MC404 Band 2 and Band 3 impulse
+  renders. They agree with the compensated LR4 tree to numerical precision for
+  the supplied standard, close and extreme crossover configurations.
 - Only 48 kHz original renders were supplied. Coefficients and timing are
   sample-rate invariant by construction and regression-tested at 44.1, 48 and
   96 kHz, but original plug-in sample-rate dependence remains unmeasured.
+- The final sidechain folder supplies Program/Key stimuli but no paired
+  reference render.  The production plug-in now exposes a conventional
+  band-split external detector; its exact relationship to the original
+  plug-in still requires those reference renders.
 
 These limits require new reference renders, not additional guessing in the
 production DSP.
