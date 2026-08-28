@@ -1587,14 +1587,13 @@ Auto:
 Attack/Release manuali al minimo e al massimo: i due render sono
 sample-identical, confermando che i controlli manuali vengono ignorati.
 
-Quei render non permettono però di fittare la traiettoria Auto: a regime sono
-sostanzialmente neutri anche nei casi in cui il setup scritto (`T=-24 dB`,
-`R=10:1`) richiederebbe una forte compressione. Il dataset è quindi
-incoerente con la propria specifica per il solo valore assoluto di GR.
+I parametri completi di ciascun test sono definiti dal relativo
+`TEST_SPEC.md`; il suffisso del filename identifica soltanto la variante
+manuale min/max. La prossima analisi deve quindi usare setup ed intervalli
+temporali della specifica, non inferire il setup dal nome del WAV.
 
-Il DSP mantiene una fallback **[CANDIDATE]** peak/RMS dipendente dal programma.
-Non sostituirla con un bypass sulla base di questi render; servono nuovi
-reference render controllati con parametri effettivi registrati.
+Il DSP mantiene una fallback **[CANDIDATE]** peak/RMS dipendente dal programma
+finché il fitting segment-aware dei render Auto esistenti non è completo.
 
 ---
 
@@ -2808,8 +2807,9 @@ Il secondo test pack è disponibile. Implementare e mantenere:
 
 - crest-factor auto model.
 
-Sostituirlo/fittarlo solo con black-box data controllati: i render min/max
-attuali validano l'indipendenza dai controlli manuali ma non la GR assoluta.
+Fittarlo con i black-box data disponibili usando setup e timing del
+`TEST_SPEC.md`: i render min/max validano già l'indipendenza dai controlli
+manuali.
 
 ---
 
@@ -3395,7 +3395,7 @@ Non serve aspettare Auto/BITE per costruire l'80% dell'infrastruttura.
 | Attack | DATI PRESENTI, FIT PENDING |
 | Type-1 release | MODELLO EMPIRICO DISPONIBILE |
 | Type-2 | MODELLO EMPIRICO V1 DISPONIBILE |
-| Auto | FALLBACK CREST-FACTOR IMPLEMENTATA; FIT CONTROLLATO PENDENTE |
+| Auto | FALLBACK CREST-FACTOR IMPLEMENTATA; FIT DEI RENDER ESISTENTI PENDENTE |
 | BITE | TOPOLOGIA PROBABILE, FIT PENDING |
 | Sidechain esterno | IMPLEMENTATO PER-BANDA; REFERENCE FIT PENDENTE |
 | Automazione crossover/Solo | SMOOTHING IMPLEMENTATO; MATCHING ORIGINALE PENDENTE |

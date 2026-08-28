@@ -24,12 +24,11 @@ declared 44.1, 88.2, 96 and 192 kHz stimuli.
   No change to the crossover topology is justified.
 - The additional Auto `min`/`max` pairs are sample-identical. Manual Attack and
   Release are therefore ignored in that mode, as required by the test.
-- Those same Auto files cannot calibrate an Auto gain law: their steady-state
-  output is essentially unity even for inputs that, under the written
-  Threshold `-24 dB` / Ratio `10:1` setup, should exhibit substantial gain
-  reduction. This is inconsistent with the accompanying specification. The
-  existing signal-dependent Auto model is retained rather than fitting an
-  apparent bypass.
+- The `.md` specification, rather than the abbreviated filename, defines the
+  complete Auto configuration. The preliminary fixed-window gain check is not
+  sufficient to extract an Auto curve from the supplied material; it must be
+  replaced by a segment-aware analysis that uses the specified settings and
+  event timings. No conclusion about a neutral/bypassed Auto mode is valid.
 - The final sidechain folder contains Program and Key sources, but no rendered
   output pair. It supports testing a correct sidechain implementation but not
   numerical matching to the original.

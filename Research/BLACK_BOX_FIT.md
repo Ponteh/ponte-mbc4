@@ -36,13 +36,13 @@ with the product.
 ## Remaining empirical limits
 
 - The additional pack includes Auto `min`/`max` renders, and the two variants
-  are sample-identical.  However, their steady-state gain is effectively
-  neutral even where the written test setup calls for Threshold `-24 dB` and
-  Ratio `10:1`.  Those files therefore confirm that manual Attack/Release are
-  ignored, but do not provide a controlled Auto gain trajectory from which to
-  fit a replacement timing law.  Auto remains the documented crest-factor,
-  peak/RMS program-dependent fallback until controlled reference renders are
-  available.
+  are sample-identical.  The complete parameter mapping is defined by the
+  folder's `TEST_SPEC.md`; the filename suffix only identifies the manual
+  Attack/Release position.  This confirms that manual Attack/Release are
+  ignored.  A dedicated segment-aware extraction pass is still required to
+  fit the Auto gain trajectory from these existing renders, rather than
+  inferring configuration from filename text.  Auto remains the documented
+  crest-factor, peak/RMS program-dependent fallback until that fit is complete.
 - The additional suite supplies separate MC404 Band 2 and Band 3 impulse
   renders. They agree with the compensated LR4 tree to numerical precision for
   the supplied standard, close and extreme crossover configurations.
