@@ -84,4 +84,13 @@ if (MC2000_BUILD_TESTS)
         juce::juce_audio_formats
         juce::juce_core
         juce::juce_recommended_config_flags)
+
+    juce_add_console_app(MC2000ExtendedAnalysis PRODUCT_NAME "Ponte MBC4 Extended Test-Pack Analysis")
+    target_sources(MC2000ExtendedAnalysis PRIVATE
+        Research/ExtendedPackAnalysis.cpp)
+    target_include_directories(MC2000ExtendedAnalysis PRIVATE Source)
+    target_link_libraries(MC2000ExtendedAnalysis PRIVATE
+        juce::juce_audio_formats
+        juce::juce_core
+        juce::juce_recommended_config_flags)
 endif()

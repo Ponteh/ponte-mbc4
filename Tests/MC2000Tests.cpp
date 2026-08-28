@@ -168,7 +168,7 @@ void testBallisticsModels()
                    "Auto computes timing from the signal and ignores manual Attack/Release");
     }
 
-    for (const auto rate : {44100.0, 96000.0})
+    for (const auto rate : {44100.0, 48000.0, 88200.0, 96000.0, 192000.0})
     {
         Ballistics scaled;
         scaled.prepare(rate);
@@ -322,6 +322,75 @@ void testExternalSidechain()
            "external sidechain publishes per-band gain reduction");
 }
 
+void testExternalSidechainAcrossTimeConstants()
+{
+    using namespace pontedsp::mc2000::dsp;
+    constexpr auto sampleRate = 48000.0;
+    constexpr auto blockSize = 256;
+    for (const auto mode : { TCMode::type2, TCMode::automatic })
+    {
+        GlobalParameters parameters;
+        parameters.numBands = 2;
+        parameters.crossoverHz = { 300.0, 3000.0, 10000.0 };
+        for (auto& band : parameters.bands)
+        {
+            band.thresholdDb = -24.0;
+            band.ratio = 10.0;
+            band.attackMs = 0.03;
+            band.releaseMs = 250.0;
+            band.bite = 1.0;
+            band.tcMode = mode;
+        }
+
+        MultiBandCompressor internalDetector;
+        MultiBandCompressor externalDetector;
+        internalDetector.setParameters(parameters);
+        externalDetector.setParameters(parameters);
+        internalDetector.prepare(sampleRate, blockSize, 2);
+        externalDetector.prepare(sampleRate, blockSize, 2);
+
+        std::vector<float> internalLeft(blockSize), internalRight(blockSize);
+        std::vector<float> externalLeft(blockSize), externalRight(blockSize);
+        std::vector<float> keyLeft(blockSize), keyRight(blockSize);
+        std::array<float*, 2> internal { internalLeft.data(), internalRight.data() };
+        std::array<float*, 2> external { externalLeft.data(), externalRight.data() };
+        std::array<const float*, 2> key { keyLeft.data(), keyRight.data() };
+        auto internalEnergy = 0.0;
+        auto externalEnergy = 0.0;
+
+        for (int block = 0; block < 400; ++block)
+        {
+            for (int sample = 0; sample < blockSize; ++sample)
+            {
+                const auto phase = 2.0 * 3.14159265358979323846 * 1000.0
+                                 * (block * blockSize + sample) / sampleRate;
+                const auto program = static_cast<float>(0.005 * std::sin(phase));
+                const auto sidechain = static_cast<float>(0.8 * std::sin(phase));
+                internalLeft[static_cast<std::size_t>(sample)] = program;
+                internalRight[static_cast<std::size_t>(sample)] = -program;
+                externalLeft[static_cast<std::size_t>(sample)] = program;
+                externalRight[static_cast<std::size_t>(sample)] = -program;
+                keyLeft[static_cast<std::size_t>(sample)] = sidechain;
+                keyRight[static_cast<std::size_t>(sample)] = -sidechain;
+            }
+            internalDetector.process(internal.data(), 2, blockSize);
+            externalDetector.process(external.data(), 2, key.data(), 2, blockSize);
+            if (block >= 300)
+                for (int sample = 0; sample < blockSize; ++sample)
+                {
+                    internalEnergy += internalLeft[static_cast<std::size_t>(sample)]
+                                    * internalLeft[static_cast<std::size_t>(sample)];
+                    externalEnergy += externalLeft[static_cast<std::size_t>(sample)]
+                                    * externalLeft[static_cast<std::size_t>(sample)];
+                }
+        }
+
+        const auto modeName = mode == TCMode::type2 ? "Type-2" : "Auto";
+        expect(externalEnergy < internalEnergy * 0.6,
+               std::string("external sidechain controls ") + modeName + " gain reduction");
+    }
+}
+
 void testSoloSmoothing()
 {
     using namespace pontedsp::mc2000::dsp;
@@ -389,6 +458,7 @@ int main()
     testBiteModel();
     testStereoDetectorAndFiniteOutput();
     testExternalSidechain();
+    testExternalSidechainAcrossTimeConstants();
     testSoloSmoothing();
     testArbitraryBlocksAndInvalidInput();
     if (failures == 0)

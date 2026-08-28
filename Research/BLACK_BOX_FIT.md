@@ -35,14 +35,15 @@ with the product.
 
 ## Remaining empirical limits
 
-- The additional pack includes Auto `min`/`max` renders, and the two variants
-  are sample-identical.  The complete parameter mapping is defined by the
-  folder's `TEST_SPEC.md`; the filename suffix only identifies the manual
-  Attack/Release position.  This confirms that manual Attack/Release are
-  ignored.  A dedicated segment-aware extraction pass is still required to
-  fit the Auto gain trajectory from these existing renders, rather than
-  inferring configuration from filename text.  Auto remains the documented
-  crest-factor, peak/RMS program-dependent fallback until that fit is complete.
+- The complete Auto parameter mapping is defined by the relevant
+  `TEST_SPEC.md`; filename suffixes only identify the manual variant.  All 20
+  MC404 T02 `min`/`max` pairs and all 9 MC404 T08 pairs are sample-identical,
+  so those series ignore manual Attack/Release.  T08 MC303 pulse-series pairs
+  differ materially, and T11 Auto/BITE renders sustain gain reduction on a
+  band-isolated burst.  The available files therefore do not support a single
+  global “Auto ignores manual controls” or “Auto bypasses compression” rule.
+  Auto remains a conservative crest-factor, peak/RMS fallback until a
+  segment-aware fit reconciles the MC303, MC404 and BITE trajectories.
 - The additional suite supplies separate MC404 Band 2 and Band 3 impulse
   renders. They agree with the compensated LR4 tree to numerical precision for
   the supplied standard, close and extreme crossover configurations.

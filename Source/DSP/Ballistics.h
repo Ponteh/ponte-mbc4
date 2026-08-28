@@ -116,7 +116,10 @@ private:
                    + (1.0 - rmsCoefficient) * detectorLinear * detectorLinear;
         const auto crest = peakEnvelope / std::max(std::sqrt(rmsSquared), 1.0e-9);
         const auto crestNorm = std::clamp((crest - 1.0) / 5.0, 0.0, 1.0);
-        // Scientific crest-factor fallback until Auto black-box renders are available.
+        // Conservative crest-factor fallback.  The available Auto renders are
+        // internally inconsistent across MC303/MC404 and BITE test families,
+        // so a single replacement law would over-fit one series and regress
+        // another until a cross-model trajectory fit is available.
         const auto attackSeconds = 0.030 - 0.028 * crestNorm;
         const auto releaseSeconds = 0.600 - 0.480 * crestNorm;
         const auto coefficient = std::exp(-1.0 / (sampleRate
