@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(PonteMC2000 VERSION 0.1.0 LANGUAGES C CXX)
+project(PonteMC2000 VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -58,6 +58,7 @@ target_compile_definitions(PonteMC2000 PUBLIC
 target_link_libraries(PonteMC2000 PRIVATE
     juce::juce_audio_utils
     juce::juce_audio_processors
+    juce::juce_dsp
     juce::juce_gui_extra
     PUBLIC
     juce::juce_recommended_config_flags

@@ -16,6 +16,7 @@ public:
     void drawComboBox(juce::Graphics&, int, int, bool, int, int, int, int,
                       juce::ComboBox&) override;
     void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
+    juce::Slider::SliderLayout getSliderLayout(juce::Slider&) override;
 };
 
 } // namespace pontedsp::gui

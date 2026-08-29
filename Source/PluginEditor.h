@@ -3,13 +3,14 @@
 #include "PluginProcessor.h"
 #include "PonteLookAndFeel.h"
 #include <array>
+#include <juce_dsp/juce_dsp.h>
 
 class ParameterKnob final : public juce::Component
 {
 public:
     ParameterKnob(juce::AudioProcessorValueTreeState&, const juce::String& parameterId,
                   const juce::String& caption, const juce::String& suffix = {},
-                  const juce::String& helpText = {});
+                  const juce::String& helpText = {}, int decimalPlaces = 2);
     void resized() override;
 
 private:
@@ -71,17 +72,19 @@ public:
     BandStrip(PonteMC2000AudioProcessor&, int bandIndex);
     void paint(juce::Graphics&) override;
     void resized() override;
+    void setActiveVisual(bool active);
 
 private:
     PonteMC2000AudioProcessor& processor;
     int band {};
-    juce::Label title;
+    juce::Label title, algorithmLabel;
     juce::TextButton enabled { "IN" }, solo { "SOLO" };
     ParameterKnob gain, threshold, ratio, knee, bite, attack, release;
     juce::ComboBox timeConstant;
     BandMeter meter;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> enabledAttachment, soloAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> timeConstantAttachment;
+    bool activeVisual { true };
 };
 
 class CrossoverPlot final : public juce::Component
@@ -89,6 +92,7 @@ class CrossoverPlot final : public juce::Component
 public:
     explicit CrossoverPlot(PonteMC2000AudioProcessor&);
     void paint(juce::Graphics&) override;
+    void updateSpectrum();
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
     void mouseUp(const juce::MouseEvent&) override;
@@ -97,8 +101,20 @@ private:
     float frequencyToX(double frequency) const noexcept;
     double xToFrequency(float x) const noexcept;
     int currentBandCount() const noexcept;
+    bool bandIsAudible(int band) const noexcept;
+    int bandForFrequency(double frequency) const noexcept;
     PonteMC2000AudioProcessor& processor;
     int draggedCrossover { -1 };
+    static constexpr int fftOrder = 11;
+    static constexpr int fftSize = 1 << fftOrder;
+    juce::dsp::FFT fft { fftOrder };
+    juce::dsp::WindowingFunction<float> fftWindow {
+        fftSize, juce::dsp::WindowingFunction<float>::hann, true };
+    std::array<float, fftSize> fftInput {};
+    std::array<float, fftSize * 2> fftWork {};
+    std::array<float, fftSize / 2> spectrumDb {};
+    int fftInputCount {};
+    bool spectrumReady {};
 };
 
 class CompressionPlot final : public juce::Component
@@ -135,6 +151,8 @@ private:
     int activeBandCount() const noexcept;
     void updateContextHelp();
     void updateBandCountLayout();
+    void updateLinkedControls();
+    void updateBandVisualStates();
 
     PonteMC2000AudioProcessor& processor;
     pontedsp::gui::PonteLookAndFeel lookAndFeel;
@@ -155,7 +173,11 @@ private:
     double hoverHelpStartedMs {};
     juce::String activeHelpText;
     int displayedBandCount { 4 };
+    static constexpr int linkedControlCount = 7;
+    int displayedLinkMaster { -1 };
+    bool linkDisplayInitialised {};
+    std::array<std::array<double, linkedControlCount>, 4> linkDisplayOffsets {};
+    std::array<std::array<double, linkedControlCount>, 4> previousLinkedValues {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PonteMC2000AudioProcessorEditor)
 };
-

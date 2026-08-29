@@ -10,7 +10,7 @@ PonteLookAndFeel::PonteLookAndFeel()
     setColour(juce::Slider::textBoxTextColourId, Palette::text());
     setColour(juce::Slider::textBoxBackgroundColourId, Palette::ink().withAlpha(0.8f));
     setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    setColour(juce::ComboBox::backgroundColourId, Palette::surface());
+    setColour(juce::ComboBox::backgroundColourId, Palette::ink());
     setColour(juce::ComboBox::textColourId, Palette::text());
     setColour(juce::ComboBox::outlineColourId, Palette::outline());
     setColour(juce::ComboBox::arrowColourId, Palette::lime());
@@ -18,6 +18,8 @@ PonteLookAndFeel::PonteLookAndFeel()
     setColour(juce::PopupMenu::textColourId, Palette::text());
     setColour(juce::PopupMenu::highlightedBackgroundColourId, Palette::violet());
     setColour(juce::PopupMenu::highlightedTextColourId, Palette::lime());
+    setColour(juce::TextButton::buttonColourId, Palette::ink());
+    setColour(juce::TextButton::buttonOnColourId, Palette::lime());
 }
 
 void PonteLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
@@ -96,6 +98,23 @@ void PonteLookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& la
 {
     label.setBounds(10, 1, box.getWidth() - 34, box.getHeight() - 2);
     label.setFont(juce::FontOptions(13.0f, juce::Font::bold));
+}
+
+juce::Slider::SliderLayout PonteLookAndFeel::getSliderLayout(juce::Slider& slider)
+{
+    auto bounds = slider.getLocalBounds();
+    const auto textHeight = juce::jmin(slider.getTextBoxHeight(),
+                                       juce::jmax(0, bounds.getHeight() - 24));
+    const auto rotaryHeight = juce::jmax(24, juce::jmin(bounds.getWidth(),
+                                                        bounds.getHeight() - textHeight));
+    juce::Slider::SliderLayout layout;
+    layout.sliderBounds = { 0, 0, bounds.getWidth(), rotaryHeight };
+    layout.textBoxBounds = {
+        (bounds.getWidth() - juce::jmin(slider.getTextBoxWidth(), bounds.getWidth())) / 2,
+        juce::jmax(0, rotaryHeight - 3),
+        juce::jmin(slider.getTextBoxWidth(), bounds.getWidth()), textHeight
+    };
+    return layout;
 }
 
 } // namespace pontedsp::gui

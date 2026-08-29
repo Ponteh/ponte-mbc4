@@ -37,11 +37,11 @@ public:
             return processAuto(target, detector);
         }
 
-        const auto displayedAttackMs = clampFinite(attackMs, 0.03, 250.0, 10.0);
+        const auto displayedAttackMs = clampFinite(attackMs, 0.25, 250.0, 10.0);
         // T08 fit: the displayed value is not the one-pole 63.2% time constant.
         const auto attackScale = 0.51 / (1.0 + displayedAttackMs / 800.0);
         const auto attackSeconds = displayedAttackMs * attackScale * 0.001;
-        const auto releaseSeconds = clampFinite(releaseMs, 5.0, 2500.0, 250.0) * 0.001;
+        const auto releaseSeconds = clampFinite(releaseMs, 25.0, 2500.0, 250.0) * 0.001;
         const auto attackCoefficient = std::exp(-1.0 / (sampleRate * attackSeconds));
 
         if (mode != previousMode)
@@ -221,18 +221,13 @@ private:
             const auto smooth = t * t * (3.0 - 2.0 * t);
             return y0 + (y1 - y0) * smooth;
         };
-        const auto normalised = std::clamp((biteValue - 1.0) / 49.0, 0.0, 1.0);
-        constexpr double biteFive = 4.0 / 49.0;
-        constexpr double biteTen = 9.0 / 49.0;
-        // The Low/Mid BITE retest resolves the earlier inconsistent BITE-5
-        // exports: measured onset relief is about 0.20 dB at BITE=5 and
-        // 0.82 dB at BITE=10, with the established 3.2 dB BITE=50 ceiling.
-        // A linear 1..50 map cannot satisfy both calibrated points.
+        const auto normalised = std::clamp((biteValue - 1.0) / 9.0, 0.0, 1.0);
+        constexpr double biteFive = 4.0 / 9.0;
+        // Preserve the calibrated gentle response around BITE=5 while mapping
+        // the public 1..10 control range onto the full transient-relief range.
         if (normalised <= biteFive)
             return interpolate(normalised, 0.0, biteFive, 0.0, 0.062);
-        if (normalised <= biteTen)
-            return interpolate(normalised, biteFive, biteTen, 0.062, 0.256);
-        return interpolate(normalised, biteTen, 1.0, 0.256, 1.0);
+        return interpolate(normalised, biteFive, 1.0, 0.062, 1.0);
     }
 
     double sampleRate { 48000.0 };

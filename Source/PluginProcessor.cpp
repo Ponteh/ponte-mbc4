@@ -12,6 +12,8 @@ PonteMC2000AudioProcessor::PonteMC2000AudioProcessor()
 
 void PonteMC2000AudioProcessor::prepareToPlay(const double sampleRate, const int samplesPerBlock)
 {
+    spectrumFifo.reset();
+    processingSampleRate.store(sampleRate, std::memory_order_relaxed);
     engine.setParameters(pontedsp::mc2000::parameters::readSnapshot(state, linkRuntime));
     engine.prepare(sampleRate, samplesPerBlock, getTotalNumInputChannels());
 }
@@ -37,6 +39,7 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 
     auto mainBuffer = getBusBuffer(buffer, false, 0);
     auto sidechainBuffer = getBusBuffer(buffer, true, 1);
+    pushSpectrumSamples(mainBuffer);
     std::array<float*, 2> program { mainBuffer.getWritePointer(0), nullptr };
     if (mainBuffer.getNumChannels() > 1) program[1] = mainBuffer.getWritePointer(1);
 
@@ -48,6 +51,40 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     }
     engine.process(program.data(), mainBuffer.getNumChannels(), detector.data(),
                    sidechainBuffer.getNumChannels(), mainBuffer.getNumSamples());
+}
+
+void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<float>& buffer) noexcept
+{
+    const auto channels = buffer.getNumChannels();
+    if (channels <= 0) return;
+
+    int start1 {}, size1 {}, start2 {}, size2 {};
+    spectrumFifo.prepareToWrite(buffer.getNumSamples(), start1, size1, start2, size2);
+    const auto writeRange = [&] (const int fifoStart, const int count, const int sourceStart)
+    {
+        for (int sample = 0; sample < count; ++sample)
+        {
+            auto mono = 0.0f;
+            for (int channel = 0; channel < channels; ++channel)
+                mono += buffer.getSample(channel, sourceStart + sample);
+            spectrumSamples[static_cast<std::size_t>(fifoStart + sample)] = mono / channels;
+        }
+    };
+    writeRange(start1, size1, 0);
+    writeRange(start2, size2, size1);
+    spectrumFifo.finishedWrite(size1 + size2);
+}
+
+int PonteMC2000AudioProcessor::popSpectrumSamples(float* const destination,
+                                                   const int maximumSamples) noexcept
+{
+    if (destination == nullptr || maximumSamples <= 0) return 0;
+    int start1 {}, size1 {}, start2 {}, size2 {};
+    spectrumFifo.prepareToRead(maximumSamples, start1, size1, start2, size2);
+    std::copy_n(spectrumSamples.data() + start1, size1, destination);
+    std::copy_n(spectrumSamples.data() + start2, size2, destination + size1);
+    spectrumFifo.finishedRead(size1 + size2);
+    return size1 + size2;
 }
 
 juce::AudioProcessorEditor* PonteMC2000AudioProcessor::createEditor()

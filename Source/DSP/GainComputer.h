@@ -13,7 +13,7 @@ public:
                            const double ratioValue, const double kneeValue) const noexcept
     {
         const auto input = std::isfinite(inputDb) ? inputDb : -160.0;
-        const auto threshold = clampFinite(thresholdDb, -45.0, 0.0, 0.0);
+        const auto threshold = clampFinite(thresholdDb, -48.0, 0.0, 0.0);
         const auto ratio = clampFinite(ratioValue, 1.0, 10.0, 1.0);
         const auto knee = clampFinite(kneeValue, -10.0, 15.0, 0.0);
         const auto over = input - threshold;

@@ -26,15 +26,19 @@ void setContextHelp(juce::Component& component, const juce::String& text)
 
 float meterPosition(const float db) noexcept
 {
-    return juce::jlimit(0.0f, 1.0f, (db + 60.0f) / 60.0f);
+    return juce::jlimit(0.0f, 1.0f, (db + 48.0f) / 48.0f);
 }
+
+constexpr std::array<const char*, 7> linkedSuffixes {
+    "gainDb", "thresholdDb", "ratio", "knee", "bite", "attackMs", "releaseMs"
+};
 
 } // namespace
 
 ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
                              const juce::String& parameterId,
                              const juce::String& caption, const juce::String& suffix,
-                             const juce::String& helpText)
+                             const juce::String& helpText, const int decimalPlaces)
 {
     setContextHelp(*this, helpText);
     configureLabel(name, caption, 10.0f);
@@ -45,7 +49,7 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
         state.getParameterRange(parameterId).convertFrom0to1(
             state.getParameter(parameterId)->getDefaultValue()));
     slider.setTextValueSuffix(suffix);
-    slider.setNumDecimalPlacesToDisplay(2);
+    slider.setNumDecimalPlacesToDisplay(decimalPlaces);
     slider.setMouseDragSensitivity(180);
     addAndMakeVisible(slider);
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -206,60 +210,91 @@ BandMeter::BandMeter(PonteMC2000AudioProcessor& p, const int bandIndex)
 void BandMeter::paint(juce::Graphics& g)
 {
     const auto snapshot = processor.getEngine().getBandMeter(band);
-    auto area = getLocalBounds().toFloat().reduced(3.0f);
+    auto area = getLocalBounds().toFloat().reduced(2.0f, 1.0f);
     const auto row = area.getHeight() / 3.0f;
     const std::array<float, 3> positions {
         meterPosition(snapshot.inputDb), meterPosition(snapshot.outputDb),
-        juce::jlimit(0.0f, 1.0f, snapshot.gainReductionDb / 30.0f)
+        juce::jlimit(0.0f, 1.0f, snapshot.gainReductionDb / 48.0f)
     };
     const std::array<const char*, 3> labels { "IN", "OUT", "GR" };
     for (int i = 0; i < 3; ++i)
     {
-        auto line = area.removeFromTop(row).reduced(0.0f, 3.0f);
+        auto line = area.removeFromTop(row);
         g.setColour(pontedsp::gui::Palette::mutedText());
         g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-        g.drawText(labels[static_cast<std::size_t>(i)], line.removeFromLeft(24.0f),
+        g.drawText(labels[static_cast<std::size_t>(i)], line.removeFromLeft(27.0f),
                    juce::Justification::centredLeft);
+        const auto scaleHeight = juce::jlimit(5.0f, 10.0f, row * 0.36f);
+        auto scale = line.removeFromBottom(scaleHeight);
+        auto bar = line.withSizeKeepingCentre(line.getWidth(),
+            juce::jmin(8.0f, line.getHeight()));
         g.setColour(pontedsp::gui::Palette::ink());
-        g.fillRoundedRectangle(line, 2.0f);
+        g.fillRoundedRectangle(bar, 2.0f);
         g.setColour(i == 2 ? pontedsp::gui::Palette::danger()
                            : bandColours[static_cast<std::size_t>(band)]);
-        g.fillRoundedRectangle(line.withWidth(line.getWidth()
+        g.fillRoundedRectangle(bar.withWidth(bar.getWidth()
             * positions[static_cast<std::size_t>(i)]), 2.0f);
+
+        g.setColour(pontedsp::gui::Palette::outline());
+        g.drawHorizontalLine(juce::roundToInt(scale.getY()), scale.getX(), scale.getRight());
+        g.setColour(pontedsp::gui::Palette::lime());
+        g.setFont(juce::FontOptions(scaleHeight >= 8.0f ? 7.0f : 5.5f));
+        for (int tick = 0; tick < 5; ++tick)
+        {
+            const auto x = juce::jmap(static_cast<float>(tick), 0.0f, 4.0f,
+                                      scale.getX(), scale.getRight());
+            g.drawVerticalLine(juce::roundToInt(x), scale.getY(), scale.getY() + 2.0f);
+            const auto value = i == 2 ? -12 * tick : -48 + 12 * tick;
+            g.drawText(juce::String(value), juce::roundToInt(x) - 13,
+                       juce::roundToInt(scale.getY() + 1.0f), 26,
+                       juce::roundToInt(scaleHeight),
+                       juce::Justification::centred);
+        }
     }
 }
 
 BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
     : processor(p), band(bandIndex),
       gain(p.state, pontedsp::mc2000::parameters::bandId(band, "gainDb"), "GAIN", " dB",
-           "Add post-compression makeup gain to this band."),
+           "Add post-compression makeup gain to this band.", 1),
       threshold(p.state, pontedsp::mc2000::parameters::bandId(band, "thresholdDb"), "THRESH", " dB",
-                "Set the peak level where compression starts for this band."),
+                "Set the peak level where compression starts for this band.", 1),
       ratio(p.state, pontedsp::mc2000::parameters::bandId(band, "ratio"), "RATIO", " :1",
-            "Set how strongly signals above the threshold are compressed."),
+            "Set how strongly signals above the threshold are compressed.", 2),
       knee(p.state, pontedsp::mc2000::parameters::bandId(band, "knee"), "KNEE", {},
-           "Shape the transition around threshold: undershoot, hard knee, overshoot or tail."),
+           "Shape the transition around threshold: undershoot, hard knee, overshoot or tail.", 2),
       bite(p.state, pontedsp::mc2000::parameters::bandId(band, "bite"), "BITE", {},
-           "Let more transient detail pass while preserving steady-state compression."),
+           "Let more transient detail pass while preserving steady-state compression.", 2),
       attack(p.state, pontedsp::mc2000::parameters::bandId(band, "attackMs"), "ATTACK", " ms",
-             "Set how quickly gain reduction reacts to a rising signal."),
+             "Set how quickly gain reduction reacts to a rising signal.", 2),
       release(p.state, pontedsp::mc2000::parameters::bandId(band, "releaseMs"), "RELEASE", " ms",
-              "Set how quickly gain reduction returns after the signal falls."),
+              "Set how quickly gain reduction returns after the signal falls.", 1),
       meter(p, band)
 {
     configureLabel(title, "BAND " + juce::String(band + 1), 13.0f,
                    juce::Justification::centredLeft);
     title.setColour(juce::Label::textColourId, bandColours[static_cast<std::size_t>(band)]);
+    configureLabel(algorithmLabel, "ALGORITHM", 9.0f, juce::Justification::centredLeft);
     addAndMakeVisible(title);
-    for (auto* component : std::array<juce::Component*, 11> {
+    for (auto* component : std::array<juce::Component*, 12> {
         &enabled, &solo, &gain, &threshold, &ratio, &knee, &bite, &attack, &release,
-        &timeConstant, &meter })
+        &algorithmLabel, &timeConstant, &meter })
         addAndMakeVisible(*component);
     enabled.setClickingTogglesState(true);
     solo.setClickingTogglesState(true);
+    enabled.onClick = [this]
+    {
+        if (!enabled.getToggleState() && solo.getToggleState())
+            solo.setToggleState(false, juce::sendNotification);
+    };
+    solo.onClick = [this]
+    {
+        if (solo.getToggleState() && !enabled.getToggleState())
+            enabled.setToggleState(true, juce::sendNotification);
+    };
     timeConstant.addItemList({ "R1", "R2", "AUTO" }, 1);
-    setContextHelp(enabled, "Enable or bypass compression for this band. Makeup gain remains active.");
-    setContextHelp(solo, "Monitor this band after crossover and compression. Multiple bands may be soloed.");
+    setContextHelp(enabled, "Enable this band. Turning IN off also turns SOLO off.");
+    setContextHelp(solo, "Monitor this band after crossover and compression. Turning SOLO on also enables IN.");
     setContextHelp(timeConstant, "Choose Pure Peak R1, adaptive release R2, or program-dependent Auto timing.");
     setContextHelp(meter, "Monitor band input, output and gain reduction levels.");
     enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
@@ -273,26 +308,56 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
 void BandStrip::paint(juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat().reduced(1.0f);
-    g.setColour(pontedsp::gui::Palette::surface().withAlpha(0.94f));
+    g.setColour(pontedsp::gui::Palette::surface().withAlpha(activeVisual ? 0.94f : 0.54f));
     g.fillRoundedRectangle(area, 8.0f);
-    g.setColour(bandColours[static_cast<std::size_t>(band)].withAlpha(0.42f));
+    g.setColour(bandColours[static_cast<std::size_t>(band)]
+        .withAlpha(activeVisual ? 0.42f : 0.18f));
     g.drawRoundedRectangle(area, 8.0f, 1.0f);
+
+    g.setColour(pontedsp::gui::Palette::purple().withAlpha(0.7f));
+    for (const auto* knob : { &gain, &ratio, &bite })
+    {
+        const auto x = static_cast<float>(knob->getRight());
+        g.drawVerticalLine(juce::roundToInt(x), 11.0f,
+                           static_cast<float>(getHeight() - 11));
+    }
 }
 
 void BandStrip::resized()
 {
     auto area = getLocalBounds().reduced(8, 5);
-    auto identity = area.removeFromLeft(96);
-    title.setBounds(identity.removeFromTop(24));
-    enabled.setBounds(identity.removeFromTop(30).reduced(2));
-    solo.setBounds(identity.removeFromTop(30).reduced(2));
-    auto meterArea = area.removeFromRight(142);
-    timeConstant.setBounds(meterArea.removeFromTop(30).reduced(4, 1));
+    auto identity = area.removeFromLeft(98);
+    title.setBounds(identity.removeFromTop(22));
+    const auto buttonHeight = juce::jlimit(15, 30, identity.getHeight() / 2);
+    enabled.setBounds(identity.removeFromTop(buttonHeight).reduced(2));
+    solo.setBounds(identity.removeFromTop(buttonHeight).reduced(2));
+
+    const auto knobWidth = juce::jlimit(58, 82, (area.getWidth() - 280) / 7);
+    auto knobArea = area.removeFromLeft(knobWidth * 7);
+    auto meterArea = area.reduced(5, 0);
+    auto algorithm = meterArea.removeFromTop(
+        juce::jlimit(18, 27, meterArea.getHeight() / 3));
+    algorithmLabel.setBounds(algorithm.removeFromLeft(82));
+    timeConstant.setBounds(algorithm.reduced(2, 0));
     meter.setBounds(meterArea);
-    const auto knobWidth = area.getWidth() / 7;
     for (auto* knob : std::array<ParameterKnob*, 7> {
         &gain, &threshold, &ratio, &knee, &bite, &attack, &release })
-        knob->setBounds(area.removeFromLeft(knobWidth));
+        knob->setBounds(knobArea.removeFromLeft(knobWidth));
+}
+
+void BandStrip::setActiveVisual(const bool active)
+{
+    if (activeVisual == active) return;
+    activeVisual = active;
+    const auto alpha = active ? 1.0f : 0.38f;
+    for (auto* component : std::array<juce::Component*, 10> {
+        &title, &gain, &threshold, &ratio, &knee, &bite, &attack, &release,
+        &algorithmLabel, &timeConstant })
+        component->setAlpha(alpha);
+    meter.setAlpha(alpha);
+    enabled.setAlpha(1.0f);
+    solo.setAlpha(1.0f);
+    repaint();
 }
 
 CrossoverPlot::CrossoverPlot(PonteMC2000AudioProcessor& p) : processor(p)
@@ -308,19 +373,76 @@ int CrossoverPlot::currentBandCount() const noexcept
 
 float CrossoverPlot::frequencyToX(const double frequency) const noexcept
 {
+    constexpr float left = 34.0f;
+    constexpr float right = 8.0f;
     return static_cast<float>(std::log(frequency / 20.0) / std::log(1000.0))
-         * static_cast<float>(getWidth());
+         * std::max(1.0f, static_cast<float>(getWidth()) - left - right) + left;
 }
 
 double CrossoverPlot::xToFrequency(const float x) const noexcept
 {
+    constexpr double left = 34.0;
+    constexpr double right = 8.0;
     return 20.0 * std::pow(1000.0, juce::jlimit(0.0, 1.0,
-        static_cast<double>(x) / std::max(1, getWidth())));
+        (static_cast<double>(x) - left) / std::max(1.0, getWidth() - left - right)));
+}
+
+bool CrossoverPlot::bandIsAudible(const int requestedBand) const noexcept
+{
+    const auto count = currentBandCount();
+    auto anySolo = false;
+    for (int band = 0; band < count; ++band)
+        anySolo = anySolo || processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
+    if (requestedBand < 0 || requestedBand >= count) return false;
+    const auto enabled = processor.state.getRawParameterValue(
+        pontedsp::mc2000::parameters::bandId(requestedBand, "enabled"))->load() > 0.5f;
+    const auto solo = processor.state.getRawParameterValue(
+        pontedsp::mc2000::parameters::bandId(requestedBand, "solo"))->load() > 0.5f;
+    return anySolo ? solo : enabled;
+}
+
+int CrossoverPlot::bandForFrequency(const double frequency) const noexcept
+{
+    for (int crossover = 0; crossover < currentBandCount() - 1; ++crossover)
+        if (frequency < processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::crossoverId(crossover))->load())
+            return crossover;
+    return currentBandCount() - 1;
+}
+
+void CrossoverPlot::updateSpectrum()
+{
+    std::array<float, 4096> incoming {};
+    const auto count = processor.popSpectrumSamples(incoming.data(),
+                                                     static_cast<int>(incoming.size()));
+    for (int sample = 0; sample < count; ++sample)
+    {
+        fftInput[static_cast<std::size_t>(fftInputCount++)] = incoming[static_cast<std::size_t>(sample)];
+        if (fftInputCount < fftSize) continue;
+
+        std::fill(fftWork.begin(), fftWork.end(), 0.0f);
+        std::copy(fftInput.begin(), fftInput.end(), fftWork.begin());
+        fftWindow.multiplyWithWindowingTable(fftWork.data(), fftSize);
+        fft.performFrequencyOnlyForwardTransform(fftWork.data());
+        for (int bin = 0; bin < fftSize / 2; ++bin)
+        {
+            const auto db = juce::Decibels::gainToDecibels(
+                fftWork[static_cast<std::size_t>(bin)] * (2.0f / fftSize), -100.0f);
+            auto& displayed = spectrumDb[static_cast<std::size_t>(bin)];
+            displayed = spectrumReady ? 0.72f * displayed + 0.28f * db : db;
+        }
+        spectrumReady = true;
+        std::copy(fftInput.begin() + fftSize / 2, fftInput.end(), fftInput.begin());
+        fftInputCount = fftSize / 2;
+    }
 }
 
 void CrossoverPlot::paint(juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat();
+    const auto plot = area.withTrimmedLeft(34.0f).withTrimmedRight(8.0f)
+                          .withTrimmedTop(18.0f).withTrimmedBottom(20.0f);
     g.setColour(pontedsp::gui::Palette::ink().withAlpha(0.92f));
     g.fillRoundedRectangle(area, 8.0f);
     g.setFont(juce::FontOptions(9.0f));
@@ -328,25 +450,68 @@ void CrossoverPlot::paint(juce::Graphics& g)
     {
         const auto x = frequencyToX(frequency);
         g.setColour(pontedsp::gui::Palette::outline().withAlpha(0.5f));
-        g.drawVerticalLine(juce::roundToInt(x), 16.0f, area.getBottom() - 5.0f);
-        g.setColour(pontedsp::gui::Palette::mutedText());
+        g.drawVerticalLine(juce::roundToInt(x), plot.getY(), plot.getBottom());
+        g.setColour(pontedsp::gui::Palette::lime());
         const auto label = frequency >= 1000.0
             ? juce::String(frequency / 1000.0, 0) + "k"
             : juce::String(static_cast<int>(frequency));
-        g.drawText(label, juce::roundToInt(x) - 18, 1, 36, 14, juce::Justification::centred);
+        g.drawText(label, juce::roundToInt(x) - 18, juce::roundToInt(plot.getBottom() + 3.0f),
+                   36, 13, juce::Justification::centred);
+    }
+    for (const auto db : { -12, -6, 0, 6, 12 })
+    {
+        const auto y = juce::jmap(static_cast<float>(db), 12.0f, -12.0f,
+                                  plot.getY(), plot.getBottom());
+        g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.85f : 0.42f));
+        g.drawHorizontalLine(juce::roundToInt(y), plot.getX(), plot.getRight());
+        g.setColour(pontedsp::gui::Palette::lime());
+        g.drawText((db > 0 ? "+" : "") + juce::String(db), 2,
+                   juce::roundToInt(y) - 6, 29, 12, juce::Justification::centredRight);
+    }
+
+    if (spectrumReady)
+    {
+        juce::Path spectrum;
+        auto drawing = false;
+        const auto sampleRate = std::max(1.0, processor.getProcessingSampleRate());
+        for (int pixel = 0; pixel <= juce::roundToInt(plot.getWidth()); ++pixel)
+        {
+            const auto x = plot.getX() + static_cast<float>(pixel);
+            const auto frequency = xToFrequency(x);
+            if (!bandIsAudible(bandForFrequency(frequency)))
+            {
+                drawing = false;
+                continue;
+            }
+            const auto bin = juce::jlimit(0.0, static_cast<double>(fftSize / 2 - 1),
+                                          frequency * fftSize / sampleRate);
+            const auto lower = static_cast<int>(bin);
+            const auto upper = std::min(lower + 1, fftSize / 2 - 1);
+            const auto mix = static_cast<float>(bin - lower);
+            const auto db = juce::jmap(mix,
+                spectrumDb[static_cast<std::size_t>(lower)],
+                spectrumDb[static_cast<std::size_t>(upper)]);
+            const auto y = juce::jmap(juce::jlimit(-90.0f, 0.0f, db),
+                                      0.0f, -90.0f, plot.getY(), plot.getBottom());
+            if (!drawing) spectrum.startNewSubPath(x, y); else spectrum.lineTo(x, y);
+            drawing = true;
+        }
+        g.setColour(pontedsp::gui::Palette::mutedText().withAlpha(0.58f));
+        g.strokePath(spectrum, juce::PathStrokeType(1.2f));
     }
     for (int band = 0; band < currentBandCount(); ++band)
     {
         juce::Path path;
         for (int point = 0; point <= 180; ++point)
         {
-            const auto x = area.getWidth() * static_cast<float>(point) / 180.0f;
+            const auto x = plot.getX() + plot.getWidth() * static_cast<float>(point) / 180.0f;
             const auto db = processor.getEngine().getBandMagnitudeDb(band, xToFrequency(x));
-            const auto y = juce::jmap(static_cast<float>(juce::jlimit(-48.0, 3.0, db)),
-                                     3.0f, -48.0f, 18.0f, area.getBottom() - 8.0f);
+            const auto y = juce::jmap(static_cast<float>(juce::jlimit(-12.0, 12.0, db)),
+                                      12.0f, -12.0f, plot.getY(), plot.getBottom());
             if (point == 0) path.startNewSubPath(x, y); else path.lineTo(x, y);
         }
-        g.setColour(bandColours[static_cast<std::size_t>(band)]);
+        g.setColour(bandColours[static_cast<std::size_t>(band)]
+            .withAlpha(bandIsAudible(band) ? 1.0f : 0.28f));
         g.strokePath(path, juce::PathStrokeType(2.0f));
     }
     for (int crossover = 0; crossover < currentBandCount() - 1; ++crossover)
@@ -355,7 +520,8 @@ void CrossoverPlot::paint(juce::Graphics& g)
             pontedsp::mc2000::parameters::crossoverId(crossover))->load();
         const auto x = frequencyToX(frequency);
         g.setColour(pontedsp::gui::Palette::text());
-        g.fillEllipse(x - 4.0f, area.getCentreY() - 4.0f, 8.0f, 8.0f);
+        const auto zeroY = juce::jmap(0.0f, 12.0f, -12.0f, plot.getY(), plot.getBottom());
+        g.fillEllipse(x - 4.0f, zeroY - 4.0f, 8.0f, 8.0f);
     }
 }
 
@@ -404,26 +570,66 @@ void CrossoverPlot::mouseUp(const juce::MouseEvent&)
 void CompressionPlot::paint(juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat();
+    const auto plot = area.withTrimmedLeft(32.0f).withTrimmedRight(8.0f)
+                          .withTrimmedTop(21.0f).withTrimmedBottom(20.0f);
     g.setColour(pontedsp::gui::Palette::ink().withAlpha(0.92f));
     g.fillRoundedRectangle(area, 8.0f);
+    g.setFont(juce::FontOptions(8.0f));
+    for (const auto db : { -48, -36, -24, -12, 0 })
+    {
+        const auto x = juce::jmap(static_cast<float>(db), -48.0f, 0.0f,
+                                  plot.getX(), plot.getRight());
+        const auto y = juce::jmap(static_cast<float>(db), -48.0f, 0.0f,
+                                  plot.getBottom(), plot.getY());
+        g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.8f : 0.42f));
+        g.drawVerticalLine(juce::roundToInt(x), plot.getY(), plot.getBottom());
+        g.drawHorizontalLine(juce::roundToInt(y), plot.getX(), plot.getRight());
+        g.setColour(pontedsp::gui::Palette::lime());
+        g.drawText(juce::String(db), juce::roundToInt(x) - 13,
+                   juce::roundToInt(plot.getBottom() + 3.0f), 26, 12,
+                   juce::Justification::centred);
+        g.drawText(juce::String(db), 1, juce::roundToInt(y) - 6, 28, 12,
+                   juce::Justification::centredRight);
+    }
     g.setColour(pontedsp::gui::Palette::outline());
-    g.drawLine(0.0f, area.getBottom(), area.getRight(), 0.0f, 1.0f);
+    g.drawLine(plot.getX(), plot.getBottom(), plot.getRight(), plot.getY(), 1.0f);
     const auto count = juce::jlimit(2, 4, static_cast<int>(processor.state.getRawParameterValue(
         pontedsp::mc2000::parameters::bandCount)->load()) + 2);
+    auto anySolo = false;
+    for (int band = 0; band < count; ++band)
+        anySolo = anySolo || processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
     for (int band = 0; band < count; ++band)
     {
+        const auto enabled = processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
+        const auto solo = processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
+        const auto active = anySolo ? solo : enabled;
         juce::Path path;
         for (int point = 0; point <= 120; ++point)
         {
-            const auto input = -60.0 + 60.0 * static_cast<double>(point) / 120.0;
+            const auto input = -48.0 + 48.0 * static_cast<double>(point) / 120.0;
             const auto output = processor.getEngine().getStaticOutputDb(band, input);
-            const auto x = area.getWidth() * static_cast<float>(point) / 120.0f;
-            const auto y = juce::jmap(static_cast<float>(output), -60.0f, 0.0f,
-                                     area.getBottom(), 0.0f);
+            const auto x = plot.getX() + plot.getWidth() * static_cast<float>(point) / 120.0f;
+            const auto y = juce::jmap(static_cast<float>(juce::jlimit(-48.0, 0.0, output)),
+                                      -48.0f, 0.0f, plot.getBottom(), plot.getY());
             if (point == 0) path.startNewSubPath(x, y); else path.lineTo(x, y);
         }
-        g.setColour(bandColours[static_cast<std::size_t>(band)]);
+        g.setColour(bandColours[static_cast<std::size_t>(band)].withAlpha(active ? 1.0f : 0.28f));
         g.strokePath(path, juce::PathStrokeType(2.0f));
+
+        if (active)
+        {
+            const auto meter = processor.getEngine().getBandMeter(band);
+            const auto liveInput = juce::jlimit(-48.0f, 0.0f, meter.inputDb);
+            const auto liveOutput = juce::jlimit(-48.0f, 0.0f,
+                static_cast<float>(processor.getEngine().getStaticOutputDb(band, liveInput)));
+            const auto dotX = juce::jmap(liveInput, -48.0f, 0.0f, plot.getX(), plot.getRight());
+            const auto dotY = juce::jmap(liveOutput, -48.0f, 0.0f, plot.getBottom(), plot.getY());
+            g.setColour(bandColours[static_cast<std::size_t>(band)].darker(0.3f));
+            g.fillEllipse(dotX - 3.5f, dotY - 3.5f, 7.0f, 7.0f);
+        }
     }
     g.setColour(pontedsp::gui::Palette::mutedText());
     g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
@@ -433,11 +639,12 @@ void CompressionPlot::paint(juce::Graphics& g)
 void OutputMeter::paint(juce::Graphics& g)
 {
     const auto levels = processor.getEngine().getOutputMeterDb();
-    auto area = getLocalBounds().toFloat().reduced(3.0f);
+    auto area = getLocalBounds().toFloat().reduced(2.0f);
+    auto scale = area.removeFromBottom(11.0f);
     for (int channel = 0; channel < 2; ++channel)
     {
         auto row = area.removeFromTop(area.getHeight()
-            / static_cast<float>(2 - channel)).reduced(0.0f, 3.0f);
+            / static_cast<float>(2 - channel)).reduced(0.0f, 2.0f);
         g.setColour(pontedsp::gui::Palette::ink());
         g.fillRoundedRectangle(row, 2.0f);
         g.setColour(levels[static_cast<std::size_t>(channel)] > -0.1f
@@ -445,14 +652,27 @@ void OutputMeter::paint(juce::Graphics& g)
         g.fillRoundedRectangle(row.withWidth(row.getWidth()
             * meterPosition(levels[static_cast<std::size_t>(channel)])), 2.0f);
     }
+    g.setColour(pontedsp::gui::Palette::outline());
+    g.drawHorizontalLine(juce::roundToInt(scale.getY()), scale.getX(), scale.getRight());
+    g.setColour(pontedsp::gui::Palette::lime());
+    g.setFont(juce::FontOptions(7.0f));
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        const auto x = juce::jmap(static_cast<float>(tick), 0.0f, 4.0f,
+                                  scale.getX(), scale.getRight());
+        g.drawVerticalLine(juce::roundToInt(x), scale.getY(), scale.getY() + 2.0f);
+        g.drawText(juce::String(-48 + tick * 12), juce::roundToInt(x) - 13,
+                   juce::roundToInt(scale.getY() + 1.0f), 26, 9,
+                   juce::Justification::centred);
+    }
 }
 
 PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000AudioProcessor& p)
     : AudioProcessorEditor(&p), processor(p),
       inputGain(p.state, pontedsp::mc2000::parameters::inputGain, "INPUT", " dB",
-                "Adjust the level feeding the crossover and all compressor bands."),
+                "Adjust the level feeding the crossover and all compressor bands.", 1),
       outputGain(p.state, pontedsp::mc2000::parameters::outputGain, "OUTPUT", " dB",
-                 "Adjust the final level after all processed bands are summed."),
+                 "Adjust the final level after all processed bands are summed.", 1),
       crossoverPlot(p), compressionPlot(p), outputMeter(p)
 {
     setLookAndFeel(&lookAndFeel);
@@ -492,7 +712,7 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
     displayedBandCount = activeBandCount();
     contextHeader.setBandCount(displayedBandCount);
     setResizable(true, true);
-    setResizeLimits(1100, 580, 1600, 1100);
+    setResizeLimits(1100, 590, 1600, 1100);
     setSize(1250, 298 + 146 * displayedBandCount);
     startTimerHz(30);
 }
@@ -522,35 +742,33 @@ void PonteMC2000AudioProcessorEditor::resized()
 {
     auto area = getLocalBounds().reduced(12);
     auto header = area.removeFromTop(54);
-    outputMeter.setBounds(header.removeFromRight(140).reduced(4, 8));
-    contextHeader.setBounds(header.removeFromLeft(176));
-    header.removeFromLeft(10);
-    crossoverLabel.setBounds(header.removeFromLeft(72));
+    outputMeter.setBounds(header.removeFromRight(160).reduced(3, 7));
+    contextHeader.setBounds(header.removeFromLeft(160));
+    header.removeFromLeft(6);
+    crossoverLabel.setBounds(header.removeFromLeft(64));
     const auto activeFields = activeBandCount() - 1;
     for (int crossover = 0; crossover < 3; ++crossover)
     {
+        auto slot = header.removeFromLeft(90);
         const auto visible = crossover < activeFields;
         crossoverFields[static_cast<std::size_t>(crossover)]->setVisible(visible);
         if (visible)
-        {
             crossoverFields[static_cast<std::size_t>(crossover)]->setBounds(
-                header.removeFromLeft(100).reduced(0, 9));
-            header.removeFromLeft(10);
-        }
+                slot.removeFromLeft(84).reduced(0, 9));
     }
-    header.removeFromLeft(8);
-    bandCountLabel.setBounds(header.removeFromLeft(42));
-    bandCount.setBounds(header.removeFromLeft(102).reduced(0, 9));
-    header.removeFromLeft(10);
-    linkLabel.setBounds(header.removeFromLeft(36));
-    linkMaster.setBounds(header.removeFromLeft(122).reduced(0, 9));
+    header.removeFromLeft(4);
+    bandCountLabel.setBounds(header.removeFromLeft(36));
+    bandCount.setBounds(header.removeFromLeft(92).reduced(0, 9));
+    header.removeFromLeft(6);
+    linkLabel.setBounds(header.removeFromLeft(30));
+    linkMaster.setBounds(header.removeFromLeft(110).reduced(0, 9));
 
     auto displays = area.removeFromTop(212);
-    auto master = displays.removeFromLeft(180).reduced(3);
+    auto master = displays.removeFromLeft(168).reduced(3);
     phase.setBounds(master.removeFromBottom(32).reduced(8, 2));
     inputGain.setBounds(master.removeFromLeft(master.getWidth() / 2));
     outputGain.setBounds(master);
-    auto compression = displays.removeFromRight(displays.getWidth() / 2).reduced(5);
+    auto compression = displays.removeFromRight(juce::roundToInt(displays.getWidth() * 0.36f)).reduced(5);
     compressionPlot.setBounds(compression);
     crossoverPlot.setBounds(displays.reduced(5));
 
@@ -576,7 +794,118 @@ void PonteMC2000AudioProcessorEditor::updateBandCountLayout()
         (getHeight() - fixedHeight) / std::max(1, displayedBandCount));
     displayedBandCount = count;
     contextHeader.setBandCount(count);
-    setSize(getWidth(), fixedHeight + stripHeight * count);
+    setSize(getWidth(), juce::jlimit(590, 1100, fixedHeight + stripHeight * count));
+}
+
+void PonteMC2000AudioProcessorEditor::updateLinkedControls()
+{
+    const auto selectedMaster = juce::jlimit(-1, 3, static_cast<int>(
+        processor.state.getRawParameterValue(pontedsp::mc2000::parameters::linkMaster)->load()) - 1);
+    std::array<std::array<double, linkedControlCount>, 4> values {};
+    for (int band = 0; band < 4; ++band)
+        for (int control = 0; control < linkedControlCount; ++control)
+            values[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)] =
+                processor.state.getRawParameterValue(pontedsp::mc2000::parameters::bandId(
+                    band, linkedSuffixes[static_cast<std::size_t>(control)]))->load();
+
+    if (!linkDisplayInitialised || selectedMaster != displayedLinkMaster)
+    {
+        displayedLinkMaster = selectedMaster;
+        linkDisplayInitialised = true;
+        previousLinkedValues = values;
+        if (selectedMaster >= 0)
+            for (int band = 0; band < 4; ++band)
+                for (int control = 0; control < linkedControlCount; ++control)
+                    linkDisplayOffsets[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)] =
+                        values[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)]
+                      - values[static_cast<std::size_t>(selectedMaster)][static_cast<std::size_t>(control)];
+    }
+
+    if (selectedMaster < 0)
+    {
+        previousLinkedValues = values;
+        return;
+    }
+
+    auto masterChanged = false;
+    for (int control = 0; control < linkedControlCount; ++control)
+        masterChanged = masterChanged || std::abs(
+            values[static_cast<std::size_t>(selectedMaster)][static_cast<std::size_t>(control)]
+          - previousLinkedValues[static_cast<std::size_t>(selectedMaster)][static_cast<std::size_t>(control)]) > 1.0e-7;
+
+    if (masterChanged)
+    {
+        for (int band = 0; band < 4; ++band)
+        {
+            if (band == selectedMaster) continue;
+            for (int control = 0; control < linkedControlCount; ++control)
+            {
+                const auto id = pontedsp::mc2000::parameters::bandId(
+                    band, linkedSuffixes[static_cast<std::size_t>(control)]);
+                if (auto* parameter = processor.state.getParameter(id))
+                {
+                    const auto desired = values[static_cast<std::size_t>(selectedMaster)]
+                                                [static_cast<std::size_t>(control)]
+                                       + linkDisplayOffsets[static_cast<std::size_t>(band)]
+                                                           [static_cast<std::size_t>(control)];
+                    const auto normalised = parameter->convertTo0to1(static_cast<float>(desired));
+                    if (std::abs(parameter->getValue() - normalised) > 1.0e-7f)
+                        parameter->setValueNotifyingHost(normalised);
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int band = 0; band < 4; ++band)
+        {
+            if (band == selectedMaster) continue;
+            for (int control = 0; control < linkedControlCount; ++control)
+                if (std::abs(values[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)]
+                           - previousLinkedValues[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)]) > 1.0e-7)
+                    linkDisplayOffsets[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)] =
+                        values[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)]
+                      - values[static_cast<std::size_t>(selectedMaster)][static_cast<std::size_t>(control)];
+        }
+    }
+
+    const auto masterModeId = pontedsp::mc2000::parameters::bandId(selectedMaster, "tcMode");
+    const auto masterMode = processor.state.getRawParameterValue(masterModeId)->load();
+    for (int band = 0; band < 4; ++band)
+    {
+        if (band == selectedMaster) continue;
+        if (auto* parameter = processor.state.getParameter(
+            pontedsp::mc2000::parameters::bandId(band, "tcMode")))
+        {
+            const auto normalised = parameter->convertTo0to1(masterMode);
+            if (std::abs(parameter->getValue() - normalised) > 1.0e-7f)
+                parameter->setValueNotifyingHost(normalised);
+        }
+    }
+
+    for (int band = 0; band < 4; ++band)
+        for (int control = 0; control < linkedControlCount; ++control)
+            previousLinkedValues[static_cast<std::size_t>(band)][static_cast<std::size_t>(control)] =
+                processor.state.getRawParameterValue(pontedsp::mc2000::parameters::bandId(
+                    band, linkedSuffixes[static_cast<std::size_t>(control)]))->load();
+}
+
+void PonteMC2000AudioProcessorEditor::updateBandVisualStates()
+{
+    const auto count = activeBandCount();
+    auto anySolo = false;
+    for (int band = 0; band < count; ++band)
+        anySolo = anySolo || processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
+    for (int band = 0; band < 4; ++band)
+    {
+        const auto enabled = processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
+        const auto solo = processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
+        bands[static_cast<std::size_t>(band)]->setActiveVisual(
+            band < count && (anySolo ? solo : enabled));
+    }
 }
 
 void PonteMC2000AudioProcessorEditor::updateContextHelp()
@@ -615,8 +944,11 @@ void PonteMC2000AudioProcessorEditor::updateContextHelp()
 
 void PonteMC2000AudioProcessorEditor::timerCallback()
 {
+    updateLinkedControls();
     updateBandCountLayout();
+    updateBandVisualStates();
     updateContextHelp();
+    crossoverPlot.updateSpectrum();
     for (auto& band : bands) band->repaint();
     crossoverPlot.repaint();
     compressionPlot.repaint();

@@ -13,6 +13,11 @@ Auto and isolated four-band internal phase.
 `MC2000` remains the internal research codename. The public product name and
 plug-in identity are `Ponte MBC4`, avoiding third-party product identity.
 
+Current public parameter ranges are: Input/Output and per-band Gain
+`-24.0..+24.0 dB`, Threshold `-48.0..0.0 dB`, Ratio `1.00:1..10.00:1`,
+Knee `-10.00..+15.00`, BITE `1.00..10.00`, Attack `0.25..250.00 ms`, and
+Release `25.0..2500.0 ms`.
+
 `Research/NEXT_VALIDATION_AUDIT.md` records the latest Auto, BITE, stereo and
 sample-rate render audit. `MC2000NextPackAnalysis` is the companion executable
 for rerunning it against a clean validation-pack root.

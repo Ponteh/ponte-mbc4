@@ -541,6 +541,11 @@ Band 2 = -28
 
 Questa logica deve vivere nel **Parameter/Control layer**, non nel DSP core.
 
+**[IMPLEMENTED — v0.2.0]** Il DSP conserva gli offset relativi anche con
+l'editor chiuso. Quando la GUI è aperta, il controller di link replica i valori
+effettivi nei parametri slave, così knob, valori numerici, automazione host e
+selettori TC rimangono visivamente sincronizzati con il master.
+
 ---
 
 # 8. Crossover
@@ -782,24 +787,24 @@ La revisione NextGen porta il makeup gain a:
 0 ... +48 dB
 ```
 
-Per il target v6:
+Per il prodotto Ponte MBC4 v0.2:
 
 ```text
-Band Gain: 0 ... +48 dB
+Band Gain: -24.0 ... +24.0 dB
 default: 0 dB
 ```
 
-**[TODO]** verificare step/esatto comportamento del punto zero.
+Step GUI: `0.1 dB`.
 
 ---
 
 ## 11.2 Threshold
 
 ```text
--45 ... 0 dB
+-48.0 ... 0.0 dB
 ```
 
-Default da scegliere in base al preset iniziale del prodotto.
+Step GUI: `0.1 dB`.
 
 Parameter ID:
 
@@ -866,10 +871,16 @@ Range storico:
 
 Il minimo storico è `1`, non `0`.
 
-Nel DSP conviene normalizzare:
+Range pubblico Ponte MBC4 v0.2:
+
+```text
+1.00 ... 10.00
+```
+
+In `DSP_MODEL_4` il range pubblico viene normalizzato:
 
 ```cpp
-biteNorm = (bite - 1.0) / 49.0;
+biteNorm = (bite - 1.0) / 9.0;
 ```
 
 ottenendo:
@@ -889,7 +900,7 @@ bandN.bite
 ## 11.6 Attack
 
 ```text
-0.03 ms ... 250 ms
+0.25 ms ... 250.00 ms
 ```
 
 Distribuzione GUI presumibilmente fortemente non lineare/logaritmica.
@@ -905,7 +916,7 @@ bandN.attackMs
 ## 11.7 Release
 
 ```text
-5 ms ... 2500 ms
+25.0 ms ... 2500.0 ms
 ```
 
 Parameter ID:
@@ -1319,6 +1330,10 @@ Range:
 ```text
 0.03 ... 250 ms
 ```
+
+Questo è il range documentato/storico usato nei render di ricerca. Il controllo
+pubblico `DSP_MODEL_4` è limitato a `0.25 ... 250.00 ms`; i valori di ricerca
+inferiori vengono clampati a 0.25 ms nel percorso di produzione.
 
 ## 19.2 Test eseguiti
 
@@ -1826,6 +1841,11 @@ una scala BITE non lineare con ancore 1/5/10/50, mantenendo il tetto di relief
 da 3.2 dB e il detector fast/slow. Dettagli e numeri completi:
 `Research/NEXT_VALIDATION_AUDIT.md`.
 
+`DSP_MODEL_4` conserva l'andamento dolce calibrato fino a BITE 5, ma rimappa il
+massimo pubblico BITE 10 sul tetto completo di relief da 3.2 dB. Le ancore fino
+a 50 restano documentazione dei render storici e non sono più esposte dalla
+GUI v0.2.
+
 ---
 
 # 31. BITE candidate V1
@@ -1961,6 +1981,12 @@ Design consigliato:
 - grafici grandi;
 - meter leggibili.
 
+**[IMPLEMENTED — v0.2.0]** La GUI proprietaria corrente usa una palette
+near-black/viola con quattro accenti di banda, layout adattivo 2/3/4 bande,
+controlli numerici editabili e refresh dei dati live a 30 Hz. I controlli
+inattivi vengono attenuati senza ridurre l'opacità dei pulsanti `IN` e `SOLO`,
+che devono restare sempre leggibili e azionabili.
+
 ---
 
 # 35. GUI completa — wireframe MC404
@@ -2004,14 +2030,20 @@ Design consigliato:
 Il grafico deve mostrare:
 
 - asse X logaritmico 20 Hz – 20 kHz;
-- asse Y almeno da circa +12 a -48 dB;
+- asse Y da -12 a +12 dB, con le bande allineate a 0 dB;
 - curve delle bande;
-- area colorata opzionale;
+- analizzatore di spettro in background come linea grigia;
 - marker X1/X2/X3;
 - drag orizzontale;
 - text entry;
 - fine control con modifier;
 - ordine dei crossover sempre valido.
+
+**[IMPLEMENTED — v0.2.0]** Lo spettro usa una FIFO SPSC lock-free alimentata
+dal thread audio e una FFT Hann da 2048 campioni eseguita dalla GUI. Quando è
+presente almeno un `SOLO`, vengono mostrate solo le regioni di spettro delle
+bande in solo; altrimenti vengono mostrate le regioni con `IN` attivo. Le curve
+delle bande inattive restano visibili ma attenuate.
 
 Colori esempio:
 
@@ -2045,8 +2077,8 @@ BITE e ballistics non devono necessariamente cambiare la curva statica se il lor
 Range grafico consigliato:
 
 ```text
-X: -60 ... 0 dB
-Y: -60 ... 0 dB
+X: -48 ... 0 dB
+Y: -48 ... 0 dB
 ```
 
 Mostrare:
@@ -2055,6 +2087,11 @@ Mostrare:
 - curve per banda;
 - colore banda;
 - threshold marker opzionale.
+
+**[IMPLEMENTED — v0.2.0]** Ogni curva attiva mostra un marker live, nello
+stesso colore della banda ma leggermente più scuro, posizionato dal livello
+d'ingresso corrente. Il marker viene nascosto quando la banda è inattiva, così
+non rimane congelato sull'ultimo valore del meter.
 
 Il plot deve usare la stessa `GainComputer` del DSP, non una formula duplicata nella GUI.
 
@@ -2101,6 +2138,19 @@ IN = off
 
 **[TODO]** validare sull'originale.
 
+Nella GUI corrente `IN` e `SOLO` hanno questa dipendenza:
+
+```text
+SOLO passa da off a on  -> IN viene attivato
+IN passa da on a off    -> SOLO viene disattivato
+SOLO passa da on a off  -> IN rimane attivo
+```
+
+I due pulsanti restano sempre a piena opacità, anche quando il resto della
+strip è attenuato. Nel layer DSP una banda in `SOLO` è sempre considerata
+abilitata, anche durante il breve intervallo fra gli aggiornamenti dei due
+parametri host.
+
 ### SOLO
 
 Una o più bande possono essere solo contemporaneamente.
@@ -2109,6 +2159,10 @@ Il solo deve agire dopo crossover e processing della banda.
 
 **[IMPLEMENTED]** le transizioni Solo usano un crossfade di 5 ms per banda;
 non vengono effettuati mute istantanei durante automazione o cambio di stato.
+
+Più bande possono restare in `SOLO` contemporaneamente; in quel caso tutte le
+bande non in solo vengono attenuate nella GUI e rimosse dalla visualizzazione
+live dello spettro e dei marker Static I/O.
 
 ---
 
@@ -2166,7 +2220,7 @@ Esempio concettuale:
 
 ```cpp
 NormalisableRange<float> attackRange {
-    0.03f,
+    0.25f,
     250.0f
 };
 
@@ -2174,6 +2228,18 @@ attackRange.setSkewForCentre (10.0f);
 ```
 
 Il centre va fittato alla sensazione/mapping originale.
+
+Range e precisioni pubbliche correnti:
+
+| Parametro | Range | Precisione GUI |
+|---|---:|---:|
+| Input / Output / Gain | -24.0..+24.0 dB | 0.1 dB |
+| Threshold | -48.0..0.0 dB | 0.1 dB |
+| Ratio | 1.00:1..10.00:1 | 0.01 |
+| Knee | -10.00..+15.00 | 0.01 |
+| BITE | 1.00..10.00 | 0.01 |
+| Attack | 0.25..250.00 ms | 0.01 ms |
+| Release | 25.0..2500.0 ms | 0.1 ms |
 
 ---
 
@@ -2251,6 +2317,13 @@ Per MC202/MC303:
 - rimuovere fisicamente le righe non usate;
 - CrossoverPlot usa 1 o 2 marker;
 - Link menu mostra solo master disponibili.
+
+**[IMPLEMENTED — v0.2.0]** La posizione di `MODE` è indipendente dal numero di
+crossover visibili: i tre slot di crossover rimangono riservati nel layout.
+La dimensione minima è `1100 x 590` anche in mode 4-band, equivalente
+all'altezza normale del mode 2-band; knob, meter e intestazione algoritmo si
+comprimono senza sovrapporsi. Cambiando il numero di bande, l'editor conserva
+un'altezza per-strip coerente entro i limiti della finestra.
 
 ---
 
@@ -3226,6 +3299,12 @@ meter:
 
 Non usare il verde McDSP come identità predominante.
 
+**[IMPLEMENTED — v0.2.0]** I selettori e i pulsanti non attivi (`PHASE`,
+`SOLO`, `MODE`, `LINK`, `R1/R2/AUTO`) hanno fondo nero. Le strip usano
+separatori viola chiaro fra Gain/Threshold, Ratio/Knee e BITE/Attack. Ogni
+banda espone tre barre sottili `IN/OUT/GR`, ciascuna con scala dB viola e numeri
+lime; il meter master usa lo stesso linguaggio visivo.
+
 ---
 
 # 72. Knob behavior
@@ -3329,6 +3408,7 @@ DSP model versions:
 DSP_MODEL_1 = initial POC
 DSP_MODEL_2 = fitted Type2/BITE
 DSP_MODEL_3 = Auto verified
+DSP_MODEL_4 = public v0.2 ranges and BITE 1..10 mapping
 ```
 
 Salvare il model version nel preset per garantire backward compatibility.
@@ -3377,17 +3457,17 @@ Il POC è considerato completato quando:
 - [ ] BITE coincide su test sintetici.
 - [ ] Auto è stato caratterizzato e implementato.
 - [x] VST3 espone un sidechain esterno per-banda; matching dell'originale ancora da validare.
-- [ ] band linking funziona.
-- [ ] Solo/In funzionano.
-- [ ] meter completi.
-- [ ] GUI crossover interattiva.
-- [ ] GUI compression curve.
-- [ ] state/preset.
+- [x] band linking funziona nel DSP e sincronizza i controlli GUI.
+- [x] Solo/In funzionano con la dipendenza SOLO-on -> IN-on e IN-off -> SOLO-off.
+- [x] meter IN/OUT/GR e master completi di scale dB.
+- [x] GUI crossover interattiva con assi e analizzatore FFT.
+- [x] GUI compression curve con assi e marker live per banda attiva.
+- [x] state/preset con schema versionato.
 - [ ] pluginval.
 - [ ] Steinberg Validator.
 - [ ] no allocazioni realtime.
-- [ ] test regression automatici.
-- [ ] documentazione licenze third-party.
+- [x] test regression automatici.
+- [x] documentazione licenze third-party.
 
 ---
 
@@ -3427,13 +3507,13 @@ Non serve aspettare Auto/BITE per costruire l'80% dell'infrastruttura.
 | Type-1 release | MODELLO EMPIRICO DISPONIBILE |
 | Type-2 | MODELLO EMPIRICO V1 DISPONIBILE |
 | Auto | MANUAL CONTROLS IGNORATI VERIFICATO; FALLBACK CREST-FACTOR, FIT TRAIETTORIA PENDENTE |
-| BITE | FAST/SLOW E SCALA 1/5/10/50 CALIBRATI; FIT FINE PER-BANDA PENDENTE |
+| BITE | FAST/SLOW CALIBRATO; CONTROLLO PUBBLICO 1..10 MAPPATO SUL RELIEF COMPLETO |
 | Sidechain esterno | IMPLEMENTATO PER-BANDA; REFERENCE FIT PENDENTE |
 | Automazione crossover/Solo | SMOOTHING IMPLEMENTATO; MATCHING ORIGINALE PENDENTE |
-| band linking | DOCUMENTATO |
-| master controls | DOCUMENTATI |
-| GUI | SPECIFICATA |
-| VST3 architecture | SPECIFICATA |
+| band linking | IMPLEMENTATO DSP + SINCRONIZZAZIONE GUI |
+| master controls | IMPLEMENTATI |
+| GUI | IMPLEMENTATA, RESPONSIVE, FFT E METER LIVE |
+| VST3 architecture | IMPLEMENTATA |
 
 ---
 
@@ -3492,19 +3572,19 @@ Questo POC deve rimanere un documento vivo: ogni nuova misura deve aggiornare la
 | Xover | X1 | 20..20000 Hz | ordine vincolato |
 | Xover | X2 | 20..20000 Hz | MC303/404 |
 | Xover | X3 | 20..20000 Hz | MC404 |
-| Band | IN | On/Off | independent |
+| Band | IN | On/Off | SOLO-on forza IN-on; IN-off forza SOLO-off |
 | Band | Solo | On/Off | multiple solo |
-| Band | Gain | 0..+48 dB | NextGen/v6 |
-| Band | Threshold | -45..0 dB | |
+| Band | Gain | -24.0..+24.0 dB | step 0.1 dB |
+| Band | Threshold | -48.0..0.0 dB | step 0.1 dB |
 | Band | Ratio | 1..10 | |
 | Band | Knee | -10..+15 | |
-| Band | BITE | 1..50 | |
-| Band | Attack | 0.03..250 ms | |
-| Band | Release | 5..2500 ms | |
+| Band | BITE | 1..10 | step 0.01 |
+| Band | Attack | 0.25..250 ms | log, step 0.01 ms |
+| Band | Release | 25..2500 ms | log, step 0.1 ms |
 | Band | TC Type | R1/R2/Auto | |
-| Meter | Input | approx -60..0 dB | GUI |
-| Meter | Output | approx -60..0 dB | GUI |
-| Meter | GR | 0..60 dB | GUI |
+| Meter | Input | -48..0 dB | GUI con scala |
+| Meter | Output | -48..0 dB | GUI con scala |
+| Meter | GR | 0..48 dB | GUI con scala |
 
 ---
 

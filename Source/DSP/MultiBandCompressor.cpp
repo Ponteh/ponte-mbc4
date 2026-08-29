@@ -51,13 +51,13 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
     x[2] = clampFinite(x[2], x[1] + 1.0, 20000.0, 10000.0);
     for (auto& band : currentParameters.bands)
     {
-        band.gainDb = clampFinite(band.gainDb, 0.0, 48.0, 0.0);
-        band.thresholdDb = clampFinite(band.thresholdDb, -45.0, 0.0, 0.0);
+        band.gainDb = clampFinite(band.gainDb, -24.0, 24.0, 0.0);
+        band.thresholdDb = clampFinite(band.thresholdDb, -48.0, 0.0, 0.0);
         band.ratio = clampFinite(band.ratio, 1.0, 10.0, 1.0);
         band.knee = clampFinite(band.knee, -10.0, 15.0, 0.0);
-        band.bite = clampFinite(band.bite, 1.0, 50.0, 1.0);
-        band.attackMs = clampFinite(band.attackMs, 0.03, 250.0, 10.0);
-        band.releaseMs = clampFinite(band.releaseMs, 5.0, 2500.0, 250.0);
+        band.bite = clampFinite(band.bite, 1.0, 10.0, 1.0);
+        band.attackMs = clampFinite(band.attackMs, 0.25, 250.0, 10.0);
+        band.releaseMs = clampFinite(band.releaseMs, 25.0, 2500.0, 250.0);
         const auto mode = std::clamp(static_cast<int>(band.tcMode), 0, 2);
         band.tcMode = static_cast<TCMode>(mode);
     }

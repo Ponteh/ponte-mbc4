@@ -11,9 +11,9 @@ float value(const juce::AudioProcessorValueTreeState& state, const juce::String&
 }
 
 juce::NormalisableRange<float> logarithmicRange(const float minimum, const float maximum,
-                                                 const float centre)
+                                                 const float centre, const float interval = 0.0f)
 {
-    juce::NormalisableRange<float> range(minimum, maximum);
+    juce::NormalisableRange<float> range(minimum, maximum, interval);
     range.setSkewForCentre(centre);
     return range;
 }
@@ -23,12 +23,18 @@ constexpr std::array<const char*, LinkRuntime::linkedParameters> linkedSuffixes 
 };
 
 constexpr std::array<double, LinkRuntime::linkedParameters> minima {
-    0.0, -45.0, 1.0, -10.0, 1.0, 0.03, 5.0
+    -24.0, -48.0, 1.0, -10.0, 1.0, 0.25, 25.0
 };
 
 constexpr std::array<double, LinkRuntime::linkedParameters> maxima {
-    48.0, 0.0, 10.0, 15.0, 50.0, 250.0, 2500.0
+    24.0, 0.0, 10.0, 15.0, 10.0, 250.0, 2500.0
 };
+
+juce::NormalisableRange<float> steppedRange(const float minimum, const float maximum,
+                                             const float interval)
+{
+    return { minimum, maximum, interval };
+}
 
 } // namespace
 
@@ -46,9 +52,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> layout;
     layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID(inputGain, 1), "Input Gain", -24.0f, 24.0f, 0.0f));
+        juce::ParameterID(inputGain, 1), "Input Gain", steppedRange(-24.0f, 24.0f, 0.1f), 0.0f));
     layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID(outputGain, 1), "Output Gain", -24.0f, 24.0f, 0.0f));
+        juce::ParameterID(outputGain, 1), "Output Gain", steppedRange(-24.0f, 24.0f, 0.1f), 0.0f));
     layout.push_back(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID(phaseInvert, 1), "Phase Invert", false));
     layout.push_back(std::make_unique<juce::AudioParameterChoice>(
@@ -71,21 +77,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
         layout.push_back(std::make_unique<juce::AudioParameterBool>(
             juce::ParameterID(bandId(band, "solo"), 1), "Band " + number + " Solo", false));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-            juce::ParameterID(bandId(band, "gainDb"), 1), "Band " + number + " Gain", 0.0f, 48.0f, 0.0f));
+            juce::ParameterID(bandId(band, "gainDb"), 1), "Band " + number + " Gain",
+            steppedRange(-24.0f, 24.0f, 0.1f), 0.0f));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-            juce::ParameterID(bandId(band, "thresholdDb"), 1), "Band " + number + " Threshold", -45.0f, 0.0f, 0.0f));
+            juce::ParameterID(bandId(band, "thresholdDb"), 1), "Band " + number + " Threshold",
+            steppedRange(-48.0f, 0.0f, 0.1f), 0.0f));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-            juce::ParameterID(bandId(band, "ratio"), 1), "Band " + number + " Ratio", 1.0f, 10.0f, 1.0f));
+            juce::ParameterID(bandId(band, "ratio"), 1), "Band " + number + " Ratio",
+            steppedRange(1.0f, 10.0f, 0.01f), 1.0f));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-            juce::ParameterID(bandId(band, "knee"), 1), "Band " + number + " Knee", -10.0f, 15.0f, 0.0f));
+            juce::ParameterID(bandId(band, "knee"), 1), "Band " + number + " Knee",
+            steppedRange(-10.0f, 15.0f, 0.01f), 0.0f));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
-            juce::ParameterID(bandId(band, "bite"), 1), "Band " + number + " Bite", 1.0f, 50.0f, 1.0f));
+            juce::ParameterID(bandId(band, "bite"), 1), "Band " + number + " Bite",
+            steppedRange(1.0f, 10.0f, 0.01f), 1.0f));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID(bandId(band, "attackMs"), 1), "Band " + number + " Attack",
-            logarithmicRange(0.03f, 250.0f, 10.0f), 10.0f));
+            logarithmicRange(0.25f, 250.0f, 10.0f, 0.01f), 10.0f));
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID(bandId(band, "releaseMs"), 1), "Band " + number + " Release",
-            logarithmicRange(5.0f, 2500.0f, 250.0f), 250.0f));
+            logarithmicRange(25.0f, 2500.0f, 250.0f, 0.1f), 250.0f));
         layout.push_back(std::make_unique<juce::AudioParameterChoice>(
             juce::ParameterID(bandId(band, "tcMode"), 1), "Band " + number + " Time Constant",
             juce::StringArray { "R1", "R2", "Auto" }, 0));
@@ -112,8 +123,8 @@ dsp::GlobalParameters readSnapshot(const juce::AudioProcessorValueTreeState& sta
     for (int band = 0; band < 4; ++band)
     {
         auto& p = snapshot.bands[static_cast<std::size_t>(band)];
-        p.enabled = value(state, bandId(band, "enabled")) > 0.5f;
         p.solo = value(state, bandId(band, "solo")) > 0.5f;
+        p.enabled = p.solo || value(state, bandId(band, "enabled")) > 0.5f;
         for (int parameter = 0; parameter < LinkRuntime::linkedParameters; ++parameter)
             raw[static_cast<std::size_t>(band)][static_cast<std::size_t>(parameter)] =
                 value(state, bandId(band, linkedSuffixes[static_cast<std::size_t>(parameter)]));

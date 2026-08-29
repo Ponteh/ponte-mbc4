@@ -117,22 +117,22 @@ void testBallisticsModels()
     type1.prepare(sampleRate);
     auto gr = 0.0;
     for (int n = 0; n < static_cast<int>(sampleRate * 0.5); ++n)
-        gr = type1.process(12.0, 1.0, 0.03, 100.0, TCMode::type1);
+        gr = type1.process(12.0, 1.0, 0.25, 100.0, TCMode::type1);
     const auto releaseStart = gr;
     for (int n = 0; n < static_cast<int>(sampleRate * 0.1336); ++n)
-        gr = type1.process(0.0, 0.0, 0.03, 100.0, TCMode::type1);
+        gr = type1.process(0.0, 0.0, 0.25, 100.0, TCMode::type1);
     expectNear(gr / releaseStart, 0.5, 0.003, "Type-1 measured release reaches half at 1.336 R");
 
     Ballistics seed;
     seed.prepare(sampleRate);
     for (int n = 0; n < static_cast<int>(sampleRate * 0.2); ++n)
-        seed.process(12.0, 1.0, 0.03, 1000.0, TCMode::type1);
+        seed.process(12.0, 1.0, 0.25, 1000.0, TCMode::type1);
     auto quiet = seed;
     auto lowerEvent = seed;
     for (int n = 0; n < 4800; ++n)
     {
-        const auto a = quiet.process(0.0, 0.0, 0.03, 1000.0, TCMode::type1);
-        const auto b = lowerEvent.process(2.0, 0.2, 0.03, 1000.0, TCMode::type1);
+        const auto a = quiet.process(0.0, 0.0, 0.25, 1000.0, TCMode::type1);
+        const auto b = lowerEvent.process(2.0, 0.2, 0.25, 1000.0, TCMode::type1);
         expectNear(a, b, 1.0e-12, "Type-1 ignores a second event below its release envelope");
     }
 
@@ -142,15 +142,15 @@ void testBallisticsModels()
     type2Event.prepare(sampleRate);
     for (int n = 0; n < static_cast<int>(sampleRate * 0.2); ++n)
     {
-        type2Quiet.process(12.0, 1.0, 0.03, 1000.0, TCMode::type2);
-        type2Event.process(12.0, 1.0, 0.03, 1000.0, TCMode::type2);
+        type2Quiet.process(12.0, 1.0, 0.25, 1000.0, TCMode::type2);
+        type2Event.process(12.0, 1.0, 0.25, 1000.0, TCMode::type2);
     }
     auto quietGr = 0.0;
     auto eventGr = 0.0;
     for (int n = 0; n < 4800; ++n)
     {
-        quietGr = type2Quiet.process(0.0, 0.0, 0.03, 1000.0, TCMode::type2);
-        eventGr = type2Event.process(2.0, 0.25, 0.03, 1000.0, TCMode::type2);
+        quietGr = type2Quiet.process(0.0, 0.0, 0.25, 1000.0, TCMode::type2);
+        eventGr = type2Event.process(2.0, 0.25, 0.25, 1000.0, TCMode::type2);
     }
     expect(eventGr > quietGr, "Type-2 lower event slows the measured adaptive release");
 
@@ -162,7 +162,7 @@ void testBallisticsModels()
     {
         const auto detector = n < 12000 ? 0.05 : 0.8;
         const auto target = n < 12000 ? 0.0 : 10.0;
-        const auto fast = autoFastManual.process(target, detector, 0.03, 5.0, TCMode::automatic);
+        const auto fast = autoFastManual.process(target, detector, 0.25, 25.0, TCMode::automatic);
         const auto slow = autoSlowManual.process(target, detector, 250.0, 2500.0, TCMode::automatic);
         expectNear(fast, slow, 1.0e-12,
                    "Auto computes timing from the signal and ignores manual Attack/Release");
@@ -174,16 +174,16 @@ void testBallisticsModels()
         scaled.prepare(rate);
         auto current = 0.0;
         for (int n = 0; n < static_cast<int>(rate * 0.5); ++n)
-            current = scaled.process(12.0, 1.0, 0.03, 100.0, TCMode::type1);
+            current = scaled.process(12.0, 1.0, 0.25, 100.0, TCMode::type1);
         const auto start = current;
         for (int n = 0; n < static_cast<int>(rate * 0.1336); ++n)
-            current = scaled.process(0.0, 0.0, 0.03, 100.0, TCMode::type1);
+            current = scaled.process(0.0, 0.0, 0.25, 100.0, TCMode::type1);
         expectNear(current / start, 0.5, 0.003,
                    "Type-1 timing remains invariant across sample rates");
     }
 }
 
-double maximumBiteRelief(const double riseSeconds, const double biteValue = 50.0)
+double maximumBiteRelief(const double riseSeconds, const double biteValue = 10.0)
 {
     using namespace pontedsp::mc2000::dsp;
     constexpr double sampleRate = 48000.0;
@@ -214,8 +214,8 @@ void testBiteModel()
     expect(biteTen > biteFive * 4.0,
            "BITE 10 follows the validated nonlinear low-range control response");
     for (int n = 0; n < 48000; ++n)
-        bite.process(6.0, 1.0, 50.0);
-    expectNear(bite.process(6.0, 1.0, 50.0), 6.0, 0.001,
+        bite.process(6.0, 1.0, 10.0);
+    expectNear(bite.process(6.0, 1.0, 10.0), 6.0, 0.001,
                "BITE converges to neutral gain at steady state");
 }
 
@@ -229,7 +229,7 @@ void testStereoDetectorAndFiniteOutput()
     {
         band.thresholdDb = -24.0;
         band.ratio = 4.0;
-        band.attackMs = 0.03;
+        band.attackMs = 0.25;
         band.releaseMs = 250.0;
     }
     compressor.setParameters(parameters);
@@ -271,7 +271,7 @@ void testExternalSidechain()
     {
         band.thresholdDb = -24.0;
         band.ratio = 10.0;
-        band.attackMs = 0.03;
+        band.attackMs = 0.25;
         band.releaseMs = 250.0;
         band.bite = 1.0;
     }
@@ -340,7 +340,7 @@ void testExternalSidechainAcrossTimeConstants()
         {
             band.thresholdDb = -24.0;
             band.ratio = 10.0;
-            band.attackMs = 0.03;
+            band.attackMs = 0.25;
             band.releaseMs = 250.0;
             band.bite = 1.0;
             band.tcMode = mode;

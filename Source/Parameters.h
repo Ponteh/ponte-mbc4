@@ -5,7 +5,7 @@
 
 namespace pontedsp::mc2000::parameters {
 
-inline constexpr int stateSchemaVersion = 1;
+inline constexpr int stateSchemaVersion = 2;
 inline constexpr const char* inputGain = "global.inputGainDb";
 inline constexpr const char* outputGain = "global.outputGainDb";
 inline constexpr const char* phaseInvert = "global.phaseInvert";
@@ -29,4 +29,3 @@ dsp::GlobalParameters readSnapshot(const juce::AudioProcessorValueTreeState& sta
                                    LinkRuntime& linkRuntime) noexcept;
 
 } // namespace pontedsp::mc2000::parameters
-
