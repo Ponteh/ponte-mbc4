@@ -3,17 +3,29 @@
 #include "PluginProcessor.h"
 #include "PonteLookAndFeel.h"
 #include <array>
+#include <functional>
 #include <juce_dsp/juce_dsp.h>
 
-class ParameterKnob final : public juce::Component
+class ParameterKnob final : public juce::Component,
+                            private juce::Timer
 {
 public:
     ParameterKnob(juce::AudioProcessorValueTreeState&, const juce::String& parameterId,
                   const juce::String& caption, const juce::String& suffix = {},
                   const juce::String& helpText = {}, int decimalPlaces = 2);
     void resized() override;
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
+    void focusOfChildComponentChanged(FocusChangeType) override;
 
 private:
+    void timerCallback() override;
+    void showValueForInteraction();
+    void setValueVisible(bool visible);
+    double hoverStartedMs {};
+    double visibleUntilMs {};
+    bool hovering {};
+    bool dragging {};
     juce::Label name;
     juce::Slider slider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
@@ -73,6 +85,10 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void setActiveVisual(bool active);
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
+    void focusOfChildComponentChanged(FocusChangeType) override;
+    std::function<void()> onInteraction;
 
 private:
     PonteMC2000AudioProcessor& processor;
@@ -122,9 +138,11 @@ class CompressionPlot final : public juce::Component
 public:
     explicit CompressionPlot(PonteMC2000AudioProcessor& p) : processor(p) {}
     void paint(juce::Graphics&) override;
+    void setForegroundBand(int band);
 
 private:
     PonteMC2000AudioProcessor& processor;
+    int foregroundBand { 0 };
 };
 
 class OutputMeter final : public juce::Component

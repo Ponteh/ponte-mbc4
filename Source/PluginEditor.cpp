@@ -11,12 +11,13 @@ const std::array<juce::Colour, 4> bandColours {
 };
 
 void configureLabel(juce::Label& label, const juce::String& text, const float size,
-                    const juce::Justification justification = juce::Justification::centred)
+                    const juce::Justification justification = juce::Justification::centred,
+                    const juce::Colour colour = pontedsp::gui::Palette::text())
 {
     label.setText(text, juce::dontSendNotification);
     label.setFont(juce::FontOptions(size, juce::Font::bold));
     label.setJustificationType(justification);
-    label.setColour(juce::Label::textColourId, pontedsp::gui::Palette::text());
+    label.setColour(juce::Label::textColourId, colour);
 }
 
 void setContextHelp(juce::Component& component, const juce::String& text)
@@ -41,8 +42,11 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
                              const juce::String& helpText, const int decimalPlaces)
 {
     setContextHelp(*this, helpText);
-    configureLabel(name, caption, 10.0f);
+    configureLabel(name, caption, 10.0f, juce::Justification::centred,
+                   pontedsp::gui::Palette::text());
     addAndMakeVisible(name);
+    slider.getProperties().set("mbc4ContextualValue", true);
+    slider.setWantsKeyboardFocus(true);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 18);
     slider.setDoubleClickReturnValue(true,
@@ -54,6 +58,68 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
     addAndMakeVisible(slider);
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         state, parameterId, slider);
+    slider.onDragStart = [this]
+    {
+        dragging = true;
+        showValueForInteraction();
+    };
+    slider.onDragEnd = [this]
+    {
+        dragging = false;
+        showValueForInteraction();
+    };
+    addMouseListener(this, true);
+    setValueVisible(false);
+    startTimerHz(30);
+}
+
+void ParameterKnob::setValueVisible(const bool visible)
+{
+    slider.getProperties().set("mbc4ValueVisible", visible);
+    // Keep the text box in the layout and preserve JUCE's editable value binding.
+    for (auto* child : slider.getChildren())
+        if (auto* label = dynamic_cast<juce::Label*>(child))
+        {
+            label->setAlpha(visible ? 1.0f : 0.0f);
+            label->setInterceptsMouseClicks(visible, visible);
+        }
+}
+
+void ParameterKnob::showValueForInteraction()
+{
+    visibleUntilMs = juce::Time::getMillisecondCounterHiRes() + 700.0;
+    setValueVisible(true);
+}
+
+void ParameterKnob::mouseDown(const juce::MouseEvent&)
+{
+    showValueForInteraction();
+}
+
+void ParameterKnob::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&)
+{
+    showValueForInteraction();
+}
+
+void ParameterKnob::focusOfChildComponentChanged(FocusChangeType)
+{
+    if (hasKeyboardFocus(true)) showValueForInteraction();
+}
+
+void ParameterKnob::timerCallback()
+{
+    const auto now = juce::Time::getMillisecondCounterHiRes();
+    const auto over = slider.isMouseOver(true);
+    if (over && !hovering) hoverStartedMs = now;
+    hovering = over;
+    const auto hoverReady = over && now - hoverStartedMs >= 400.0;
+    auto editing = false;
+    for (auto* child : slider.getChildren())
+        if (const auto* label = dynamic_cast<const juce::Label*>(child))
+            editing = editing || label->isBeingEdited();
+    if (hoverReady) visibleUntilMs = juce::jmax(visibleUntilMs, now + 200.0);
+    setValueVisible(isShowing() && (dragging || editing || hasKeyboardFocus(true)
+                                  || hoverReady || now < visibleUntilMs));
 }
 
 void ParameterKnob::resized()
@@ -91,9 +157,10 @@ void ContextHeader::paint(juce::Graphics& g)
     auto title = area;
     auto subtitle = title.removeFromBottom(20);
     g.setColour(pontedsp::gui::Palette::text());
-    g.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+    g.setFont(juce::FontOptions(17.0f, juce::Font::bold));
     g.drawFittedText("PONTE DSP", title, juce::Justification::centredLeft, 1);
-    g.setFont(juce::FontOptions(18.0f));
+    g.setColour(pontedsp::gui::Palette::mutedText());
+    g.setFont(juce::FontOptions(13.0f));
     g.drawFittedText("MBC4", subtitle, juce::Justification::centredLeft, 1);
 }
 
@@ -220,32 +287,33 @@ void BandMeter::paint(juce::Graphics& g)
     for (int i = 0; i < 3; ++i)
     {
         auto line = area.removeFromTop(row);
-        g.setColour(pontedsp::gui::Palette::mutedText());
+        g.setColour(pontedsp::gui::Palette::text());
         g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
         g.drawText(labels[static_cast<std::size_t>(i)], line.removeFromLeft(27.0f),
                    juce::Justification::centredLeft);
-        const auto scaleHeight = juce::jlimit(5.0f, 10.0f, row * 0.36f);
+        const auto scaleHeight = 12.0f;
         auto scale = line.removeFromBottom(scaleHeight);
         auto bar = line.withSizeKeepingCentre(line.getWidth(),
-            juce::jmin(8.0f, line.getHeight()));
-        g.setColour(pontedsp::gui::Palette::ink());
+            juce::jmin(6.0f, line.getHeight()));
+        g.setColour(pontedsp::gui::Palette::elevated());
         g.fillRoundedRectangle(bar, 2.0f);
         g.setColour(i == 2 ? pontedsp::gui::Palette::danger()
                            : bandColours[static_cast<std::size_t>(band)]);
         g.fillRoundedRectangle(bar.withWidth(bar.getWidth()
             * positions[static_cast<std::size_t>(i)]), 2.0f);
 
-        g.setColour(pontedsp::gui::Palette::outline());
+        g.setColour(pontedsp::gui::Palette::divider());
         g.drawHorizontalLine(juce::roundToInt(scale.getY()), scale.getX(), scale.getRight());
-        g.setColour(pontedsp::gui::Palette::lime());
-        g.setFont(juce::FontOptions(scaleHeight >= 8.0f ? 7.0f : 5.5f));
+        g.setColour(pontedsp::gui::Palette::text());
+        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
         for (int tick = 0; tick < 5; ++tick)
         {
             const auto x = juce::jmap(static_cast<float>(tick), 0.0f, 4.0f,
                                       scale.getX(), scale.getRight());
             g.drawVerticalLine(juce::roundToInt(x), scale.getY(), scale.getY() + 2.0f);
             const auto value = i == 2 ? -12 * tick : -48 + 12 * tick;
-            g.drawText(juce::String(value), juce::roundToInt(x) - 13,
+            const auto textX = juce::jlimit(scale.getX(), scale.getRight() - 26.0f, x - 13.0f);
+            g.drawText(juce::String(value), juce::roundToInt(textX),
                        juce::roundToInt(scale.getY() + 1.0f), 26,
                        juce::roundToInt(scaleHeight),
                        juce::Justification::centred);
@@ -274,7 +342,8 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
     configureLabel(title, "BAND " + juce::String(band + 1), 13.0f,
                    juce::Justification::centredLeft);
     title.setColour(juce::Label::textColourId, bandColours[static_cast<std::size_t>(band)]);
-    configureLabel(algorithmLabel, "ALGORITHM", 9.0f, juce::Justification::centredLeft);
+    configureLabel(algorithmLabel, "ALGORITHM", 9.0f, juce::Justification::centredLeft,
+                   pontedsp::gui::Palette::text());
     addAndMakeVisible(title);
     for (auto* component : std::array<juce::Component*, 12> {
         &enabled, &solo, &gain, &threshold, &ratio, &knee, &bite, &attack, &release,
@@ -303,18 +372,34 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
         p.state, pontedsp::mc2000::parameters::bandId(band, "solo"), solo);
     timeConstantAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         p.state, pontedsp::mc2000::parameters::bandId(band, "tcMode"), timeConstant);
+    addMouseListener(this, true);
+}
+
+void BandStrip::mouseDown(const juce::MouseEvent&)
+{
+    if (onInteraction) onInteraction();
+}
+
+void BandStrip::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&)
+{
+    if (onInteraction) onInteraction();
+}
+
+void BandStrip::focusOfChildComponentChanged(FocusChangeType)
+{
+    if (hasKeyboardFocus(true) && onInteraction) onInteraction();
 }
 
 void BandStrip::paint(juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat().reduced(1.0f);
     g.setColour(pontedsp::gui::Palette::surface().withAlpha(activeVisual ? 0.94f : 0.54f));
-    g.fillRoundedRectangle(area, 8.0f);
+    g.fillRoundedRectangle(area, 6.0f);
     g.setColour(bandColours[static_cast<std::size_t>(band)]
-        .withAlpha(activeVisual ? 0.42f : 0.18f));
-    g.drawRoundedRectangle(area, 8.0f, 1.0f);
+        .withAlpha(activeVisual ? 0.38f : 0.16f));
+    g.drawRoundedRectangle(area, 6.0f, 1.0f);
 
-    g.setColour(pontedsp::gui::Palette::purple().withAlpha(0.7f));
+    g.setColour(pontedsp::gui::Palette::divider());
     for (const auto* knob : { &gain, &ratio, &bite })
     {
         const auto x = static_cast<float>(knob->getRight());
@@ -444,14 +529,14 @@ void CrossoverPlot::paint(juce::Graphics& g)
     const auto plot = area.withTrimmedLeft(34.0f).withTrimmedRight(8.0f)
                           .withTrimmedTop(18.0f).withTrimmedBottom(20.0f);
     g.setColour(pontedsp::gui::Palette::ink().withAlpha(0.92f));
-    g.fillRoundedRectangle(area, 8.0f);
+    g.fillRoundedRectangle(area, 6.0f);
     g.setFont(juce::FontOptions(9.0f));
     for (const auto frequency : { 20.0, 100.0, 1000.0, 10000.0, 20000.0 })
     {
         const auto x = frequencyToX(frequency);
-        g.setColour(pontedsp::gui::Palette::outline().withAlpha(0.5f));
+        g.setColour(pontedsp::gui::Palette::outline().withAlpha(0.3f));
         g.drawVerticalLine(juce::roundToInt(x), plot.getY(), plot.getBottom());
-        g.setColour(pontedsp::gui::Palette::lime());
+        g.setColour(pontedsp::gui::Palette::mutedText());
         const auto label = frequency >= 1000.0
             ? juce::String(frequency / 1000.0, 0) + "k"
             : juce::String(static_cast<int>(frequency));
@@ -462,9 +547,9 @@ void CrossoverPlot::paint(juce::Graphics& g)
     {
         const auto y = juce::jmap(static_cast<float>(db), 12.0f, -12.0f,
                                   plot.getY(), plot.getBottom());
-        g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.85f : 0.42f));
+        g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.6f : 0.24f));
         g.drawHorizontalLine(juce::roundToInt(y), plot.getX(), plot.getRight());
-        g.setColour(pontedsp::gui::Palette::lime());
+        g.setColour(pontedsp::gui::Palette::mutedText());
         g.drawText((db > 0 ? "+" : "") + juce::String(db), 2,
                    juce::roundToInt(y) - 6, 29, 12, juce::Justification::centredRight);
     }
@@ -496,8 +581,8 @@ void CrossoverPlot::paint(juce::Graphics& g)
             if (!drawing) spectrum.startNewSubPath(x, y); else spectrum.lineTo(x, y);
             drawing = true;
         }
-        g.setColour(pontedsp::gui::Palette::mutedText().withAlpha(0.58f));
-        g.strokePath(spectrum, juce::PathStrokeType(1.2f));
+        g.setColour(pontedsp::gui::Palette::mutedText().withAlpha(0.4f));
+        g.strokePath(spectrum, juce::PathStrokeType(1.0f));
     }
     for (int band = 0; band < currentBandCount(); ++band)
     {
@@ -512,16 +597,18 @@ void CrossoverPlot::paint(juce::Graphics& g)
         }
         g.setColour(bandColours[static_cast<std::size_t>(band)]
             .withAlpha(bandIsAudible(band) ? 1.0f : 0.28f));
-        g.strokePath(path, juce::PathStrokeType(2.0f));
+        g.strokePath(path, juce::PathStrokeType(1.6f));
     }
     for (int crossover = 0; crossover < currentBandCount() - 1; ++crossover)
     {
         const auto frequency = processor.state.getRawParameterValue(
             pontedsp::mc2000::parameters::crossoverId(crossover))->load();
         const auto x = frequencyToX(frequency);
+        g.setColour(pontedsp::gui::Palette::text().withAlpha(0.22f));
+        g.drawVerticalLine(juce::roundToInt(x), plot.getY(), plot.getBottom());
         g.setColour(pontedsp::gui::Palette::text());
         const auto zeroY = juce::jmap(0.0f, 12.0f, -12.0f, plot.getY(), plot.getBottom());
-        g.fillEllipse(x - 4.0f, zeroY - 4.0f, 8.0f, 8.0f);
+        g.fillEllipse(x - 3.0f, zeroY - 3.0f, 6.0f, 6.0f);
     }
 }
 
@@ -567,13 +654,21 @@ void CrossoverPlot::mouseUp(const juce::MouseEvent&)
     draggedCrossover = -1;
 }
 
+void CompressionPlot::setForegroundBand(const int band)
+{
+    const auto nextBand = juce::jlimit(0, 3, band);
+    if (foregroundBand == nextBand) return;
+    foregroundBand = nextBand;
+    repaint();
+}
+
 void CompressionPlot::paint(juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat();
     const auto plot = area.withTrimmedLeft(32.0f).withTrimmedRight(8.0f)
                           .withTrimmedTop(21.0f).withTrimmedBottom(20.0f);
     g.setColour(pontedsp::gui::Palette::ink().withAlpha(0.92f));
-    g.fillRoundedRectangle(area, 8.0f);
+    g.fillRoundedRectangle(area, 6.0f);
     g.setFont(juce::FontOptions(8.0f));
     for (const auto db : { -48, -36, -24, -12, 0 })
     {
@@ -581,17 +676,17 @@ void CompressionPlot::paint(juce::Graphics& g)
                                   plot.getX(), plot.getRight());
         const auto y = juce::jmap(static_cast<float>(db), -48.0f, 0.0f,
                                   plot.getBottom(), plot.getY());
-        g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.8f : 0.42f));
+        g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.55f : 0.24f));
         g.drawVerticalLine(juce::roundToInt(x), plot.getY(), plot.getBottom());
         g.drawHorizontalLine(juce::roundToInt(y), plot.getX(), plot.getRight());
-        g.setColour(pontedsp::gui::Palette::lime());
+        g.setColour(pontedsp::gui::Palette::mutedText());
         g.drawText(juce::String(db), juce::roundToInt(x) - 13,
                    juce::roundToInt(plot.getBottom() + 3.0f), 26, 12,
                    juce::Justification::centred);
         g.drawText(juce::String(db), 1, juce::roundToInt(y) - 6, 28, 12,
                    juce::Justification::centredRight);
     }
-    g.setColour(pontedsp::gui::Palette::outline());
+    g.setColour(pontedsp::gui::Palette::outline().withAlpha(0.6f));
     g.drawLine(plot.getX(), plot.getBottom(), plot.getRight(), plot.getY(), 1.0f);
     const auto count = juce::jlimit(2, 4, static_cast<int>(processor.state.getRawParameterValue(
         pontedsp::mc2000::parameters::bandCount)->load()) + 2);
@@ -599,8 +694,11 @@ void CompressionPlot::paint(juce::Graphics& g)
     for (int band = 0; band < count; ++band)
         anySolo = anySolo || processor.state.getRawParameterValue(
             pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
-    for (int band = 0; band < count; ++band)
+    const auto front = juce::jlimit(0, count - 1, foregroundBand);
+    for (int layer = 0; layer < count; ++layer)
     {
+        // Preserve the order of other bands, then paint the edited band on top.
+        const auto band = layer == count - 1 ? front : (layer < front ? layer : layer + 1);
         const auto enabled = processor.state.getRawParameterValue(
             pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
         const auto solo = processor.state.getRawParameterValue(
@@ -617,7 +715,7 @@ void CompressionPlot::paint(juce::Graphics& g)
             if (point == 0) path.startNewSubPath(x, y); else path.lineTo(x, y);
         }
         g.setColour(bandColours[static_cast<std::size_t>(band)].withAlpha(active ? 1.0f : 0.28f));
-        g.strokePath(path, juce::PathStrokeType(2.0f));
+        g.strokePath(path, juce::PathStrokeType(1.6f));
 
         if (active)
         {
@@ -631,7 +729,7 @@ void CompressionPlot::paint(juce::Graphics& g)
             g.fillEllipse(dotX - 3.5f, dotY - 3.5f, 7.0f, 7.0f);
         }
     }
-    g.setColour(pontedsp::gui::Palette::mutedText());
+    g.setColour(pontedsp::gui::Palette::text());
     g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
     g.drawText("STATIC I/O", 8, 5, 80, 14, juce::Justification::centredLeft);
 }
@@ -640,29 +738,35 @@ void OutputMeter::paint(juce::Graphics& g)
 {
     const auto levels = processor.getEngine().getOutputMeterDb();
     auto area = getLocalBounds().toFloat().reduced(2.0f);
-    auto scale = area.removeFromBottom(11.0f);
+    g.setColour(pontedsp::gui::Palette::text());
+    g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+    auto caption = area.removeFromLeft(84.0f).withTrimmedBottom(12.0f);
+    g.drawText("MAIN OUTPUT", caption, juce::Justification::centredLeft);
+    area.removeFromLeft(4.0f);
+    auto scale = area.removeFromBottom(12.0f);
     for (int channel = 0; channel < 2; ++channel)
     {
         auto row = area.removeFromTop(area.getHeight()
             / static_cast<float>(2 - channel)).reduced(0.0f, 2.0f);
-        g.setColour(pontedsp::gui::Palette::ink());
+        g.setColour(pontedsp::gui::Palette::elevated());
         g.fillRoundedRectangle(row, 2.0f);
         g.setColour(levels[static_cast<std::size_t>(channel)] > -0.1f
                         ? pontedsp::gui::Palette::danger() : pontedsp::gui::Palette::lime());
         g.fillRoundedRectangle(row.withWidth(row.getWidth()
             * meterPosition(levels[static_cast<std::size_t>(channel)])), 2.0f);
     }
-    g.setColour(pontedsp::gui::Palette::outline());
+    g.setColour(pontedsp::gui::Palette::divider());
     g.drawHorizontalLine(juce::roundToInt(scale.getY()), scale.getX(), scale.getRight());
-    g.setColour(pontedsp::gui::Palette::lime());
-    g.setFont(juce::FontOptions(7.0f));
+    g.setColour(pontedsp::gui::Palette::text());
+    g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
     for (int tick = 0; tick < 5; ++tick)
     {
         const auto x = juce::jmap(static_cast<float>(tick), 0.0f, 4.0f,
                                   scale.getX(), scale.getRight());
         g.drawVerticalLine(juce::roundToInt(x), scale.getY(), scale.getY() + 2.0f);
-        g.drawText(juce::String(-48 + tick * 12), juce::roundToInt(x) - 13,
-                   juce::roundToInt(scale.getY() + 1.0f), 26, 9,
+        const auto textX = juce::jlimit(scale.getX(), scale.getRight() - 26.0f, x - 13.0f);
+        g.drawText(juce::String(-48 + tick * 12), juce::roundToInt(textX),
+                   juce::roundToInt(scale.getY() + 1.0f), 26, 11,
                    juce::Justification::centred);
     }
 }
@@ -676,9 +780,12 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
       crossoverPlot(p), compressionPlot(p), outputMeter(p)
 {
     setLookAndFeel(&lookAndFeel);
-    configureLabel(crossoverLabel, "CROSSOVER", 10.0f);
-    configureLabel(bandCountLabel, "MODE", 9.0f);
-    configureLabel(linkLabel, "LINK", 9.0f);
+    configureLabel(crossoverLabel, "CROSSOVER", 10.0f, juce::Justification::centred,
+                   pontedsp::gui::Palette::text());
+    configureLabel(bandCountLabel, "MODE", 9.0f, juce::Justification::centred,
+                   pontedsp::gui::Palette::text());
+    configureLabel(linkLabel, "LINK", 9.0f, juce::Justification::centred,
+                   pontedsp::gui::Palette::text());
     bandCount.addItemList({ "2 BAND", "3 BAND", "4 BAND" }, 1);
     linkMaster.addItemList({ "UNLINKED", "MASTER 1", "MASTER 2", "MASTER 3", "MASTER 4" }, 1);
     phase.setClickingTogglesState(true);
@@ -701,6 +808,10 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
     for (int band = 0; band < 4; ++band)
     {
         bands[static_cast<std::size_t>(band)] = std::make_unique<BandStrip>(p, band);
+        bands[static_cast<std::size_t>(band)]->onInteraction = [this, band]
+        {
+            compressionPlot.setForegroundBand(band);
+        };
         addAndMakeVisible(*bands[static_cast<std::size_t>(band)]);
     }
     phaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
@@ -712,7 +823,7 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
     displayedBandCount = activeBandCount();
     contextHeader.setBandCount(displayedBandCount);
     setResizable(true, true);
-    setResizeLimits(1100, 590, 1600, 1100);
+    setResizeLimits(1100, juce::jmax(590, 298 + 110 * displayedBandCount), 1600, 1100);
     setSize(1250, 298 + 146 * displayedBandCount);
     startTimerHz(30);
 }
@@ -731,7 +842,7 @@ int PonteMC2000AudioProcessorEditor::activeBandCount() const noexcept
 void PonteMC2000AudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(pontedsp::gui::Palette::ink());
-    juce::ColourGradient gradient(pontedsp::gui::Palette::violet().withAlpha(0.42f),
+    juce::ColourGradient gradient(pontedsp::gui::Palette::violet().withAlpha(0.55f),
                                   0.0f, 0.0f, pontedsp::gui::Palette::ink(),
                                   0.0f, static_cast<float>(getHeight()), false);
     g.setGradientFill(gradient);
@@ -742,8 +853,8 @@ void PonteMC2000AudioProcessorEditor::resized()
 {
     auto area = getLocalBounds().reduced(12);
     auto header = area.removeFromTop(54);
-    outputMeter.setBounds(header.removeFromRight(160).reduced(3, 7));
-    contextHeader.setBounds(header.removeFromLeft(160));
+    outputMeter.setBounds(header.removeFromRight(220).reduced(3, 1));
+    contextHeader.setBounds(header.removeFromLeft(130));
     header.removeFromLeft(6);
     crossoverLabel.setBounds(header.removeFromLeft(64));
     const auto activeFields = activeBandCount() - 1;
@@ -793,6 +904,7 @@ void PonteMC2000AudioProcessorEditor::updateBandCountLayout()
     const auto stripHeight = juce::jlimit(110, 180,
         (getHeight() - fixedHeight) / std::max(1, displayedBandCount));
     displayedBandCount = count;
+    setResizeLimits(1100, juce::jmax(590, fixedHeight + 110 * count), 1600, 1100);
     contextHeader.setBandCount(count);
     setSize(getWidth(), juce::jlimit(590, 1100, fixedHeight + stripHeight * count));
 }

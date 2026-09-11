@@ -17,6 +17,7 @@ public:
                       juce::ComboBox&) override;
     void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
     juce::Slider::SliderLayout getSliderLayout(juce::Slider&) override;
+    juce::Label* createSliderTextBox(juce::Slider&) override;
 };
 
 } // namespace pontedsp::gui

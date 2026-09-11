@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -447,15 +448,198 @@ void modelComparison(const juce::File& sourceDirectory, const juce::File& render
     }
 }
 
+struct AdditionalCrossoverCase
+{
+    const char* stem;
+    int bands;
+    std::array<double, 3> crossoverHz;
+};
+
+void additionalCrossoverAnalysis(const juce::File& directory)
+{
+    using namespace pontedsp::mc2000::dsp;
+    const std::array cases {
+        AdditionalCrossoverCase { "MC303_Crossover_100_1000", 3, { 100.0, 1000.0, 10000.0 } },
+        AdditionalCrossoverCase { "MC303_Crossover_800_1000", 3, { 800.0, 1000.0, 10000.0 } },
+        AdditionalCrossoverCase { "MC303_Crossover_100_1200", 3, { 100.0, 1200.0, 10000.0 } },
+        AdditionalCrossoverCase { "MC303_Crossover_EXTREME", 3, { 20.0, 20000.0, 20000.0 } },
+        AdditionalCrossoverCase { "MC404_Crossover_100_1000_10000", 4, { 100.0, 1000.0, 10000.0 } },
+        AdditionalCrossoverCase { "MC404_Crossover_100_900_1200", 4, { 100.0, 900.0, 1200.0 } },
+        AdditionalCrossoverCase { "MC404_Crossover_100_8000_10000", 4, { 100.0, 8000.0, 10000.0 } },
+        AdditionalCrossoverCase { "MC404_Crossover_EXTREME_CLOSE", 4, { 1000.0, 1001.0, 1002.0 } }
+    };
+
+    std::cout << "\nADDITIONAL_CROSSOVER case,output,nrmse_db\n";
+    for (const auto& test : cases)
+    {
+        const auto source = readAudio(directory.getChildFile(juce::String(test.stem) + "_Impulse_-6dBFS.wav"));
+        GlobalParameters parameters;
+        parameters.numBands = test.bands;
+        parameters.crossoverHz = test.crossoverHz;
+        for (auto& band : parameters.bands)
+        {
+            band.ratio = 1.0;
+            band.thresholdDb = 0.0;
+            band.bite = 1.0;
+        }
+
+        const auto analyse = [&](const juce::String& name, const int soloBand)
+        {
+            for (auto& band : parameters.bands) band.solo = false;
+            if (soloBand >= 0) parameters.bands[static_cast<std::size_t>(soloBand)].solo = true;
+            const auto model = renderModel(source, parameters);
+            const auto reference = readAudio(directory.getChildFile(
+                juce::String(test.stem) + "_Impulse_-6dBFS-" + name + ".wav"));
+            std::cout << test.stem << ',' << name << ','
+                      << normalisedErrorDb(model, reference, 0.48, 1.0) << '\n';
+        };
+
+        analyse("all", -1);
+        analyse("solo low", 0);
+        if (test.bands == 3)
+        {
+            analyse("solo mid", 1);
+            analyse("solo high", 2);
+        }
+        else
+        {
+            analyse("solo mid1", 1);
+            analyse("solo mid", 2);
+            analyse("solo high", 3);
+        }
+    }
+}
+
+double maximumGainDifferenceDb(const AudioFile& source, const AudioFile& first,
+                               const AudioFile& second)
+{
+    constexpr auto windowSeconds = 0.020;
+    constexpr auto stepSeconds = 0.010;
+    auto maximum = 0.0;
+    for (auto time = 0.0; time + windowSeconds <= source.samples.getNumSamples() / source.sampleRate;
+         time += stepSeconds)
+    {
+        if (rms(source, time, time + windowSeconds) < 1.0e-7)
+            continue;
+        maximum = std::max(maximum, std::abs(gainDb(source, first, time, time + windowSeconds)
+                                               - gainDb(source, second, time, time + windowSeconds)));
+    }
+    return maximum;
+}
+
+std::pair<double, double> gainRangeDb(const AudioFile& source, const AudioFile& render)
+{
+    constexpr auto windowSeconds = 0.020;
+    constexpr auto stepSeconds = 0.010;
+    auto minimum = std::numeric_limits<double>::infinity();
+    auto maximum = -std::numeric_limits<double>::infinity();
+    for (auto time = 0.0; time + windowSeconds <= source.samples.getNumSamples() / source.sampleRate;
+         time += stepSeconds)
+    {
+        if (rms(source, time, time + windowSeconds) < 1.0e-7)
+            continue;
+        const auto gain = gainDb(source, render, time, time + windowSeconds);
+        minimum = std::min(minimum, gain);
+        maximum = std::max(maximum, gain);
+    }
+    return { minimum, maximum };
+}
+
+void additionalAutoAnalysis(const juce::File& directory)
+{
+    using namespace pontedsp::mc2000::dsp;
+    std::cout << "\nADDITIONAL_AUTO file,min_max_nrmse_db,max_window_gain_difference_db,neutral_gain_min_db,neutral_gain_max_db,neutral_model_nrmse_db,current_model_nrmse_db\n";
+    for (const auto& minimumFile : directory.findChildFiles(juce::File::findFiles, false, "*-min.wav"))
+    {
+        const auto minimumName = minimumFile.getFileNameWithoutExtension();
+        const auto stem = minimumName.dropLastCharacters(4);
+        const auto sourceFile = directory.getChildFile(stem + ".wav");
+        const auto maximumFile = directory.getChildFile(stem + "-max.wav");
+        if (!sourceFile.existsAsFile() || !maximumFile.existsAsFile())
+            throw std::runtime_error("Incomplete Auto render triplet for " + stem.toStdString());
+        const auto source = readAudio(sourceFile);
+        const auto minimum = readAudio(minimumFile);
+        const auto maximum = readAudio(maximumFile);
+        GlobalParameters parameters;
+        parameters.numBands = 4;
+        parameters.crossoverHz = { 100.0, 1000.0, 10000.0 };
+        const auto neutralModel = renderModel(source, parameters);
+        for (auto& band : parameters.bands)
+        {
+            band.thresholdDb = -24.0;
+            band.ratio = 10.0;
+            band.knee = 0.0;
+            band.bite = 1.0;
+            band.tcMode = TCMode::automatic;
+        }
+        const auto model = renderModel(source, parameters);
+        const auto [neutralMinimumGain, neutralMaximumGain] = gainRangeDb(neutralModel, minimum);
+        std::cout << stem << ','
+                  << normalisedErrorDb(minimum, maximum, 0.0,
+                                       source.samples.getNumSamples() / source.sampleRate) << ','
+                  << maximumGainDifferenceDb(source, minimum, maximum) << ','
+                  << neutralMinimumGain << ',' << neutralMaximumGain << ','
+                  << normalisedErrorDb(neutralModel, minimum, 0.0,
+                                       source.samples.getNumSamples() / source.sampleRate) << ','
+                  << normalisedErrorDb(model, minimum, 0.0,
+                                       source.samples.getNumSamples() / source.sampleRate) << '\n';
+    }
+}
+
+void additionalAnalysis(const juce::File& root)
+{
+    const auto crossoverDirectory = root.getChildFile("01_Crossover_MC303_MC404");
+    const auto autoDirectory = root.getChildFile("02_Auto");
+    if (!crossoverDirectory.isDirectory() || !autoDirectory.isDirectory())
+        throw std::runtime_error("Expected 01_Crossover_MC303_MC404 and 02_Auto directories");
+    additionalCrossoverAnalysis(crossoverDirectory);
+    additionalAutoAnalysis(autoDirectory);
+}
+
+void traceGain(const juce::File& sourceFile, const juce::File& renderFile)
+{
+    const auto source = readAudio(sourceFile);
+    const auto render = readAudio(renderFile);
+    std::cout << "time_s,input_dbfs,gain_db\n";
+    constexpr auto windowSeconds = 0.010;
+    for (auto time = 0.0; time + windowSeconds <= source.samples.getNumSamples() / source.sampleRate;
+         time += windowSeconds)
+    {
+        const auto input = rms(source, time, time + windowSeconds);
+        if (input < 1.0e-7)
+            continue;
+        std::cout << time << ',' << toDb(input) << ','
+                  << gainDb(source, render, time, time + windowSeconds) << '\n';
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv)
 {
     try
     {
+        if (argc == 3 && std::string(argv[1]) == "--additional")
+        {
+            const juce::File root(juce::String::fromUTF8(argv[2]));
+            if (!root.isDirectory())
+                throw std::runtime_error("Additional test-pack path is not a directory");
+            std::cout << std::fixed << std::setprecision(6);
+            additionalAnalysis(root);
+            return 0;
+        }
+        if (argc == 4 && std::string(argv[1]) == "--trace-gain")
+        {
+            std::cout << std::fixed << std::setprecision(6);
+            traceGain(juce::File(juce::String::fromUTF8(argv[2])),
+                      juce::File(juce::String::fromUTF8(argv[3])));
+            return 0;
+        }
         if (argc != 3)
         {
-            std::cerr << "Usage: MC2000BlackBoxAnalysis <source-dir> <render-dir>\n";
+            std::cerr << "Usage: MC2000BlackBoxAnalysis <source-dir> <render-dir>\n"
+                         "   or: MC2000BlackBoxAnalysis --additional <test-pack-root>\n"
+                         "   or: MC2000BlackBoxAnalysis --trace-gain <source> <render>\n";
             return 2;
         }
         const juce::File sourceDirectory(juce::String::fromUTF8(argv[1]));
