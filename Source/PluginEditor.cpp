@@ -45,10 +45,10 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
     configureLabel(name, caption, 10.0f, juce::Justification::centred,
                    pontedsp::gui::Palette::text());
     addAndMakeVisible(name);
-    slider.getProperties().set("mbc4ContextualValue", true);
+    slider.getProperties().set("pontedspKnobActive", false);
     slider.setWantsKeyboardFocus(true);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 18);
+    slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     slider.setDoubleClickReturnValue(true,
         state.getParameterRange(parameterId).convertFrom0to1(
             state.getParameter(parameterId)->getDefaultValue()));
@@ -58,6 +58,30 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
     addAndMakeVisible(slider);
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         state, parameterId, slider);
+    valueDisplay.setEditable(true, true, false);
+    valueDisplay.setJustificationType(juce::Justification::centred);
+    valueDisplay.setFont(juce::FontOptions(13.0f, juce::Font::bold));
+    valueDisplay.setColour(juce::Label::textColourId, pontedsp::gui::Palette::text());
+    valueDisplay.setColour(juce::Label::backgroundColourId, pontedsp::gui::Palette::elevated());
+    valueDisplay.setColour(juce::Label::outlineColourId, pontedsp::gui::Palette::lime());
+    valueDisplay.setColour(juce::Label::textWhenEditingColourId, pontedsp::gui::Palette::text());
+    valueDisplay.setColour(juce::Label::backgroundWhenEditingColourId, pontedsp::gui::Palette::elevated());
+    valueDisplay.setTitle(caption + " value");
+    valueDisplay.setAlwaysOnTop(true);
+    valueDisplay.addMouseListener(this, true);
+    valueDisplay.onTextChange = [this, parameter = state.getParameter(parameterId)]
+    {
+        const auto requested = slider.getValueFromText(valueDisplay.getText());
+        if (std::isfinite(requested))
+        {
+            parameter->beginChangeGesture();
+            slider.setValue(requested, juce::sendNotificationSync);
+            parameter->endChangeGesture();
+        }
+        updateValueText();
+    };
+    slider.onValueChange = [this] { updateValueText(); };
+    updateValueText();
     slider.onDragStart = [this]
     {
         dragging = true;
@@ -75,14 +99,50 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
 
 void ParameterKnob::setValueVisible(const bool visible)
 {
-    slider.getProperties().set("mbc4ValueVisible", visible);
-    // Keep the text box in the layout and preserve JUCE's editable value binding.
-    for (auto* child : slider.getChildren())
-        if (auto* label = dynamic_cast<juce::Label*>(child))
-        {
-            label->setAlpha(visible ? 1.0f : 0.0f);
-            label->setInterceptsMouseClicks(visible, visible);
-        }
+    const auto show = visible && isShowing() && valueDisplay.getParentComponent() != nullptr;
+    if (show) positionValueDisplay();
+    valueDisplay.setVisible(show);
+    if (show) valueDisplay.toFront(false);
+    if (static_cast<bool>(slider.getProperties()["pontedspKnobActive"]) != show)
+    {
+        slider.getProperties().set("pontedspKnobActive", show);
+        slider.repaint();
+    }
+}
+
+void ParameterKnob::updateValueText()
+{
+    if (!valueDisplay.isBeingEdited())
+        valueDisplay.setText(slider.getTextFromValue(slider.getValue()), juce::dontSendNotification);
+}
+
+void ParameterKnob::parentHierarchyChanged()
+{
+    if (auto* editor = findParentComponentOfClass<juce::AudioProcessorEditor>())
+    {
+        if (valueDisplay.getParentComponent() != editor)
+            editor->addChildComponent(valueDisplay);
+        positionValueDisplay();
+    }
+    else if (auto* parent = valueDisplay.getParentComponent())
+    {
+        valueDisplay.setVisible(false);
+        parent->removeChildComponent(&valueDisplay);
+    }
+}
+
+void ParameterKnob::positionValueDisplay()
+{
+    if (auto* parent = valueDisplay.getParentComponent())
+    {
+        const auto knobBounds = parent->getLocalArea(&slider, slider.getLocalBounds());
+        constexpr int width = 100, height = 24, gap = 3;
+        const auto x = juce::jlimit(0, juce::jmax(0, parent->getWidth() - width),
+                                   knobBounds.getCentreX() - width / 2);
+        const auto y = juce::jlimit(0, juce::jmax(0, parent->getHeight() - height),
+                                   knobBounds.getY() - height - gap);
+        valueDisplay.setBounds(x, y, width, height);
+    }
 }
 
 void ParameterKnob::showValueForInteraction()
@@ -93,6 +153,8 @@ void ParameterKnob::showValueForInteraction()
 
 void ParameterKnob::mouseDown(const juce::MouseEvent&)
 {
+    if (auto* strip = findParentComponentOfClass<BandStrip>())
+        if (strip->onInteraction) strip->onInteraction();
     showValueForInteraction();
 }
 
@@ -108,25 +170,28 @@ void ParameterKnob::focusOfChildComponentChanged(FocusChangeType)
 
 void ParameterKnob::timerCallback()
 {
+    updateValueText();
     const auto now = juce::Time::getMillisecondCounterHiRes();
-    const auto over = slider.isMouseOver(true);
+    const auto over = slider.isMouseOver(true)
+                   || (valueDisplay.isVisible() && valueDisplay.isMouseOver(true));
     if (over && !hovering) hoverStartedMs = now;
     hovering = over;
     const auto hoverReady = over && now - hoverStartedMs >= 400.0;
-    auto editing = false;
-    for (auto* child : slider.getChildren())
-        if (const auto* label = dynamic_cast<const juce::Label*>(child))
-            editing = editing || label->isBeingEdited();
+    const auto editing = valueDisplay.isBeingEdited();
     if (hoverReady) visibleUntilMs = juce::jmax(visibleUntilMs, now + 200.0);
     setValueVisible(isShowing() && (dragging || editing || hasKeyboardFocus(true)
+                                  || valueDisplay.hasKeyboardFocus(true)
                                   || hoverReady || now < visibleUntilMs));
 }
 
 void ParameterKnob::resized()
 {
-    auto bounds = getLocalBounds();
-    name.setBounds(bounds.removeFromTop(15));
-    slider.setBounds(bounds);
+    constexpr int captionHeight = 15;
+    const auto diameter = juce::jmax(0, juce::jmin(getWidth(), getHeight() - captionHeight));
+    auto group = getLocalBounds().withSizeKeepingCentre(getWidth(), diameter + captionHeight);
+    slider.setBounds(group.removeFromTop(diameter));
+    name.setBounds(group);
+    positionValueDisplay();
 }
 
 void ContextHeader::setHelpText(const juce::String& text)

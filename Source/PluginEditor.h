@@ -14,6 +14,7 @@ public:
                   const juce::String& caption, const juce::String& suffix = {},
                   const juce::String& helpText = {}, int decimalPlaces = 2);
     void resized() override;
+    void parentHierarchyChanged() override;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void focusOfChildComponentChanged(FocusChangeType) override;
@@ -22,12 +23,15 @@ private:
     void timerCallback() override;
     void showValueForInteraction();
     void setValueVisible(bool visible);
+    void positionValueDisplay();
+    void updateValueText();
     double hoverStartedMs {};
     double visibleUntilMs {};
     bool hovering {};
     bool dragging {};
     juce::Label name;
     juce::Slider slider;
+    juce::Label valueDisplay;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
 };
 

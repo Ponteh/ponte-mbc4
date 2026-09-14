@@ -18,8 +18,10 @@ UI changes and build history are catalogued in
 Meter scales and control captions use the same white as R1; the last band
 selected by mouse, wheel or keyboard focus is drawn in front in Static I/O.
 The master output meter is labelled MAIN OUTPUT to the left of the bars.
-Knob values appear immediately on interaction or keyboard focus, or after
-400 ms of hover; captions remain visible and the knob layout stays fixed.
+Knob values appear in an editable overlay above the control on interaction
+or keyboard focus, or after 400 ms of hover. Captions sit below the knobs;
+no layout space is reserved for hidden values. Active knobs use a brighter,
+more saturated accent. See POC sections 71–73 for the interaction contract.
 
 Current public parameter ranges are: Input/Output and per-band Gain
 `-24.0..+24.0 dB`, Threshold `-48.0..0.0 dB`, Ratio `1.00:1..10.00:1`,

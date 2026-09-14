@@ -35,27 +35,30 @@ void PonteLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wid
     const auto radius = juce::jmax(11.0f, juce::jmin(area.getWidth(), area.getHeight()) * 0.5f - 3.0f);
     const auto centre = area.getCentre();
     const auto angle = startAngle + position * (endAngle - startAngle);
+    const auto selected = static_cast<bool>(slider.getProperties()["pontedspKnobActive"]);
+    const auto accent = slider.findColour(juce::Slider::rotarySliderFillColourId);
+    const auto displayedAccent = selected ? accent : accent.withMultipliedSaturation(0.35f).darker(0.3f);
 
     juce::Path track, active;
     track.addCentredArc(centre.x, centre.y, radius, radius, 0.0f, startAngle, endAngle, true);
     active.addCentredArc(centre.x, centre.y, radius, radius, 0.0f, startAngle, angle, true);
     g.setColour(slider.findColour(juce::Slider::rotarySliderOutlineColourId).withAlpha(0.55f));
     g.strokePath(track, {2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded});
-    g.setColour(slider.findColour(juce::Slider::rotarySliderFillColourId)
+    g.setColour(displayedAccent
         .withAlpha(slider.isEnabled() ? 1.0f : 0.35f));
     g.strokePath(active, {2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded});
 
     const auto body = radius - 8.0f;
-    g.setColour(Palette::elevated());
+    g.setColour(selected ? Palette::elevated().interpolatedWith(accent, 0.12f) : Palette::elevated());
     g.fillEllipse(centre.x - body, centre.y - body, body * 2.0f, body * 2.0f);
-    g.setColour(Palette::outline());
+    g.setColour(selected ? accent.withAlpha(0.7f) : Palette::outline());
     g.drawEllipse(centre.x - body, centre.y - body, body * 2.0f, body * 2.0f, 1.0f);
 
     juce::Path pointer;
     const auto pointerLength = juce::jmax(4.0f, body * 0.62f);
     pointer.startNewSubPath(0.0f, -body * 0.24f);
     pointer.lineTo(0.0f, -pointerLength);
-    g.setColour(slider.isEnabled() ? Palette::lime() : Palette::mutedText());
+    g.setColour(slider.isEnabled() ? displayedAccent : Palette::mutedText());
     g.strokePath(pointer, {1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded},
                 juce::AffineTransform::rotation(angle).translated(centre.x, centre.y));
 }
@@ -105,35 +108,6 @@ void PonteLookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& la
 {
     label.setBounds(10, 1, box.getWidth() - 34, box.getHeight() - 2);
     label.setFont(juce::FontOptions(13.0f, juce::Font::bold));
-}
-
-juce::Slider::SliderLayout PonteLookAndFeel::getSliderLayout(juce::Slider& slider)
-{
-    auto bounds = slider.getLocalBounds();
-    const auto textHeight = juce::jmin(slider.getTextBoxHeight(),
-                                       juce::jmax(0, bounds.getHeight() - 24));
-    const auto rotaryHeight = juce::jmax(24, juce::jmin(bounds.getWidth(),
-                                                        bounds.getHeight() - textHeight));
-    juce::Slider::SliderLayout layout;
-    layout.sliderBounds = { 0, 0, bounds.getWidth(), rotaryHeight };
-    layout.textBoxBounds = {
-        (bounds.getWidth() - juce::jmin(slider.getTextBoxWidth(), bounds.getWidth())) / 2,
-        juce::jmax(0, rotaryHeight - 3),
-        juce::jmin(slider.getTextBoxWidth(), bounds.getWidth()), textHeight
-    };
-    return layout;
-}
-
-juce::Label* PonteLookAndFeel::createSliderTextBox(juce::Slider& slider)
-{
-    auto* label = juce::LookAndFeel_V4::createSliderTextBox(slider);
-    if (static_cast<bool>(slider.getProperties()["mbc4ContextualValue"]))
-    {
-        const auto visible = static_cast<bool>(slider.getProperties()["mbc4ValueVisible"]);
-        label->setAlpha(visible ? 1.0f : 0.0f);
-        label->setInterceptsMouseClicks(visible, visible);
-    }
-    return label;
 }
 
 } // namespace pontedsp::gui

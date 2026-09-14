@@ -3305,6 +3305,12 @@ separatori viola chiaro fra Gain/Threshold, Ratio/Knee e BITE/Attack. Ogni
 banda espone tre barre sottili `IN/OUT/GR`, ciascuna con scala dB viola e numeri
 lime; il meter master usa lo stesso linguaggio visivo.
 
+**[SUPERSEDED — UI 2026-09-14]** Il profilo minimale corrente usa superfici
+neutre, controlli piatti e label/scale nel bianco `#F4F2F7` di R1. I meter
+hanno cifre bold da 10 unità e label laterali; `MAIN OUTPUT` è a sinistra
+della coppia stereo. Static I/O disegna per ultima la banda lavorata tramite
+click, rotella o focus. Questa priorità non cambia IN/SOLO o il DSP.
+
 ---
 
 # 72. Knob behavior
@@ -3314,10 +3320,44 @@ Tutti i knob:
 - drag verticale;
 - double-click default;
 - Shift/Ctrl fine;
-- valore numerico sotto;
+- nome del controllo sotto, sempre visibile;
+- valore numerico in un overlay sopra il knob su interazione o hover;
 - direct text entry;
 - wheel opzionale;
 - automation gesture corretta.
+
+**[IMPLEMENTED — UI 2026-09-14]** La precedente casella sotto il knob,
+anche quando trasparente, lasciava spazio vuoto ed è sostituita da un
+riquadro editabile sovrapposto alla UI. Il gruppo contiene soltanto il
+pomello quadrato e la caption da 15 unità, centrati nello spazio disponibile.
+Il valore non partecipa al layout: overlay 100 × 24 unità, 3 unità sopra
+il controllo, centrato e contenuto entro i bordi dell'editor. Non è una
+finestra desktop e non viene tagliato dai limiti della strip.
+
+Comparsa immediata con click, drag, rotella o focus da tastiera; hover dopo
+400 ms. Il valore resta visibile durante drag, focus ed editing; tolleranza
+uscita hover 200 ms e persistenza dopo interazione almeno 700 ms senza focus.
+Digitazione tramite lo stesso parser/formattatore dello slider, clamp e
+quantizzazione del parametro esistente, gesture host begin/end alla conferma.
+Le variazioni da automazione aggiornano il display senza interrompere il testo
+in corso di modifica. Il reset con doppio click rimane sul knob.
+
+L'arco e l'indicatore a riposo usano l'accento con saturazione moltiplicata
+per 0.35 e luminosità attenuata (`darker(0.3)`). Quando il valore è attivo
+usano l'accento pieno; corpo e bordo del knob sono evidenziati leggermente.
+Proprietà GUI condivisa: `pontedspKnobActive`, non un parametro audio.
+CompanyGUI supporta questa proprietà opt-in nel LookAndFeel. Non modifica
+gli altri prodotti finché non adottano il comportamento contestuale.
+
+I tempi sono scelte di interazione PonteDSP, non misure dei plugin usati
+come riferimento grafico. La proposta precedente «valore sotto» è superata;
+non restano fasce di layout vuote riservate al numero.
+
+Verifica 2026-09-14: build VST3 x64 Release completata, CTest `MC2000Tests`
+1/1 superato (4.27 s), diff-check superato. Binario 7370752 byte, SHA256
+`4EE93ED775D4B5B2B62073E8E210884E3A71283187926259CA6A8A31C587588A`.
+La verifica visiva/interattiva nella DAW resta da eseguire: i test DSP non
+certificano popup, focus, editing o posizionamento ai bordi della finestra.
 
 Attack/Release:
 
@@ -3336,7 +3376,7 @@ Ratio:
 
 # 73. Accessibility / usability
 
-- valore leggibile senza hover;
+- valore accessibile con focus da tastiera o selezione, oltre all'hover;
 - contrasto alto;
 - resize;
 - tooltip opzionale;
