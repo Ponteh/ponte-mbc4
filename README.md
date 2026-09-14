@@ -26,9 +26,15 @@ one visual focus controller. Captions sit below the knobs;
 no layout space is reserved for hidden values. Active knobs use a slightly brighter
 accent; unfocused controls retain their original saturation. See POC sections
 71–73 for the interaction contract. SOLO temporarily overrides the displayed
-IN states without overwriting them; releasing the last SOLO restores the saved
+IN states without overwriting them: every IN button is off and disabled during
+SOLO, including the isolated bands. Releasing the last SOLO restores the saved
 IN configuration. The initial editor size is 1100 × 738; resizing is preserved
 across band-count changes, editor reopening and session save/restore.
+
+CROSSOVER starts at the left edge of the band display. The context help area
+above the input/output knobs is 168 × 54, with up to four full-size text lines.
+Band responses and the spectrum share a vertical display range of -48 dB at
+the bottom to 0 dB at the top; crossover markers sit on the 0 dB line.
 
 Current public parameter ranges are: Input/Output and per-band Gain
 `-24.0..+24.0 dB`, Threshold `-48.0..0.0 dB`, Ratio `1.00:1..10.00:1`,

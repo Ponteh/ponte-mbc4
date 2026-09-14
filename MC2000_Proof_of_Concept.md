@@ -2030,7 +2030,7 @@ che devono restare sempre leggibili e azionabili.
 Il grafico deve mostrare:
 
 - asse X logaritmico 20 Hz – 20 kHz;
-- asse Y da -12 a +12 dB, con le bande allineate a 0 dB;
+- asse Y da -48 dB in basso a 0 dB in alto, comune a curve e spettro;
 - curve delle bande;
 - analizzatore di spettro in background come linea grigia;
 - marker X1/X2/X3;
@@ -2044,6 +2044,18 @@ dal thread audio e una FFT Hann da 2048 campioni eseguita dalla GUI. Quando è
 presente almeno un `SOLO`, vengono mostrate solo le regioni di spettro delle
 bande in solo; altrimenti vengono mostrate le regioni con `IN` attivo. Le curve
 delle bande inattive restano visibili ma attenuate.
+
+**[IMPLEMENTED — UI 2026-09-14, allineamento e scala]** La caption CROSSOVER
+parte dal bordo sinistro del visualizzatore delle bande. L'help sul wordmark
+PonteDSP occupa 168 × 54 unità (prima 110 × 54), fino a quattro righe a 11
+unità bold senza restringimento orizzontale. La scala verticale usa tacche
+-48/-36/-24/-12/0 dB, con clamp delle curve e dello spettro ai bordi; i marker
+crossover si trovano sulla linea superiore a 0 dB. Nessun cambiamento DSP.
+
+Verifica di questa iterazione: CTest 2/2 superato in 4.81 s (DSP 1.64 s,
+UI/stato 3.14 s), inclusi allineamento CROSSOVER, capienza di tutti i testi
+contestuali al minimo e IN spenti durante SOLO. Rendering JUCE a 1100 × 738
+controllato; riferimento build e commit nel catalogo CompanyGUI.
 
 Colori esempio:
 
@@ -2141,9 +2153,9 @@ IN = off
 Nella GUI corrente `SOLO` applica un override temporaneo senza riscrivere `IN`:
 
 ```text
-Uno o più SOLO attivi -> IN mostra soltanto le bande in SOLO; pulsanti IN non modificabili
+Uno o più SOLO attivi -> tutti gli IN spenti e non modificabili, anche sulle bande in SOLO
 Ultimo SOLO spento    -> IN torna alla configurazione salvata prima del SOLO
-Esempio: IN 2/3 -> SOLO 4 -> IN visualizzato solo 4 -> fine SOLO -> IN 2/3
+Esempio: IN 2/3 -> SOLO 4 -> tutti gli IN spenti -> fine SOLO -> IN 2/3
 ```
 
 I due pulsanti restano sempre a piena opacità, anche quando il resto della
@@ -3642,7 +3654,7 @@ Questo POC deve rimanere un documento vivo: ogni nuova misura deve aggiornare la
 | Xover | X1 | 20..20000 Hz | ordine vincolato |
 | Xover | X2 | 20..20000 Hz | MC303/404 |
 | Xover | X3 | 20..20000 Hz | MC404 |
-| Band | IN | On/Off | Conservato durante SOLO; display temporaneo sulle sole bande in SOLO |
+| Band | IN | On/Off | Conservato durante SOLO; tutti i pulsanti IN spenti e bloccati fino al termine |
 | Band | Solo | On/Off | multiple solo |
 | Band | Gain | -24.0..+24.0 dB | step 0.1 dB |
 | Band | Threshold | -48.0..0.0 dB | step 0.1 dB |

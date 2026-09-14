@@ -93,6 +93,26 @@ void testEditorAndSolo()
     expect(meter && plot && meter->getX() == plot->getX() && meter->getWidth() == plot->getWidth(),
            "MAIN OUTPUT matches STATIC I/O width and left edge");
     expect(meter && plot && meter->getBottom() <= plot->getY(), "main meter stays above plot");
+    auto* crossover = find<CrossoverPlot>(*editor);
+    auto* caption = find<juce::Label>(*editor, "crossoverCaption");
+    auto* helpHeader = find<ContextHeader>(*editor);
+    expect(crossover && caption && caption->getX() == crossover->getX(),
+           "CROSSOVER starts at the left edge of the band display");
+    expect(helpHeader && caption && helpHeader->getRight() <= caption->getX(), "expanded help does not overlap CROSSOVER");
+    const std::function<void(juce::Component&)> checkHelp = [&](juce::Component& c)
+    {
+        const auto text = c.getProperties()["mbc4ContextHelp"].toString();
+        if (helpHeader && text.isNotEmpty())
+        {
+            juce::AttributedString content(text);
+            content.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            juce::TextLayout layout;
+            layout.createLayout(content, static_cast<float>(helpHeader->getWidth() - 6));
+            expect(layout.getHeight() <= helpHeader->getHeight() - 4, "complete contextual help fits at minimum editor size");
+        }
+        for (auto* child : c.getChildren()) checkHelp(*child);
+    };
+    checkHelp(*editor);
     editor->setSize(1330, 950);
     for (const auto count : { 2, 3, 4, 2, 4 })
     {
@@ -113,30 +133,30 @@ void testEditorAndSolo()
         for (int b = 0; b < 4; ++b)
         {
             auto* button = find<juce::TextButton>(*editor, bandId(b, "enabled"));
-            expect(button && button->getToggleState() == ((mask & (1u << b)) != 0), "effective IN state matches routing");
+            expect(button && button->getToggleState() == ((mask & (1u << b)) != 0), "IN display is off during SOLO and restored afterwards");
             expect(button && button->isEnabled() == editable, "IN is temporarily locked during SOLO");
             expect((p.state.getRawParameterValue(bandId(b, "enabled"))->load() > .5f) == (b == 1 || b == 2),
                    "SOLO never overwrites saved IN values");
         }
     };
     checkIn(6, true);
-    clickSolo(3); checkIn(8, false);
+    clickSolo(3); checkIn(0, false);
     LinkRuntime runtime;
     auto snapshot = readSnapshot(p.state, runtime);
     expect(snapshot.bands[3].solo && snapshot.bands[3].enabled, "SOLO enables DSP compression even when saved IN is off");
-    clickSolo(1); checkIn(10, false);
-    clickSolo(3); checkIn(2, false);
+    clickSolo(1); checkIn(0, false);
+    clickSolo(3); checkIn(0, false);
     clickSolo(1); checkIn(6, true);
     // Automation uses the same presentation and does not depend on button callbacks.
-    set(p, bandId(3, "solo"), 1.0f); pump(); checkIn(8, false);
+    set(p, bandId(3, "solo"), 1.0f); pump(); checkIn(0, false);
     set(p, bandCount, 0.0f); pump(); checkIn(6, true);
-    set(p, bandCount, 2.0f); pump(); checkIn(8, false);
+    set(p, bandCount, 2.0f); pump(); checkIn(0, false);
     juce::MemoryBlock saved;
     p.getStateInformation(saved);
     editor.reset();
     editor.reset(p.createEditor()); host.addAndMakeVisible(*editor);
     expect(editor->getWidth() == 1330 && editor->getHeight() == 950, "editor reopen preserves chosen size");
-    checkIn(8, false);
+    checkIn(0, false);
     set(p, bandId(3, "solo"), 0.0f); pump(); checkIn(6, true);
 
     PonteMC2000AudioProcessor restored;

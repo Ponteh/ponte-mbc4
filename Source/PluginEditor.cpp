@@ -199,7 +199,7 @@ void ContextHeader::paint(juce::Graphics& g)
     {
         g.setColour(pontedsp::gui::Palette::text());
         g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
-        g.drawFittedText(helpText, area, juce::Justification::centredLeft, 3, 0.9f);
+        g.drawFittedText(helpText, area, juce::Justification::centredLeft, 4, 1.0f);
         return;
     }
 
@@ -432,9 +432,8 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
 
 void BandStrip::updateInState(const bool anySolo)
 {
-    const auto suffix = anySolo ? "solo" : "enabled";
-    const auto on = processor.state.getRawParameterValue(
-        pontedsp::mc2000::parameters::bandId(band, suffix))->load() > 0.5f;
+    const auto on = !anySolo && processor.state.getRawParameterValue(
+        pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
     enabled.setToggleState(on, juce::dontSendNotification);
     enabled.setEnabled(!anySolo);
 }
@@ -607,9 +606,9 @@ void CrossoverPlot::paint(juce::Graphics& g)
         g.drawText(label, juce::roundToInt(x) - 18, juce::roundToInt(plot.getBottom() + 3.0f),
                    36, 13, juce::Justification::centred);
     }
-    for (const auto db : { -12, -6, 0, 6, 12 })
+    for (const auto db : { -48, -36, -24, -12, 0 })
     {
-        const auto y = juce::jmap(static_cast<float>(db), 12.0f, -12.0f,
+        const auto y = juce::jmap(static_cast<float>(db), 0.0f, -48.0f,
                                   plot.getY(), plot.getBottom());
         g.setColour(pontedsp::gui::Palette::outline().withAlpha(db == 0 ? 0.6f : 0.24f));
         g.drawHorizontalLine(juce::roundToInt(y), plot.getX(), plot.getRight());
@@ -640,8 +639,8 @@ void CrossoverPlot::paint(juce::Graphics& g)
             const auto db = juce::jmap(mix,
                 spectrumDb[static_cast<std::size_t>(lower)],
                 spectrumDb[static_cast<std::size_t>(upper)]);
-            const auto y = juce::jmap(juce::jlimit(-90.0f, 0.0f, db),
-                                      0.0f, -90.0f, plot.getY(), plot.getBottom());
+            const auto y = juce::jmap(juce::jlimit(-48.0f, 0.0f, db),
+                                      0.0f, -48.0f, plot.getY(), plot.getBottom());
             if (!drawing) spectrum.startNewSubPath(x, y); else spectrum.lineTo(x, y);
             drawing = true;
         }
@@ -655,8 +654,8 @@ void CrossoverPlot::paint(juce::Graphics& g)
         {
             const auto x = plot.getX() + plot.getWidth() * static_cast<float>(point) / 180.0f;
             const auto db = processor.getEngine().getBandMagnitudeDb(band, xToFrequency(x));
-            const auto y = juce::jmap(static_cast<float>(juce::jlimit(-12.0, 12.0, db)),
-                                      12.0f, -12.0f, plot.getY(), plot.getBottom());
+            const auto y = juce::jmap(static_cast<float>(juce::jlimit(-48.0, 0.0, db)),
+                                      0.0f, -48.0f, plot.getY(), plot.getBottom());
             if (point == 0) path.startNewSubPath(x, y); else path.lineTo(x, y);
         }
         g.setColour(bandColours[static_cast<std::size_t>(band)]
@@ -671,7 +670,7 @@ void CrossoverPlot::paint(juce::Graphics& g)
         g.setColour(pontedsp::gui::Palette::text().withAlpha(0.22f));
         g.drawVerticalLine(juce::roundToInt(x), plot.getY(), plot.getBottom());
         g.setColour(pontedsp::gui::Palette::text());
-        const auto zeroY = juce::jmap(0.0f, 12.0f, -12.0f, plot.getY(), plot.getBottom());
+        const auto zeroY = plot.getY();
         g.fillEllipse(x - 3.0f, zeroY - 3.0f, 6.0f, 6.0f);
     }
 }
@@ -844,8 +843,10 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
       crossoverPlot(p), compressionPlot(p), outputMeter(p)
 {
     setLookAndFeel(&lookAndFeel);
-    configureLabel(crossoverLabel, "CROSSOVER", 10.0f, juce::Justification::centred,
+    configureLabel(crossoverLabel, "CROSSOVER", 10.0f, juce::Justification::centredLeft,
                    pontedsp::gui::Palette::text());
+    crossoverLabel.setBorderSize(juce::BorderSize<int>(0));
+    crossoverLabel.setComponentID("crossoverCaption");
     configureLabel(bandCountLabel, "MODE", 9.0f, juce::Justification::centred,
                    pontedsp::gui::Palette::text());
     configureLabel(linkLabel, "LINK", 9.0f, juce::Justification::centred,
@@ -943,8 +944,8 @@ void PonteMC2000AudioProcessorEditor::resized()
     const auto meterWidth = juce::roundToInt((area.getWidth() - 168) * 0.36f) - 10;
     outputMeter.setBounds(header.removeFromRight(meterWidth + 5).withTrimmedRight(5).reduced(0, 1));
     // Fit the header at 1100 px without letting LINK intrude into the meter.
-    contextHeader.setBounds(header.removeFromLeft(110));
-    header.removeFromLeft(4);
+    contextHeader.setBounds(header.removeFromLeft(168));
+    header.removeFromLeft(5);
     crossoverLabel.setBounds(header.removeFromLeft(62));
     const auto activeFields = activeBandCount() - 1;
     for (int crossover = 0; crossover < 3; ++crossover)
