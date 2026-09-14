@@ -36,6 +36,7 @@ public:
     double getProcessingSampleRate() const noexcept { return processingSampleRate.load(std::memory_order_relaxed); }
 
     juce::AudioProcessorValueTreeState state;
+    std::atomic<int> editorWidth { 1100 }, editorHeight { 738 };
 
 private:
     void pushSpectrumSamples(const juce::AudioBuffer<float>&) noexcept;

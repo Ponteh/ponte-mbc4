@@ -2138,18 +2138,20 @@ IN = off
 
 **[TODO]** validare sull'originale.
 
-Nella GUI corrente `IN` e `SOLO` hanno questa dipendenza:
+Nella GUI corrente `SOLO` applica un override temporaneo senza riscrivere `IN`:
 
 ```text
-SOLO passa da off a on  -> IN viene attivato
-IN passa da on a off    -> SOLO viene disattivato
-SOLO passa da on a off  -> IN rimane attivo
+Uno o più SOLO attivi -> IN mostra soltanto le bande in SOLO; pulsanti IN non modificabili
+Ultimo SOLO spento    -> IN torna alla configurazione salvata prima del SOLO
+Esempio: IN 2/3 -> SOLO 4 -> IN visualizzato solo 4 -> fine SOLO -> IN 2/3
 ```
 
 I due pulsanti restano sempre a piena opacità, anche quando il resto della
 strip è attenuato. Nel layer DSP una banda in `SOLO` è sempre considerata
-abilitata, anche durante il breve intervallo fra gli aggiornamenti dei due
-parametri host.
+abilitata. I parametri host IN conservano il valore di base, anche salvando
+il progetto durante SOLO. L'automazione di IN aggiorna questa base; l'override
+visivo resta fino all'ultimo SOLO. Le bande nascoste non attivano il SOLO.
+IN disattivato continua a bypassare la compressione, non muta la banda.
 
 ### SOLO
 
@@ -3334,18 +3336,26 @@ Il valore non partecipa al layout: overlay 100 × 24 unità, 3 unità sopra
 il controllo, centrato e contenuto entro i bordi dell'editor. Non è una
 finestra desktop e non viene tagliato dai limiti della strip.
 
-Comparsa immediata con click, drag, rotella o focus da tastiera; hover dopo
-400 ms. Il valore resta visibile durante drag, focus ed editing; tolleranza
-uscita hover 200 ms e persistenza dopo interazione almeno 700 ms senza focus.
+Comparsa immediata con click, drag, rotella o nuovo focus da tastiera; primo
+hover dopo 30 ms. Con un controllo già attivo, passaggio immediato al nuovo
+elemento sotto il mouse. Un unico controller gestisce knob, selettori, pulsanti
+e campi numerici: non possono restare più controlli accesi per focus tastiera
+obsoleto. Rilascio dopo 100 ms fuori dai controlli, mantenimento durante drag,
+editing o menu aperto. Il mouse fermo sopra un controllo mantiene il focus.
+Timer GUI da 10 ms: le scadenze sono soggette alla disponibilità del message
+thread, non sono tempi audio. Passare a un altro controllo chiude e conferma
+l'eventuale editing dell'overlay precedente; Esc conserva l'annullamento JUCE.
 Digitazione tramite lo stesso parser/formattatore dello slider, clamp e
 quantizzazione del parametro esistente, gesture host begin/end alla conferma.
 Le variazioni da automazione aggiornano il display senza interrompere il testo
 in corso di modifica. Il reset con doppio click rimane sul knob.
 
-L'arco e l'indicatore a riposo usano l'accento con saturazione moltiplicata
-per 0.35 e luminosità attenuata (`darker(0.3)`). Quando il valore è attivo
-usano l'accento pieno; corpo e bordo del knob sono evidenziati leggermente.
-Proprietà GUI condivisa: `pontedspKnobActive`, non un parametro audio.
+Arco e indicatore a riposo conservano esattamente l'accento originale. Il focus
+usa `brighter(0.08)`; corpo miscelato al 4% con l'accento e bordo al 25%.
+Eliminata la precedente desaturazione ×0.35 / `darker(0.3)`.
+Proprietà GUI condivise: `pontedspKnobActive` e `pontedspControlActive`,
+non parametri audio. `ControlFocus.h` e `FocusTiming.h` sono replicati in
+CompanyGUI; la copia locale mantiene compilabile il prodotto isolato.
 CompanyGUI supporta questa proprietà opt-in nel LookAndFeel. Non modifica
 gli altri prodotti finché non adottano il comportamento contestuale.
 
@@ -3353,11 +3363,31 @@ I tempi sono scelte di interazione PonteDSP, non misure dei plugin usati
 come riferimento grafico. La proposta precedente «valore sotto» è superata;
 non restano fasce di layout vuote riservate al numero.
 
-Verifica 2026-09-14: build VST3 x64 Release completata, CTest `MC2000Tests`
+Verifica storica prima della correzione focus/SOLO/resize: build VST3 x64 Release, CTest `MC2000Tests`
 1/1 superato (4.27 s), diff-check superato. Binario 7370752 byte, SHA256
 `4EE93ED775D4B5B2B62073E8E210884E3A71283187926259CA6A8A31C587588A`.
-La verifica visiva/interattiva nella DAW resta da eseguire: i test DSP non
-certificano popup, focus, editing o posizionamento ai bordi della finestra.
+La verifica della revisione successiva è registrata nel catalogo CompanyGUI.
+`MC2000UITests` aggiunge test del controller focus, dei pulsanti reali SOLO/IN,
+automazione, riapertura, salvataggio e allineamento MAIN OUTPUT / STATIC I/O.
+
+**[IMPLEMENTED — correzione UI 2026-09-14]** MAIN OUTPUT mantiene la caption
+laterale, con l'intero componente largo e allineato come STATIC I/O. Header
+ridistribuito per evitare sovrapposizioni con LINK alla larghezza minima.
+Il minimo è fisso a 1100 × 738 per tutti i modi; una nuova istanza apre al
+minimo per quattro bande. Cambiare 2/3/4 bande ridistribuisce le strip senza
+cambiare la finestra. Le dimensioni scelte persistono nel processor e nello
+stato salvato (`editorWidth`, `editorHeight`), con clamp 1100–1600 / 738–1100.
+Stati precedenti senza queste proprietà usano il minimo iniziale.
+
+Verifica della correzione 2026-09-14: VST3 x64 Release completato e CTest
+**2/2 superato** (7.47 s: DSP 2.23 s, UI/stato 5.20 s). Test di editing con
+conferma/annullamento, focus unico e alias, sequenze SOLO/IN, automazione,
+bande nascoste, resize e riapertura, salvataggio durante SOLO. Confronto audio
+con le bande del crossover a rapporto 1:1, dopo oltre 100 ms di assestamento
+della costante esponenziale SOLO da 5 ms; errore massimo ammesso 2e-6.
+Rendering JUCE a 1100 × 738 controllato; interazione manuale nella DAW da
+provare nel proprio host. Binario 7388160 byte, SHA256
+`9068957155717157DA517EC70CEB0E621DC22F53F3A19DFFC9AC7C6193227A0E`.
 
 Attack/Release:
 
@@ -3498,7 +3528,7 @@ Il POC è considerato completato quando:
 - [ ] Auto è stato caratterizzato e implementato.
 - [x] VST3 espone un sidechain esterno per-banda; matching dell'originale ancora da validare.
 - [x] band linking funziona nel DSP e sincronizza i controlli GUI.
-- [x] Solo/In funzionano con la dipendenza SOLO-on -> IN-on e IN-off -> SOLO-off.
+- [x] SOLO applica un override temporaneo; alla disattivazione ripristina gli IN salvati.
 - [x] meter IN/OUT/GR e master completi di scale dB.
 - [x] GUI crossover interattiva con assi e analizzatore FFT.
 - [x] GUI compression curve con assi e marker live per banda attiva.
@@ -3612,7 +3642,7 @@ Questo POC deve rimanere un documento vivo: ogni nuova misura deve aggiornare la
 | Xover | X1 | 20..20000 Hz | ordine vincolato |
 | Xover | X2 | 20..20000 Hz | MC303/404 |
 | Xover | X3 | 20..20000 Hz | MC404 |
-| Band | IN | On/Off | SOLO-on forza IN-on; IN-off forza SOLO-off |
+| Band | IN | On/Off | Conservato durante SOLO; display temporaneo sulle sole bande in SOLO |
 | Band | Solo | On/Off | multiple solo |
 | Band | Gain | -24.0..+24.0 dB | step 0.1 dB |
 | Band | Threshold | -48.0..0.0 dB | step 0.1 dB |

@@ -76,6 +76,20 @@ if (MC2000_BUILD_TESTS)
     target_link_libraries(MC2000Tests PRIVATE juce::juce_core)
     add_test(NAME MC2000Tests COMMAND MC2000Tests)
 
+    juce_add_console_app(MC2000UITests PRODUCT_NAME "Ponte MBC4 UI Tests")
+    target_sources(MC2000UITests PRIVATE
+        Tests/MC2000UITests.cpp
+        ${MC2000_DSP_SOURCES}
+        Source/Parameters.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp
+        Source/UI/PonteLookAndFeel.cpp)
+    target_include_directories(MC2000UITests PRIVATE Source Source/UI)
+    target_compile_definitions(MC2000UITests PRIVATE
+        JucePlugin_Name="Ponte MBC4" JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+        JUCE_REPORT_APP_USAGE=0 JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(MC2000UITests PRIVATE
+        juce::juce_audio_utils juce::juce_audio_processors juce::juce_dsp juce::juce_gui_extra)
+    add_test(NAME MC2000UITests COMMAND MC2000UITests)
+
     juce_add_console_app(MC2000BlackBoxAnalysis PRODUCT_NAME "Ponte MBC4 Black Box Analysis")
     target_sources(MC2000BlackBoxAnalysis PRIVATE
         Research/BlackBoxAnalysis.cpp

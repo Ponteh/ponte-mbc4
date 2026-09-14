@@ -17,11 +17,18 @@ UI changes and build history are catalogued in
 [`shared/CompanyGUI/MC2000_UI_CATALOG.md`](../../shared/CompanyGUI/MC2000_UI_CATALOG.md).
 Meter scales and control captions use the same white as R1; the last band
 selected by mouse, wheel or keyboard focus is drawn in front in Static I/O.
-The master output meter is labelled MAIN OUTPUT to the left of the bars.
+The master output meter matches the width of Static I/O, with MAIN OUTPUT to the left of the bars.
 Knob values appear in an editable overlay above the control on interaction
-or keyboard focus, or after 400 ms of hover. Captions sit below the knobs;
-no layout space is reserved for hidden values. Active knobs use a brighter,
-more saturated accent. See POC sections 71–73 for the interaction contract.
+or keyboard focus, or after 30 ms of initial hover. Handoffs between controls
+are immediate; visual focus clears after 100 ms outside controls, unless dragging,
+editing or using a menu. Knobs, selectors, buttons and numeric fields share
+one visual focus controller. Captions sit below the knobs;
+no layout space is reserved for hidden values. Active knobs use a slightly brighter
+accent; unfocused controls retain their original saturation. See POC sections
+71–73 for the interaction contract. SOLO temporarily overrides the displayed
+IN states without overwriting them; releasing the last SOLO restores the saved
+IN configuration. The initial editor size is 1100 × 738; resizing is preserved
+across band-count changes, editor reopening and session save/restore.
 
 Current public parameter ranges are: Input/Output and per-band Gain
 `-24.0..+24.0 dB`, Threshold `-48.0..0.0 dB`, Ratio `1.00:1..10.00:1`,
@@ -38,6 +45,11 @@ JUCE checkout. An out-of-tree build path is recommended:
 
 ```powershell
 cmake -S . -B C:/build/PonteMBC4 -A x64
-cmake --build C:/build/PonteMBC4 --config Release --target PonteMC2000_VST3 MC2000Tests
+cmake --build C:/build/PonteMBC4 --config Release --target PonteMC2000_VST3 MC2000Tests MC2000UITests
 ctest --test-dir C:/build/PonteMBC4 -C Release --output-on-failure
 ```
+
+`MC2000UITests` exercises focus timing/controller handoffs, numeric editing,
+the real editor's SOLO/IN buttons and automation, state persistence, resize,
+meter alignment and audio routing against the sum of selected crossover bands.
+It writes `MC2000_UI_minimum.png` beside the test executable for visual review.

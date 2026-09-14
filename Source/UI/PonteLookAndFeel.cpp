@@ -37,7 +37,7 @@ void PonteLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wid
     const auto angle = startAngle + position * (endAngle - startAngle);
     const auto selected = static_cast<bool>(slider.getProperties()["pontedspKnobActive"]);
     const auto accent = slider.findColour(juce::Slider::rotarySliderFillColourId);
-    const auto displayedAccent = selected ? accent : accent.withMultipliedSaturation(0.35f).darker(0.3f);
+    const auto displayedAccent = selected ? accent.brighter(0.08f) : accent;
 
     juce::Path track, active;
     track.addCentredArc(centre.x, centre.y, radius, radius, 0.0f, startAngle, endAngle, true);
@@ -49,9 +49,9 @@ void PonteLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wid
     g.strokePath(active, {2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded});
 
     const auto body = radius - 8.0f;
-    g.setColour(selected ? Palette::elevated().interpolatedWith(accent, 0.12f) : Palette::elevated());
+    g.setColour(selected ? Palette::elevated().interpolatedWith(accent, 0.04f) : Palette::elevated());
     g.fillEllipse(centre.x - body, centre.y - body, body * 2.0f, body * 2.0f);
-    g.setColour(selected ? accent.withAlpha(0.7f) : Palette::outline());
+    g.setColour(selected ? Palette::outline().interpolatedWith(accent, 0.25f) : Palette::outline());
     g.drawEllipse(centre.x - body, centre.y - body, body * 2.0f, body * 2.0f, 1.0f);
 
     juce::Path pointer;
@@ -70,7 +70,9 @@ void PonteLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& but
 {
     auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
     auto colour = button.getToggleState() ? Palette::lime() : base;
-    if (highlighted) colour = colour.brighter(button.getToggleState() ? 0.06f : 0.18f);
+    const auto focused = button.getProperties().contains("pontedspControlActive")
+        ? static_cast<bool>(button.getProperties()["pontedspControlActive"]) : highlighted;
+    if (focused) colour = colour.brighter(0.08f);
     if (down) colour = colour.darker(0.18f);
     g.setColour(colour);
     g.fillRoundedRectangle(bounds, 5.0f);
@@ -93,7 +95,10 @@ void PonteLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bo
                                          static_cast<float>(height)).reduced(1.0f);
     g.setColour(box.findColour(juce::ComboBox::backgroundColourId));
     g.fillRoundedRectangle(bounds, 5.0f);
-    g.setColour(down ? Palette::lime() : box.findColour(juce::ComboBox::outlineColourId));
+    const auto focused = box.getProperties().contains("pontedspControlActive")
+        ? static_cast<bool>(box.getProperties()["pontedspControlActive"]) : down;
+    const auto outline = box.findColour(juce::ComboBox::outlineColourId);
+    g.setColour(focused ? outline.interpolatedWith(Palette::lime(), 0.25f) : outline);
     g.drawRoundedRectangle(bounds, 5.0f, 1.0f);
     juce::Path arrow;
     const auto cx = static_cast<float>(width - 16), cy = static_cast<float>(height) * 0.5f;

@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "PonteLookAndFeel.h"
+#include "UI/ControlFocus.h"
 #include <array>
 #include <functional>
 #include <juce_dsp/juce_dsp.h>
@@ -16,18 +17,13 @@ public:
     void resized() override;
     void parentHierarchyChanged() override;
     void mouseDown(const juce::MouseEvent&) override;
-    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
-    void focusOfChildComponentChanged(FocusChangeType) override;
+    void registerFocus(pontedsp::gui::ControlFocus&);
 
 private:
     void timerCallback() override;
-    void showValueForInteraction();
     void setValueVisible(bool visible);
     void positionValueDisplay();
     void updateValueText();
-    double hoverStartedMs {};
-    double visibleUntilMs {};
-    bool hovering {};
     bool dragging {};
     juce::Label name;
     juce::Slider slider;
@@ -56,6 +52,8 @@ public:
     ~CrossoverField() override;
     void paint(juce::Graphics&) override;
     void resized() override;
+
+    bool isEditing() const { return value.isBeingEdited(); }
 
 private:
     void labelTextChanged(juce::Label*) override;
@@ -89,6 +87,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void setActiveVisual(bool active);
+    void updateInState(bool anySolo);
     void mouseDown(const juce::MouseEvent&) override;
     void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void focusOfChildComponentChanged(FocusChangeType) override;
@@ -102,7 +101,7 @@ private:
     ParameterKnob gain, threshold, ratio, knee, bite, attack, release;
     juce::ComboBox timeConstant;
     BandMeter meter;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> enabledAttachment, soloAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> soloAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> timeConstantAttachment;
     bool activeVisual { true };
 };
@@ -200,6 +199,8 @@ private:
     bool linkDisplayInitialised {};
     std::array<std::array<double, linkedControlCount>, 4> linkDisplayOffsets {};
     std::array<std::array<double, linkedControlCount>, 4> previousLinkedValues {};
+    // Destroy before the controls captured by its callbacks.
+    std::unique_ptr<pontedsp::gui::ControlFocus> controlFocus;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PonteMC2000AudioProcessorEditor)
 };

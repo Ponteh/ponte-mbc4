@@ -42,6 +42,7 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
                              const juce::String& helpText, const int decimalPlaces)
 {
     setContextHelp(*this, helpText);
+    setComponentID(parameterId);
     configureLabel(name, caption, 10.0f, juce::Justification::centred,
                    pontedsp::gui::Palette::text());
     addAndMakeVisible(name);
@@ -67,6 +68,7 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
     valueDisplay.setColour(juce::Label::textWhenEditingColourId, pontedsp::gui::Palette::text());
     valueDisplay.setColour(juce::Label::backgroundWhenEditingColourId, pontedsp::gui::Palette::elevated());
     valueDisplay.setTitle(caption + " value");
+    valueDisplay.setComponentID(parameterId + ".value");
     valueDisplay.setAlwaysOnTop(true);
     valueDisplay.addMouseListener(this, true);
     valueDisplay.onTextChange = [this, parameter = state.getParameter(parameterId)]
@@ -85,12 +87,10 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
     slider.onDragStart = [this]
     {
         dragging = true;
-        showValueForInteraction();
     };
     slider.onDragEnd = [this]
     {
         dragging = false;
-        showValueForInteraction();
     };
     addMouseListener(this, true);
     setValueVisible(false);
@@ -100,6 +100,7 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
 void ParameterKnob::setValueVisible(const bool visible)
 {
     const auto show = visible && isShowing() && valueDisplay.getParentComponent() != nullptr;
+    if (!show && valueDisplay.isBeingEdited()) valueDisplay.hideEditor(false);
     if (show) positionValueDisplay();
     valueDisplay.setVisible(show);
     if (show) valueDisplay.toFront(false);
@@ -145,43 +146,26 @@ void ParameterKnob::positionValueDisplay()
     }
 }
 
-void ParameterKnob::showValueForInteraction()
+void ParameterKnob::registerFocus(pontedsp::gui::ControlFocus& focus)
 {
-    visibleUntilMs = juce::Time::getMillisecondCounterHiRes() + 700.0;
-    setValueVisible(true);
+    focus.add(*this, [this](bool active)
+    {
+        setValueVisible(active);
+        if (active)
+            if (auto* strip = findParentComponentOfClass<BandStrip>())
+                if (strip->onInteraction) strip->onInteraction();
+    }, &valueDisplay, [this] { return dragging || valueDisplay.isBeingEdited(); });
 }
 
 void ParameterKnob::mouseDown(const juce::MouseEvent&)
 {
     if (auto* strip = findParentComponentOfClass<BandStrip>())
         if (strip->onInteraction) strip->onInteraction();
-    showValueForInteraction();
-}
-
-void ParameterKnob::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&)
-{
-    showValueForInteraction();
-}
-
-void ParameterKnob::focusOfChildComponentChanged(FocusChangeType)
-{
-    if (hasKeyboardFocus(true)) showValueForInteraction();
 }
 
 void ParameterKnob::timerCallback()
 {
     updateValueText();
-    const auto now = juce::Time::getMillisecondCounterHiRes();
-    const auto over = slider.isMouseOver(true)
-                   || (valueDisplay.isVisible() && valueDisplay.isMouseOver(true));
-    if (over && !hovering) hoverStartedMs = now;
-    hovering = over;
-    const auto hoverReady = over && now - hoverStartedMs >= 400.0;
-    const auto editing = valueDisplay.isBeingEdited();
-    if (hoverReady) visibleUntilMs = juce::jmax(visibleUntilMs, now + 200.0);
-    setValueVisible(isShowing() && (dragging || editing || hasKeyboardFocus(true)
-                                  || valueDisplay.hasKeyboardFocus(true)
-                                  || hoverReady || now < visibleUntilMs));
 }
 
 void ParameterKnob::resized()
@@ -233,6 +217,7 @@ CrossoverField::CrossoverField(juce::AudioProcessorValueTreeState& valueTreeStat
                                const int crossoverIndex)
     : state(valueTreeState), index(crossoverIndex)
 {
+    setComponentID(pontedsp::mc2000::parameters::crossoverId(index));
     value.setEditable(true, true, false);
     value.setJustificationType(juce::Justification::centred);
     value.setFont(juce::FontOptions(14.0f, juce::Font::bold));
@@ -323,8 +308,9 @@ void CrossoverField::paint(juce::Graphics& g)
     const auto area = getLocalBounds().toFloat().reduced(1.0f);
     g.setColour(pontedsp::gui::Palette::ink().withAlpha(0.88f));
     g.fillRoundedRectangle(area, 7.0f);
-    g.setColour(hasKeyboardFocus(true) ? pontedsp::gui::Palette::lime()
-                                       : pontedsp::gui::Palette::outline());
+    const auto outline = pontedsp::gui::Palette::outline();
+    g.setColour(static_cast<bool>(getProperties()["pontedspControlActive"])
+        ? outline.interpolatedWith(pontedsp::gui::Palette::lime(), 0.25f) : outline);
     g.drawRoundedRectangle(area, 7.0f, 1.2f);
 }
 
@@ -416,28 +402,41 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
         addAndMakeVisible(*component);
     enabled.setClickingTogglesState(true);
     solo.setClickingTogglesState(true);
+    enabled.setComponentID(pontedsp::mc2000::parameters::bandId(band, "enabled"));
+    solo.setComponentID(pontedsp::mc2000::parameters::bandId(band, "solo"));
     enabled.onClick = [this]
     {
-        if (!enabled.getToggleState() && solo.getToggleState())
-            solo.setToggleState(false, juce::sendNotification);
-    };
-    solo.onClick = [this]
-    {
-        if (solo.getToggleState() && !enabled.getToggleState())
-            enabled.setToggleState(true, juce::sendNotification);
+        // IN is the saved bypass state. SOLO only overrides its presentation/routing.
+        const auto count = juce::jlimit(2, 4, static_cast<int>(processor.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandCount)->load()) + 2);
+        for (int i = 0; i < count; ++i)
+            if (processor.state.getRawParameterValue(
+                pontedsp::mc2000::parameters::bandId(i, "solo"))->load() > 0.5f) return;
+        auto* parameter = processor.state.getParameter(
+            pontedsp::mc2000::parameters::bandId(band, "enabled"));
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(enabled.getToggleState() ? 1.0f : 0.0f);
+        parameter->endChangeGesture();
     };
     timeConstant.addItemList({ "R1", "R2", "AUTO" }, 1);
-    setContextHelp(enabled, "Enable this band. Turning IN off also turns SOLO off.");
-    setContextHelp(solo, "Monitor this band after crossover and compression. Turning SOLO on also enables IN.");
+    setContextHelp(enabled, "Enable this band's compression. IN settings are preserved while SOLO overrides the bands.");
+    setContextHelp(solo, "Monitor one or more bands. Releasing the last SOLO restores the saved IN settings.");
     setContextHelp(timeConstant, "Choose Pure Peak R1, adaptive release R2, or program-dependent Auto timing.");
     setContextHelp(meter, "Monitor band input, output and gain reduction levels.");
-    enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        p.state, pontedsp::mc2000::parameters::bandId(band, "enabled"), enabled);
     soloAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         p.state, pontedsp::mc2000::parameters::bandId(band, "solo"), solo);
     timeConstantAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         p.state, pontedsp::mc2000::parameters::bandId(band, "tcMode"), timeConstant);
     addMouseListener(this, true);
+}
+
+void BandStrip::updateInState(const bool anySolo)
+{
+    const auto suffix = anySolo ? "solo" : "enabled";
+    const auto on = processor.state.getRawParameterValue(
+        pontedsp::mc2000::parameters::bandId(band, suffix))->load() > 0.5f;
+    enabled.setToggleState(on, juce::dontSendNotification);
+    enabled.setEnabled(!anySolo);
 }
 
 void BandStrip::mouseDown(const juce::MouseEvent&)
@@ -805,7 +804,7 @@ void OutputMeter::paint(juce::Graphics& g)
     auto area = getLocalBounds().toFloat().reduced(2.0f);
     g.setColour(pontedsp::gui::Palette::text());
     g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-    auto caption = area.removeFromLeft(84.0f).withTrimmedBottom(12.0f);
+    auto caption = area.removeFromLeft(80.0f).withTrimmedBottom(12.0f);
     g.drawText("MAIN OUTPUT", caption, juce::Justification::centredLeft);
     area.removeFromLeft(4.0f);
     auto scale = area.removeFromBottom(12.0f);
@@ -887,14 +886,35 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
         p.state, pontedsp::mc2000::parameters::linkMaster, linkMaster);
     displayedBandCount = activeBandCount();
     contextHeader.setBandCount(displayedBandCount);
+    const auto initialWidth = processor.editorWidth.load();
+    const auto initialHeight = processor.editorHeight.load();
     setResizable(true, true);
-    setResizeLimits(1100, juce::jmax(590, 298 + 110 * displayedBandCount), 1600, 1100);
-    setSize(1250, 298 + 146 * displayedBandCount);
+    setResizeLimits(1100, 738, 1600, 1100);
+    setSize(initialWidth, initialHeight);
+    controlFocus = std::make_unique<pontedsp::gui::ControlFocus>(*this);
+    const std::function<void(juce::Component&)> registerControls = [this, &registerControls](juce::Component& c)
+    {
+        if (auto* knob = dynamic_cast<ParameterKnob*>(&c)) knob->registerFocus(*controlFocus);
+        else if (auto* field = dynamic_cast<CrossoverField*>(&c))
+            controlFocus->add(c, {}, nullptr, [field] { return field->isEditing(); });
+        else if (auto* box = dynamic_cast<juce::ComboBox*>(&c))
+            controlFocus->add(c, [box](bool active)
+            {
+                if (active)
+                    if (auto* strip = box->findParentComponentOfClass<BandStrip>())
+                        if (strip->onInteraction) strip->onInteraction();
+            }, nullptr, [box] { return box->isPopupActive(); });
+        else if (dynamic_cast<juce::Button*>(&c) != nullptr) controlFocus->add(c);
+        else for (auto* child : c.getChildren()) registerControls(*child);
+    };
+    registerControls(*this);
+    updateBandVisualStates();
     startTimerHz(30);
 }
 
 PonteMC2000AudioProcessorEditor::~PonteMC2000AudioProcessorEditor()
 {
+    controlFocus.reset();
     setLookAndFeel(nullptr);
 }
 
@@ -916,28 +936,32 @@ void PonteMC2000AudioProcessorEditor::paint(juce::Graphics& g)
 
 void PonteMC2000AudioProcessorEditor::resized()
 {
+    processor.editorWidth.store(getWidth());
+    processor.editorHeight.store(getHeight());
     auto area = getLocalBounds().reduced(12);
     auto header = area.removeFromTop(54);
-    outputMeter.setBounds(header.removeFromRight(220).reduced(3, 1));
-    contextHeader.setBounds(header.removeFromLeft(130));
-    header.removeFromLeft(6);
-    crossoverLabel.setBounds(header.removeFromLeft(64));
+    const auto meterWidth = juce::roundToInt((area.getWidth() - 168) * 0.36f) - 10;
+    outputMeter.setBounds(header.removeFromRight(meterWidth + 5).withTrimmedRight(5).reduced(0, 1));
+    // Fit the header at 1100 px without letting LINK intrude into the meter.
+    contextHeader.setBounds(header.removeFromLeft(110));
+    header.removeFromLeft(4);
+    crossoverLabel.setBounds(header.removeFromLeft(62));
     const auto activeFields = activeBandCount() - 1;
     for (int crossover = 0; crossover < 3; ++crossover)
     {
-        auto slot = header.removeFromLeft(90);
+        auto slot = header.removeFromLeft(70);
         const auto visible = crossover < activeFields;
         crossoverFields[static_cast<std::size_t>(crossover)]->setVisible(visible);
         if (visible)
             crossoverFields[static_cast<std::size_t>(crossover)]->setBounds(
-                slot.removeFromLeft(84).reduced(0, 9));
+                slot.removeFromLeft(66).reduced(0, 9));
     }
     header.removeFromLeft(4);
-    bandCountLabel.setBounds(header.removeFromLeft(36));
-    bandCount.setBounds(header.removeFromLeft(92).reduced(0, 9));
-    header.removeFromLeft(6);
-    linkLabel.setBounds(header.removeFromLeft(30));
-    linkMaster.setBounds(header.removeFromLeft(110).reduced(0, 9));
+    bandCountLabel.setBounds(header.removeFromLeft(34));
+    bandCount.setBounds(header.removeFromLeft(88).reduced(0, 9));
+    header.removeFromLeft(4);
+    linkLabel.setBounds(header.removeFromLeft(28));
+    linkMaster.setBounds(header.removeFromLeft(106).reduced(0, 9));
 
     auto displays = area.removeFromTop(212);
     auto master = displays.removeFromLeft(168).reduced(3);
@@ -965,13 +989,9 @@ void PonteMC2000AudioProcessorEditor::updateBandCountLayout()
 {
     const auto count = activeBandCount();
     if (count == displayedBandCount) return;
-    constexpr int fixedHeight = 298;
-    const auto stripHeight = juce::jlimit(110, 180,
-        (getHeight() - fixedHeight) / std::max(1, displayedBandCount));
     displayedBandCount = count;
-    setResizeLimits(1100, juce::jmax(590, fixedHeight + 110 * count), 1600, 1100);
     contextHeader.setBandCount(count);
-    setSize(getWidth(), juce::jlimit(590, 1100, fixedHeight + stripHeight * count));
+    resized();
 }
 
 void PonteMC2000AudioProcessorEditor::updateLinkedControls()
@@ -1076,6 +1096,7 @@ void PonteMC2000AudioProcessorEditor::updateBandVisualStates()
             pontedsp::mc2000::parameters::bandId(band, "solo"))->load() > 0.5f;
     for (int band = 0; band < 4; ++band)
     {
+        bands[static_cast<std::size_t>(band)]->updateInState(anySolo);
         const auto enabled = processor.state.getRawParameterValue(
             pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
         const auto solo = processor.state.getRawParameterValue(

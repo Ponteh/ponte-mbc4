@@ -95,6 +95,8 @@ juce::AudioProcessorEditor* PonteMC2000AudioProcessor::createEditor()
 void PonteMC2000AudioProcessor::getStateInformation(juce::MemoryBlock& destination)
 {
     auto saved = state.copyState();
+    saved.setProperty("editorWidth", editorWidth.load(), nullptr);
+    saved.setProperty("editorHeight", editorHeight.load(), nullptr);
     saved.setProperty("schemaVersion", pontedsp::mc2000::parameters::stateSchemaVersion, nullptr);
     saved.setProperty("dspModelVersion", pontedsp::mc2000::dsp::MultiBandCompressor::dspModelVersion, nullptr);
     if (const auto xml = saved.createXml())
@@ -108,6 +110,8 @@ void PonteMC2000AudioProcessor::setStateInformation(const void* data, const int 
         auto restored = juce::ValueTree::fromXml(*xml);
         if (restored.hasType(state.state.getType()))
         {
+            editorWidth.store(juce::jlimit(1100, 1600, static_cast<int>(restored.getProperty("editorWidth", 1100))));
+            editorHeight.store(juce::jlimit(738, 1100, static_cast<int>(restored.getProperty("editorHeight", 738))));
             state.replaceState(restored);
             linkRuntime = {};
         }
