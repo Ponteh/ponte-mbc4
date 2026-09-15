@@ -1,0 +1,32 @@
+{
+  "sessionDate": "2026-09-15",
+  "userConfirmed": {
+    "bufferSamples": 512,
+    "wavAcquisition": "separate export, not a recording of the video pass",
+    "take2Wavs": "previous WAVs retained",
+    "recorder": "OBS",
+    "test05": "neutral; compressed pass not performed"
+  },
+  "observed": {
+    "host": "Ableton Live 11 Intro",
+    "originalPlugin": "MC2000 MC404 7.3.0.23",
+    "exportSampleRate": 48000,
+    "exportFormat": "IEEE float32 stereo dual mono",
+    "videoResolution": [1920, 1080],
+    "videoFps": 60,
+    "videoAudio": "AAC present but decoded samples are all zero",
+    "ponteA2Take2Link": "UNLINKED",
+    "ponteB0Take2Solo": [2],
+    "test04PonteLink": "UNLINKED",
+    "test04Solo": [3],
+    "test05InBands": [2, 3],
+    "test05Solo": []
+  },
+  "unknown": [
+    "Exact host and OBS patch versions",
+    "Audio interface and driver",
+    "Effective block size of offline exports",
+    "Hash of loaded Ponte binary",
+    "Cause of transformed source event timings"
+  ]
+}

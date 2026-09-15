@@ -3,6 +3,7 @@
 #include "Ballistics.h"
 #include "CrossoverNetwork.h"
 #include "GainComputer.h"
+#include "MeterPeak.h"
 #include <array>
 #include <atomic>
 
@@ -61,6 +62,11 @@ public:
     double getBandMagnitudeDb(int band, double frequency) const noexcept;
     BandMeterSnapshot getBandMeter(int band) const noexcept;
     std::array<float, 2> getOutputMeterDb() const noexcept;
+    // Consume once per GUI tick. Raw getters above remain per-block readings
+    // for analysis; painting must use cached, smoothed GUI values.
+    BandMeterSnapshot consumeBandMeter(int band) noexcept;
+    std::array<float, 2> consumeOutputMeterDb() noexcept;
+    void discardPendingMeterPeaks() noexcept;
     const GlobalParameters& getParameters() const noexcept { return currentParameters; }
 
 private:
@@ -84,6 +90,12 @@ private:
     std::array<BiteProcessor, maxBands> biteProcessors;
     std::array<AtomicBandMeter, maxBands> meters;
     std::array<std::atomic<float>, 2> outputMeters { -100.0f, -100.0f };
+    struct PendingBandMeter
+    {
+        MeterPeak input, output, reduction { 0.0f };
+    };
+    std::array<PendingBandMeter, maxBands> pendingMeters;
+    std::array<MeterPeak, 2> pendingOutputMeters;
     GlobalParameters currentParameters;
     double sampleRate { 48000.0 };
     double inputGainCurrent { 1.0 };

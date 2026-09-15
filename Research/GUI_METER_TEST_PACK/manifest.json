@@ -1,0 +1,1095 @@
+{
+    "packVersion":  1,
+    "sampleRate":  48000,
+    "channels":  2,
+    "channelLayout":  "dual mono, L equals R; levels refer to each channel",
+    "format":  "WAV PCM signed 24-bit little endian, no dither",
+    "transitionSamples":  96,
+    "transition":  "2 ms half-cosine amplitude ramp at each segment start; carrier phase continuous at unchanged frequency",
+    "silenceDbMarker":  -120,
+    "notes":  "Events mark ramp START, not its end. -120 denotes digital silence, except the first 96 samples of its transition. Harmonic probe is synthetic, not a real voice.",
+    "files":  [
+                  {
+                      "File":  "01_IN_OUT_LEVELS.wav",
+                      "Sha256":  "456A15C8051FADAFDE4D4CD04A1934B29D0C80F27FBE603A1382E9C20299F007",
+                      "Frames":  2112000,
+                      "Bytes":  12672044,
+                      "DurationSeconds":  44,
+                      "PeakDbfs":  -5.99999945523699,
+                      "Events":  [
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  0,
+                                         "EndSample":  96000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  96000,
+                                         "EndSample":  216000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -36
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  216000,
+                                         "EndSample":  336000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -24
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  336000,
+                                         "EndSample":  456000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  456000,
+                                         "EndSample":  576000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  576000,
+                                         "EndSample":  696000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  696000,
+                                         "EndSample":  816000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -24
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  816000,
+                                         "EndSample":  936000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -36
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  936000,
+                                         "EndSample":  1032000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1032000,
+                                         "EndSample":  1152000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -36
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1152000,
+                                         "EndSample":  1272000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -24
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1272000,
+                                         "EndSample":  1392000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1392000,
+                                         "EndSample":  1512000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1512000,
+                                         "EndSample":  1632000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1632000,
+                                         "EndSample":  1752000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -24
+                                     },
+                                     {
+                                         "Label":  "level_plateau",
+                                         "Signal":  "sine",
+                                         "StartSample":  1752000,
+                                         "EndSample":  1872000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -36
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1872000,
+                                         "EndSample":  1968000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1968000,
+                                         "EndSample":  2112000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     }
+                                 ]
+                  },
+                  {
+                      "File":  "02_IN_OUT_BURSTS.wav",
+                      "Sha256":  "8587A59FE0E8AEF6E7C0A1133C96A0D32C7D3810B28018206CAB4445FCE43CF1",
+                      "Frames":  2704800,
+                      "Bytes":  16228844,
+                      "DurationSeconds":  56.35,
+                      "PeakDbfs":  -5.99999945523699,
+                      "Events":  [
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  0,
+                                         "EndSample":  96000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  96000,
+                                         "EndSample":  96480,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  96480,
+                                         "EndSample":  149904,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  149904,
+                                         "EndSample":  150384,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  150384,
+                                         "EndSample":  211392,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  211392,
+                                         "EndSample":  211872,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  211872,
+                                         "EndSample":  283248,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  283248,
+                                         "EndSample":  284688,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  284688,
+                                         "EndSample":  338112,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  338112,
+                                         "EndSample":  339552,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  339552,
+                                         "EndSample":  400560,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  400560,
+                                         "EndSample":  402000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  402000,
+                                         "EndSample":  473376,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  473376,
+                                         "EndSample":  478176,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  478176,
+                                         "EndSample":  531600,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  531600,
+                                         "EndSample":  536400,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  536400,
+                                         "EndSample":  597408,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  597408,
+                                         "EndSample":  602208,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  602208,
+                                         "EndSample":  673584,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  673584,
+                                         "EndSample":  687984,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  687984,
+                                         "EndSample":  741408,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  741408,
+                                         "EndSample":  755808,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  755808,
+                                         "EndSample":  816816,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  816816,
+                                         "EndSample":  831216,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  831216,
+                                         "EndSample":  902592,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  902592,
+                                         "EndSample":  950592,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  950592,
+                                         "EndSample":  1004016,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1004016,
+                                         "EndSample":  1052016,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1052016,
+                                         "EndSample":  1113024,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1113024,
+                                         "EndSample":  1161024,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1161024,
+                                         "EndSample":  1232400,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1232400,
+                                         "EndSample":  1328400,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1328400,
+                                         "EndSample":  1328880,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1328880,
+                                         "EndSample":  1382304,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1382304,
+                                         "EndSample":  1382784,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1382784,
+                                         "EndSample":  1443792,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1443792,
+                                         "EndSample":  1444272,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1444272,
+                                         "EndSample":  1515648,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1515648,
+                                         "EndSample":  1517088,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1517088,
+                                         "EndSample":  1570512,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1570512,
+                                         "EndSample":  1571952,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1571952,
+                                         "EndSample":  1632960,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1632960,
+                                         "EndSample":  1634400,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1634400,
+                                         "EndSample":  1705776,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1705776,
+                                         "EndSample":  1710576,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1710576,
+                                         "EndSample":  1764000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1764000,
+                                         "EndSample":  1768800,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1768800,
+                                         "EndSample":  1829808,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1829808,
+                                         "EndSample":  1834608,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1834608,
+                                         "EndSample":  1905984,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1905984,
+                                         "EndSample":  1920384,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1920384,
+                                         "EndSample":  1973808,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  1973808,
+                                         "EndSample":  1988208,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1988208,
+                                         "EndSample":  2049216,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  2049216,
+                                         "EndSample":  2063616,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  2063616,
+                                         "EndSample":  2134992,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  2134992,
+                                         "EndSample":  2182992,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  2182992,
+                                         "EndSample":  2236416,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  2236416,
+                                         "EndSample":  2284416,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  2284416,
+                                         "EndSample":  2345424,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "burst",
+                                         "Signal":  "sine",
+                                         "StartSample":  2345424,
+                                         "EndSample":  2393424,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  2393424,
+                                         "EndSample":  2464800,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  2464800,
+                                         "EndSample":  2560800,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  2560800,
+                                         "EndSample":  2704800,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     }
+                                 ]
+                  },
+                  {
+                      "File":  "03_GR_BAND2_315Hz.wav",
+                      "Sha256":  "08D287B33BEDCAA8DB90152EFA924D390FAD5C733443ED26A50BFAFFC347467B",
+                      "Frames":  1231200,
+                      "Bytes":  7387244,
+                      "DurationSeconds":  25.65,
+                      "PeakDbfs":  -5.99999945523699,
+                      "Events":  [
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  0,
+                                         "EndSample":  96000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "residual_baseline",
+                                         "Signal":  "sine",
+                                         "StartSample":  96000,
+                                         "EndSample":  240000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "long_compression",
+                                         "Signal":  "sine",
+                                         "StartSample":  240000,
+                                         "EndSample":  384000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "release_after_long",
+                                         "Signal":  "sine",
+                                         "StartSample":  384000,
+                                         "EndSample":  672000,
+                                         "Frequency":  315,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "short_compression",
+                                         "Signal":  "sine",
+                                         "StartSample":  672000,
+                                         "EndSample":  679200,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "release_after_short",
+                                         "Signal":  "sine",
+                                         "StartSample":  679200,
+                                         "EndSample":  871200,
+                                         "Frequency":  315,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "medium_compression",
+                                         "Signal":  "sine",
+                                         "StartSample":  871200,
+                                         "EndSample":  895200,
+                                         "Frequency":  315,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "release_after_medium",
+                                         "Signal":  "sine",
+                                         "StartSample":  895200,
+                                         "EndSample":  1087200,
+                                         "Frequency":  315,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1087200,
+                                         "EndSample":  1231200,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     }
+                                 ]
+                  },
+                  {
+                      "File":  "04_GR_BAND3_2000Hz.wav",
+                      "Sha256":  "D2EF2E6955AF567E1E6DC90A068443D6DD27A051BF2C8FDD0EBA3746BEC8A578",
+                      "Frames":  1231200,
+                      "Bytes":  7387244,
+                      "DurationSeconds":  25.65,
+                      "PeakDbfs":  -5.99999945523699,
+                      "Events":  [
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  0,
+                                         "EndSample":  96000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "residual_baseline",
+                                         "Signal":  "sine",
+                                         "StartSample":  96000,
+                                         "EndSample":  240000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "long_compression",
+                                         "Signal":  "sine",
+                                         "StartSample":  240000,
+                                         "EndSample":  384000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "release_after_long",
+                                         "Signal":  "sine",
+                                         "StartSample":  384000,
+                                         "EndSample":  672000,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "short_compression",
+                                         "Signal":  "sine",
+                                         "StartSample":  672000,
+                                         "EndSample":  679200,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "release_after_short",
+                                         "Signal":  "sine",
+                                         "StartSample":  679200,
+                                         "EndSample":  871200,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "medium_compression",
+                                         "Signal":  "sine",
+                                         "StartSample":  871200,
+                                         "EndSample":  895200,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "release_after_medium",
+                                         "Signal":  "sine",
+                                         "StartSample":  895200,
+                                         "EndSample":  1087200,
+                                         "Frequency":  2000,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1087200,
+                                         "EndSample":  1231200,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     }
+                                 ]
+                  },
+                  {
+                      "File":  "05_FUNDAMENTAL_PROBE_90_120_180Hz.wav",
+                      "Sha256":  "D8413B6256B688D9878A57B86EF43A1830629BF65FCA114D850BED3BB05B3EA8",
+                      "Frames":  1248000,
+                      "Bytes":  7488044,
+                      "DurationSeconds":  26,
+                      "PeakDbfs":  -6.0000015212092359,
+                      "Events":  [
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  0,
+                                         "EndSample":  96000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  96000,
+                                         "EndSample":  144000,
+                                         "Frequency":  90,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  144000,
+                                         "EndSample":  172800,
+                                         "Frequency":  90,
+                                         "LevelDb":  -9
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  172800,
+                                         "EndSample":  184800,
+                                         "Frequency":  90,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  184800,
+                                         "EndSample":  201600,
+                                         "Frequency":  90,
+                                         "LevelDb":  -15
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  201600,
+                                         "EndSample":  218400,
+                                         "Frequency":  90,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  218400,
+                                         "EndSample":  261600,
+                                         "Frequency":  90,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  261600,
+                                         "EndSample":  285600,
+                                         "Frequency":  90,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  285600,
+                                         "EndSample":  309600,
+                                         "Frequency":  90,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  309600,
+                                         "EndSample":  432000,
+                                         "Frequency":  90,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  432000,
+                                         "EndSample":  480000,
+                                         "Frequency":  120,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  480000,
+                                         "EndSample":  508800,
+                                         "Frequency":  120,
+                                         "LevelDb":  -9
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  508800,
+                                         "EndSample":  520800,
+                                         "Frequency":  120,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  520800,
+                                         "EndSample":  537600,
+                                         "Frequency":  120,
+                                         "LevelDb":  -15
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  537600,
+                                         "EndSample":  554400,
+                                         "Frequency":  120,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  554400,
+                                         "EndSample":  597600,
+                                         "Frequency":  120,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  597600,
+                                         "EndSample":  621600,
+                                         "Frequency":  120,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  621600,
+                                         "EndSample":  645600,
+                                         "Frequency":  120,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  645600,
+                                         "EndSample":  768000,
+                                         "Frequency":  120,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  768000,
+                                         "EndSample":  816000,
+                                         "Frequency":  180,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  816000,
+                                         "EndSample":  844800,
+                                         "Frequency":  180,
+                                         "LevelDb":  -9
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  844800,
+                                         "EndSample":  856800,
+                                         "Frequency":  180,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  856800,
+                                         "EndSample":  873600,
+                                         "Frequency":  180,
+                                         "LevelDb":  -15
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  873600,
+                                         "EndSample":  890400,
+                                         "Frequency":  180,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  890400,
+                                         "EndSample":  933600,
+                                         "Frequency":  180,
+                                         "LevelDb":  -6
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  933600,
+                                         "EndSample":  957600,
+                                         "Frequency":  180,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  957600,
+                                         "EndSample":  981600,
+                                         "Frequency":  180,
+                                         "LevelDb":  -12
+                                     },
+                                     {
+                                         "Label":  "fundamental_probe",
+                                         "Signal":  "harmonic_probe",
+                                         "StartSample":  981600,
+                                         "EndSample":  1104000,
+                                         "Frequency":  180,
+                                         "LevelDb":  -42
+                                     },
+                                     {
+                                         "Label":  "silence",
+                                         "Signal":  "sine",
+                                         "StartSample":  1104000,
+                                         "EndSample":  1248000,
+                                         "Frequency":  0,
+                                         "LevelDb":  -120
+                                     }
+                                 ]
+                  }
+              ]
+}

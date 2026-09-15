@@ -37,6 +37,14 @@ void MultiBandCompressor::reset() noexcept
     detectorCrossover.reset();
     for (auto& state : ballistics) state.reset();
     for (auto& bite : biteProcessors) bite.reset();
+    for (auto& meter : meters)
+    {
+        meter.inputDb.store(-100.0f, std::memory_order_relaxed);
+        meter.outputDb.store(-100.0f, std::memory_order_relaxed);
+        meter.gainReductionDb.store(0.0f, std::memory_order_relaxed);
+    }
+    for (auto& meter : outputMeters) meter.store(-100.0f, std::memory_order_relaxed);
+    discardPendingMeterPeaks();
 }
 
 void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noexcept
@@ -225,11 +233,42 @@ void MultiBandCompressor::publishMeters(const std::array<double, maxBands>& inpu
         meter.inputDb.store(static_cast<float>(gainToDecibels(inputPeaks[static_cast<std::size_t>(band)], -100.0)), std::memory_order_relaxed);
         meter.outputDb.store(static_cast<float>(gainToDecibels(outputPeaks[static_cast<std::size_t>(band)], -100.0)), std::memory_order_relaxed);
         meter.gainReductionDb.store(static_cast<float>(maximumGr[static_cast<std::size_t>(band)]), std::memory_order_relaxed);
+        auto& pending = pendingMeters[static_cast<std::size_t>(band)];
+        pending.input.publish(meter.inputDb.load(std::memory_order_relaxed));
+        pending.output.publish(meter.outputDb.load(std::memory_order_relaxed));
+        pending.reduction.publish(static_cast<float>(maximumGr[static_cast<std::size_t>(band)]));
     }
     for (int channel = 0; channel < 2; ++channel)
+    {
         outputMeters[static_cast<std::size_t>(channel)].store(
             static_cast<float>(gainToDecibels(masterPeaks[static_cast<std::size_t>(channel)], -100.0)),
             std::memory_order_relaxed);
+        pendingOutputMeters[static_cast<std::size_t>(channel)].publish(
+            outputMeters[static_cast<std::size_t>(channel)].load(std::memory_order_relaxed));
+    }
+}
+
+BandMeterSnapshot MultiBandCompressor::consumeBandMeter(const int band) noexcept
+{
+    if (band < 0 || band >= maxBands) return {};
+    auto& meter = pendingMeters[static_cast<std::size_t>(band)];
+    return { meter.input.consume(), meter.output.consume(), meter.reduction.consume() };
+}
+
+std::array<float, 2> MultiBandCompressor::consumeOutputMeterDb() noexcept
+{
+    return { pendingOutputMeters[0].consume(), pendingOutputMeters[1].consume() };
+}
+
+void MultiBandCompressor::discardPendingMeterPeaks() noexcept
+{
+    for (auto& meter : pendingMeters)
+    {
+        meter.input.reset();
+        meter.output.reset();
+        meter.reduction.reset();
+    }
+    for (auto& meter : pendingOutputMeters) meter.reset();
 }
 
 double MultiBandCompressor::getStaticOutputDb(const int band, const double inputDb) const noexcept

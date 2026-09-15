@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(PonteMC2000 VERSION 0.2.0 LANGUAGES C CXX)
+project(PonteMC2000 VERSION 0.2.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,6 +33,17 @@ juce_add_plugin(PonteMC2000
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     COPY_PLUGIN_AFTER_BUILD FALSE)
+
+# JUCE 9.0.1's RC rule omits Info.txt from its dependencies. Without it,
+# incremental version bumps can leave Windows FileVersion at the old value
+# even when the VST3 factory/manifest already reports the new version.
+if (WIN32)
+    get_target_property(mc2000_generated_dir PonteMC2000 JUCE_GENERATED_SOURCES_DIRECTORY)
+    get_target_property(mc2000_info_file PonteMC2000 JUCE_INFO_FILE)
+    add_custom_command(
+        OUTPUT "${mc2000_generated_dir}/PonteMC2000_resources.rc"
+        APPEND DEPENDS "${mc2000_info_file}")
+endif()
 
 set(MC2000_DSP_SOURCES
     Source/DSP/CrossoverNetwork.cpp

@@ -1,0 +1,5 @@
+*_frames.log
+# Native capture frames are reproducible local diagnostics; keep summary plots.
+*_2s.png
+*_8s.png
+*_16s.png

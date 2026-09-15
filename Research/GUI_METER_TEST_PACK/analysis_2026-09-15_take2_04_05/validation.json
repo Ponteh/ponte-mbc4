@@ -1,0 +1,59 @@
+{
+  "unchanged_input_hashes": [
+    "01_IN_OUT_LEVELS-ORIG.wav",
+    "01_IN_OUT_LEVELS-PONTE.wav",
+    "01_IN_OUT_LEVELS.wav",
+    "02_IN_OUT_BURSTS-ORIG.wav",
+    "02_IN_OUT_BURSTS-PONTE.wav",
+    "02_IN_OUT_BURSTS.wav",
+    "03_GR_BAND2_315Hz-ORIG-ratio11.wav",
+    "03_GR_BAND2_315Hz-ORIG-ratio21.wav",
+    "03_GR_BAND2_315Hz-PONTE-ratio11.wav",
+    "03_GR_BAND2_315Hz-PONTE-ratio21.wav",
+    "03_GR_BAND2_315Hz.wav",
+    "04_GR_BAND3_2000Hz-ORIG-ratio11.wav",
+    "04_GR_BAND3_2000Hz-ORIG-ratio21.wav",
+    "04_GR_BAND3_2000Hz-PONTE-ratio11.wav",
+    "04_GR_BAND3_2000Hz-PONTE-ratio21.wav",
+    "04_GR_BAND3_2000Hz.wav",
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz-ORIG-BAND23.wav",
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz-PONTE-BAND23.wav",
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz.wav",
+    "02_PONTE_A2_IN_48k_neutro_take2.mp4",
+    "03_PONTE_B0_RATIO11_R250_SOLO2_48k_take2.mp4",
+    "04_ORIG_B0_RATIO11_R250_SOLO3_48k_take1.mp4",
+    "04_ORIG_B1_RATIO21_R250_SOLO3_48k_take1.mp4",
+    "04_PONTE_B0_RATIO11_R250_SOLO3_48k_take1.mp4",
+    "04_PONTE_B1_RATIO21_R250_SOLO3_48k_take1.mp4",
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz-ORIG-BAND23.mp4",
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz-PONTE-BAND23.mp4",
+    "01_ORIG_A1_IN_48k_neutro_take1.mp4",
+    "01_PONTE_A1_IN_48k_neutro_take1.mp4",
+    "02_ORIG_A2_IN_48k_neutro_take1.mp4",
+    "02_PONTE_A2_IN_48k_neutro_take1.mp4",
+    "03_ORIG_B0_RATIO11_R250_SOLO2_48k_take1.mp4",
+    "03_ORIG_B1_RATIO21_R250_SOLO2_48k_take1.mp4",
+    "03_PONTE_B0_RATIO11_R250_SOLO2_48k_take1.mp4",
+    "03_PONTE_B1_RATIO21_R250_SOLO2_48k_take1.mp4"
+  ],
+  "new_video_frames": 15401,
+  "carrier_frequency_checks": {
+    "04_GR_BAND3_2000Hz-ORIG-ratio11": [
+      2000.0
+    ],
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz-ORIG-BAND23": [
+      90.0,
+      120.0,
+      180.0
+    ],
+    "04_GR_BAND3_2000Hz-PONTE-ratio11": [
+      2000.0
+    ],
+    "05_FUNDAMENTAL_PROBE_90_120_180Hz-PONTE-BAND23": [
+      90.0,
+      120.0,
+      180.0
+    ]
+  },
+  "status": "PASS: source hashes, all eight video traces, 30 A2 events, three GR tails, neutral 05, carriers and script syntax"
+}

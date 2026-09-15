@@ -273,6 +273,55 @@ void testSoloAudioRouting()
         expect(energy > .01 && maxError < 2.0e-6, "SOLO audio contains exactly selected crossover bands; no SOLO restores full sum");
     }
 }
+void testMeterPaintingAndReopen()
+{
+    PonteMC2000AudioProcessor processor;
+    auto& engine = processor.getEngine();
+    engine.prepare(48000, 512, 2);
+    auto sendTone = [&]
+    {
+        std::vector<float> left(512), right(512);
+        for (int i = 0; i < 512; ++i)
+            left[i] = right[i] = static_cast<float>(.5 * std::sin(2 * 3.141592653589793 * 315 * i / 48000));
+        float* audio[] { left.data(), right.data() };
+        engine.process(audio, 2, 512);
+    };
+    {
+        BandMeter band(processor, 1);
+        OutputMeter main(processor);
+        band.setSize(360, 60);
+        main.setSize(360, 40);
+        sendTone();
+        // A repaint before the timer must not consume or display new peaks.
+        band.createComponentSnapshot(band.getLocalBounds());
+        main.createComponentSnapshot(main.getLocalBounds());
+        expect(band.displayedValues().inputDb == -100 && main.displayedValues()[0] == -100,
+               "painting does not read or consume pending audio peaks");
+        band.update(1.0 / 30);
+        main.update(1.0 / 30);
+        const auto bandBefore = band.displayedValues().inputDb;
+        const auto mainBefore = main.displayedValues()[0];
+        expect(bandBefore > -12 && mainBefore > -12, "GUI tick captures peaks after an early repaint");
+        for (int i = 0; i < 5; ++i)
+        {
+            band.createComponentSnapshot(band.getLocalBounds());
+            main.createComponentSnapshot(main.getLocalBounds());
+        }
+        expect(band.displayedValues().inputDb == bandBefore && main.displayedValues()[0] == mainBefore,
+               "extra paints cannot accelerate meter decay");
+        band.update(12);
+        main.update(12);
+        expect(band.displayedValues().inputDb < -99 && main.displayedValues()[0] < -99,
+               "meters empty when the DAW suspends audio callbacks");
+    }
+    sendTone();
+    {
+        PonteMC2000AudioProcessorEditor editor(processor);
+        expect(engine.consumeOutputMeterDb()[0] == -100
+               && engine.consumeBandMeter(1).inputDb == -100,
+               "opening an editor discards peaks accumulated while closed");
+    }
+}
 } // namespace
 
 int main()
@@ -283,6 +332,7 @@ int main()
     testEditorAndSolo();
     testKnobEditing();
     testSoloAudioRouting();
+    testMeterPaintingAndReopen();
     if (failures == 0) std::cout << "All Ponte MC2000 UI/state tests passed\n";
     return failures == 0 ? 0 : 1;
 }

@@ -3,6 +3,8 @@
 #include "DSP/GainComputer.h"
 #include "DSP/LinkwitzRiley4.h"
 #include "DSP/MultiBandCompressor.h"
+#include "UI/MeterBallistics.h"
+#include <thread>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -451,6 +453,124 @@ void testArbitraryBlocksAndInvalidInput()
                "arbitrary block sizes and invalid samples cannot poison DSP state");
 }
 
+void testMeterCapture()
+{
+    using namespace pontedsp::mc2000::dsp;
+    // A short tone may end many blocks before the GUI samples its mailbox.
+    for (const auto blockSize : { 64, 512, 1024 })
+    {
+        MultiBandCompressor engine, unobserved;
+        GlobalParameters parameters;
+        for (auto& band : parameters.bands)
+        {
+            band.thresholdDb = -27.5;
+            band.ratio = 2.0;
+            band.attackMs = 2.5;
+        }
+        engine.setParameters(parameters);
+        unobserved.setParameters(parameters);
+        engine.prepare(48000, blockSize, 2);
+        unobserved.prepare(48000, blockSize, 2);
+        std::array<BandMeterSnapshot, 4> expected;
+        std::array<float, 2> master { -100.0f, -100.0f };
+        for (int start = 0; start < 48000; start += blockSize)
+        {
+            const auto count = std::min(blockSize, 48000 - start);
+            std::vector<float> left(count), right(count);
+            for (int n = 0; n < count; ++n)
+                if (start + n < 480)
+                {
+                    left[n] = static_cast<float>(.5 * std::sin(2 * 3.141592653589793 * 315 * (start + n) / 48000));
+                    right[n] = left[n] * .25f;
+                }
+            auto otherLeft = left, otherRight = right;
+            float* audio[] { left.data(), right.data() };
+            float* otherAudio[] { otherLeft.data(), otherRight.data() };
+            engine.process(audio, 2, count);
+            unobserved.process(otherAudio, 2, count);
+            expect(left == otherLeft && right == otherRight,
+                   "GUI consumption has no effect on rendered audio");
+            for (int band = 0; band < 4; ++band)
+            {
+                const auto raw = engine.getBandMeter(band);
+                expected[band].inputDb = std::max(expected[band].inputDb, raw.inputDb);
+                expected[band].outputDb = std::max(expected[band].outputDb, raw.outputDb);
+                expected[band].gainReductionDb = std::max(expected[band].gainReductionDb, raw.gainReductionDb);
+            }
+            const auto rawMaster = engine.getOutputMeterDb();
+            for (int ch = 0; ch < 2; ++ch) master[ch] = std::max(master[ch], rawMaster[ch]);
+            // Exercise independent GUI polling on the comparison instance.
+            if (start % 3 == 0) unobserved.discardPendingMeterPeaks();
+        }
+        for (int band = 0; band < 4; ++band)
+        {
+            const auto captured = engine.consumeBandMeter(band);
+            expectNear(captured.inputDb, expected[band].inputDb, 0.0, "IN retains every block peak");
+            expectNear(captured.outputDb, expected[band].outputDb, 0.0, "OUT retains every block peak");
+            expectNear(captured.gainReductionDb, expected[band].gainReductionDb, 0.0, "GR retains every block peak");
+            const auto empty = engine.consumeBandMeter(band);
+            expect(empty.inputDb == -100 && empty.outputDb == -100 && empty.gainReductionDb == 0,
+                   "consumed band mailbox returns silence until another audio block");
+        }
+        expect(engine.consumeOutputMeterDb() == master, "both MAIN peaks survive intervening silence");
+        expectNear(master[0] - master[1], 12.0412, .001, "stereo MAIN channels stay independent");
+        expect(engine.getOutputMeterDb()[0] < -90, "raw analysis getter still reflects the latest block");
+        engine.reset();
+        expect(engine.consumeOutputMeterDb()[0] == -100 && engine.getBandMeter(1).gainReductionDb == 0,
+               "reset clears raw readings and pending peaks");
+    }
+
+    // Concurrent publish/exchange: a peak must be delivered either to the
+    // racing consumer or to its next read, never lost between load and reset.
+    MeterPeak peak;
+    std::atomic<bool> done { false };
+    std::thread producer([&]
+    {
+        for (int i = 0; i < 100000; ++i) peak.publish(static_cast<float>(i));
+        done.store(true, std::memory_order_release);
+    });
+    float maximum = -100;
+    while (!done.load(std::memory_order_acquire)) maximum = std::max(maximum, peak.consume());
+    producer.join();
+    maximum = std::max(maximum, peak.consume());
+    expect(maximum == 99999, "concurrent GUI exchange cannot erase the final audio peak");
+}
+
+void testVisualMeterBallistics()
+{
+    using namespace pontedsp::gui;
+    for (const auto drop : { 6.0, 12.0 })
+    {
+        LevelMeterBallistics meter;
+        meter.update(-6, 0);
+        double t10 = 0, t90 = 0, previous = -6;
+        for (int ms = 1; ms <= 2000; ++ms)
+        {
+            const auto value = meter.update(-6 - drop, .001);
+            expect(value <= previous + 1.e-10 && value >= -6 - drop - 1.e-10,
+                   "level return is monotonic and does not overshoot");
+            if (!t10 && value <= -6 - .1 * drop) t10 = ms * .001;
+            if (!t90 && value <= -6 - .9 * drop) t90 = ms * .001;
+            previous = value;
+        }
+        expectNear(t90 - t10, drop == 6 ? .467 : .717, .035,
+                   "level fall reproduces measured original step interval");
+    }
+    LevelMeterBallistics slow, fast, irregular;
+    for (auto* meter : { &slow, &fast, &irregular }) meter->update(-6, 0);
+    for (int n = 0; n < 30; ++n) slow.update(-48, 1.0 / 30);
+    for (int n = 0; n < 60; ++n) fast.update(-48, 1.0 / 60);
+    for (auto dt : { .011, .173, .016, .3, .5 }) irregular.update(-48, dt);
+    expectNear(slow.value(), fast.value(), 1.e-10, "level timing is independent of refresh rate");
+    expectNear(slow.value(), irregular.value(), 1.e-10, "level timing handles GUI jitter");
+    expectNear(slow.update(-2, .033), -2, 0, "fresh peaks attack immediately");
+    expect(slow.update(-100, 12) < -99, "level meter drains when audio callbacks stop");
+    GainReductionMeterBallistics gr;
+    expectNear(gr.update(10.5, .033), 10.5, 0, "GR plateau has no artificial calibration offset");
+    gr.update(0, 3);
+    expect(gr.value() < .001, "GR drains without new audio callbacks");
+}
+
 } // namespace
 
 int main()
@@ -465,6 +585,8 @@ int main()
     testExternalSidechainAcrossTimeConstants();
     testSoloSmoothing();
     testArbitraryBlocksAndInvalidInput();
+    testMeterCapture();
+    testVisualMeterBallistics();
     if (failures == 0)
         std::cout << "All Ponte MC2000 DSP tests passed\n";
     return failures == 0 ? 0 : 1;

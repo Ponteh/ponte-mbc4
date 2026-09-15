@@ -1,0 +1,70 @@
+{
+  "01_ORIG_A1_IN_48k_neutro_take1_pixels": {
+    "play_intervals": [
+      [
+        3.1,
+        48.833333
+      ]
+    ]
+  },
+  "01_PONTE_A1_IN_48k_neutro_take1_pixels": {
+    "play_intervals": [
+      [
+        6.55,
+        51.65
+      ]
+    ]
+  },
+  "02_ORIG_A2_IN_48k_neutro_take1_pixels": {
+    "play_intervals": [
+      [
+        2.666667,
+        47.85
+      ]
+    ]
+  },
+  "02_PONTE_A2_IN_48k_neutro_take1_pixels": {
+    "play_intervals": [
+      [
+        2.716667,
+        47.55
+      ]
+    ]
+  },
+  "03_ORIG_B0_RATIO11_R250_SOLO2_48k_take1_pixels": {
+    "play_intervals": [
+      [
+        3.616667,
+        26.8
+      ]
+    ]
+  },
+  "03_ORIG_B1_RATIO21_R250_SOLO2_48k_take1_pixels": {
+    "play_intervals": [
+      [
+        2.766667,
+        26.766667
+      ]
+    ]
+  },
+  "03_PONTE_B0_RATIO11_R250_SOLO2_48k_take1_pixels": {
+    "play_intervals": [
+      [
+        3.1,
+        24.116667
+      ],
+      [
+        24.166667,
+        26.766667
+      ]
+    ]
+  },
+  "03_PONTE_B1_RATIO21_R250_SOLO2_48k_take1_pixels": {
+    "play_intervals": [
+      [
+        2.933333,
+        27.366667
+      ]
+    ]
+  }
+}

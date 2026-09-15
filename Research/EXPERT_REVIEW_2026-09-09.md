@@ -340,3 +340,106 @@ Riferimenti ufficiali da studiare (valutazione estetica proposta):
 Nessuna velocità definitiva dei meter e nessuna correzione DSP sono state
 scelte: i riferimenti storici sono stati analizzati, ma resta necessario il
 confronto controllato nel setup dell'esperto e la cattura dei meter originali.
+
+## Aggiornamento 2026-09-14 — acquisizione GUI da preparare in Ableton
+
+L'utente intende registrare lo schermo confrontando originale ed emulazione,
+probabilmente in Ableton Live. Preparato il
+[GUI_METER_TEST_PACK](GUI_METER_TEST_PACK/README.md): cinque WAV nuovi a
+48 kHz / 24 bit dual mono, 51163420 byte complessivi, con manifest, hash ed
+eventi temporali. Gradini e burst IN/OUT neutri, GR a 315 Hz e 2 kHz con
+portante residua -42 dBFS, sonda armonica 90/120/180 Hz (non voce reale).
+
+La guida definisce il primo giro con video e stampe audio della stessa
+passata, riferimenti ratio 1:1 filtrati e separazione fra GR audio e display.
+Ponte di riferimento: commit `2b6e97e`. Verificati i WAV generati, non ancora
+la risposta dei plugin su queste acquisizioni. Nessun tempo del meter
+originale è stato stimato o impostato. Il vecchio ZIP non è stato riaperto.
+
+## Aggiornamento 2026-09-15 — analisi delle prime acquisizioni
+
+Analizzati 8 MP4 e 8 WAV dei test 01–03. Il
+[report completo](GUI_METER_TEST_PACK/analysis_2026-09-15/REPORT.md) contiene
+grafici, calibrazione, dati per-frame, misure audio, hash e script riproducibili.
+
+Confermata la discesa troppo rapida dei meter Ponte: lo step da 6 dB richiede
+circa 467–483 ms fra 10% e 90% nell'originale, mentre Ponte lo attraversa
+in un salto. Originale mostra tutti i 30 burst; Ponte sottorappresenta quattro
+picchi brevi, uno dei quali non appare. Il codice che sovrascrive i massimi
+per blocco e li legge a 30 Hz senza accumulo è coerente con questa evidenza.
+Una rampa smussata da circa 14.3 dB/s e 130 ms descrive bene A1, ma resta
+un modello candidato e non è stata implementata.
+
+GR sul plateau: circa 9.9 dB originale contro 10.5 Ponte sul video, e
+10.319 contro 10.527 dal rapporto dei WAV B0/B1. T50 audio circa 365–369 ms
+contro 335–339 ms. Quindi una piccola differenza audio e una differenza
+visiva convivono; non emerge una release dimezzata né una prova conclusiva
+dell'esempio su voce. Nessuna modifica a release o scala per compensare
+arbitrariamente i valori letti.
+
+Limiti documentati: utente conferma MASTER 2 in A1/A2 Ponte e SOLO spento
+nel video B0 Ponte; il WAV B0 ha livello compatibile con SOLO, ma identità
+della passata non provata. WAV 02/03 contengono la sequenza completa con
+tempi rispettivamente 0.780819/0.857656 del sorgente; causa non verificata.
+I video sono 60 fps con AAC silenzioso. Buffer e PRINT/offline non noti.
+Necessari un B0 video/WAV coerente e il secondo giro R500/banda 3/voce.
+Aggiornati POC e CompanyGUI; nessuna modifica al plugin, build o commit.
+
+## Secondo giro 2026-09-15 — take 2 e test 04/05
+
+[Rapporto aggiornato, grafici e prove mancanti](GUI_METER_TEST_PACK/analysis_2026-09-15_take2_04_05/REPORT.md).
+Nuovi 8 video e 6 WAV. Metadati dichiarati dall'utente: buffer **512 campioni**,
+OBS, WAV tramite **export separati**; per i take 2 mantiene i WAV precedenti.
+Gli hash dei vecchi file coincidono. I nuovi video hanno AAC silenzioso:
+confronto delle forme visive e delle code audio possibile, latenza A/V assoluta no.
+
+A2 take 2 è UNLINKED: quattro picchi ancora sottorappresentati, due senza
+barra di banda rilevabile. Cambiano gli eventi rispetto al take 1; la
+conservazione dei picchi tra letture GUI resta una priorità. Il nuovo B0
+ha SOLO 2 acceso, GR zero e IN/OUT entro un pixel: errore del video corretto.
+
+Il test 04 con SOLO 3 e R250 conferma la banda 2: GR audio originale/Ponte
+10.365/10.607 dB, T50 364–369/334–339 ms, T10 899–905/849–855 ms.
+GR visiva circa 9.9/10.5 dB; discesa 90→10% 867–900/750–783 ms.
+Nessuna evidenza di release dimezzata; esistono piccole differenze audio
+e una dinamica del display diversa.
+
+L'utente conferma che **05 è neutro**. GR zero su 2/3 in entrambi;
+uscita Ponte circa +0.12/+0.19/+0.18 dB a 90/120/180 Hz rispetto all'originale.
+È un riferimento della catena neutra, non ancora una prova di compressione
+sulla fondamentale. I nuovi export 04/05 sono completi ma temporalmente
+trasformati (fattori onset circa 0.857710/0.84607); causa non identificata.
+
+La [guida](GUI_METER_TEST_PACK/README.md) ora esplicita ogni parametro per
+05 compresso R250/R500 e 03/04 R500. B0 riutilizzabile soltanto a parità di
+timeline, gain e routing. La voce dry reale resta necessaria per chiudere
+il caso percettivo; A2 a buffer diversi serve alla validazione dopo la modifica.
+Per intervenire sui meter i dati preliminari sono già sufficienti.
+
+Verifica: 35 hash invariati, 15 401 nuovi fotogrammi (35 671 totali),
+portanti e code controllate. Aggiornati rapporto principale, POC e CompanyGUI;
+nessuna modifica al plugin, build o commit in questa task di analisi.
+
+## Correzione dei meter - 2026-09-15, versione 0.2.2
+
+Implementata la conservazione dei massimi tra letture GUI per IN/OUT/GR e
+MAIN OUTPUT, con ritorno visivo separato dal compressore: livello 14.3 dB/s
++ polo 130 ms, GR polo 150 ms. Repaint senza avanzamento dello stato; timer
+con tempo reale trascorso; gestione di editor chiuso e callback sospesi.
+
+[Nota tecnica e motivazione del modello](GUI_METER_TEST_PACK/meter_fix_2026-09-15/REPORT.md).
+Il modello riproduce le misure disponibili, senza rivendicare la conoscenza
+dei circuiti o delle intenzioni interne McDSP. Una scarica RC spiega una
+rampa in dB, ma la sua equivalenza matematica non identifica un hardware
+originale MC2000. La distinzione e le fonti sono riportate anche nel POC.
+
+Il ritorno GR simulato sugli export migliora gli intervalli normalizzati
+03/04 (RMSE circa 13/18 ms); non si applica una sottrazione fissa al meter.
+Restano aperti il divario del plateau GR, il test 05 compresso a 250/500 ms,
+03/04 a 500 ms e il confronto su voce reale. La release audio non cambia.
+Dopo l'aggiornamento ripetere 01/02 e 03/04 R250: nuova GUI, UNLINKED,
+buffer 512 e uno diverso, Warp OFF e durata sorgente invariata.
+
+Verifica automatica 0.2.2: suite DSP/GUI **2/2 PASS**, modello numerico PASS,
+35 file sorgenti invariati. Corretta la dipendenza della risorsa versione
+Windows nelle build incrementali. Hash finali nel pacchetto di release.

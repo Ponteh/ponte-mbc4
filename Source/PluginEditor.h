@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "PonteLookAndFeel.h"
 #include "UI/ControlFocus.h"
+#include "UI/MeterBallistics.h"
 #include <array>
 #include <functional>
 #include <juce_dsp/juce_dsp.h>
@@ -74,10 +75,15 @@ class BandMeter final : public juce::Component
 public:
     BandMeter(PonteMC2000AudioProcessor&, int bandIndex);
     void paint(juce::Graphics&) override;
+    void update(double elapsedSeconds);
+    pontedsp::mc2000::dsp::BandMeterSnapshot displayedValues() const noexcept { return snapshot; }
 
 private:
     PonteMC2000AudioProcessor& processor;
     int band {};
+    pontedsp::gui::LevelMeterBallistics inputBallistics, outputBallistics;
+    pontedsp::gui::GainReductionMeterBallistics grBallistics;
+    pontedsp::mc2000::dsp::BandMeterSnapshot snapshot;
 };
 
 class BandStrip final : public juce::Component
@@ -88,6 +94,7 @@ public:
     void resized() override;
     void setActiveVisual(bool active);
     void updateInState(bool anySolo);
+    void updateMeters(double elapsedSeconds) { meter.update(elapsedSeconds); }
     void mouseDown(const juce::MouseEvent&) override;
     void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void focusOfChildComponentChanged(FocusChangeType) override;
@@ -153,9 +160,13 @@ class OutputMeter final : public juce::Component
 public:
     explicit OutputMeter(PonteMC2000AudioProcessor& p) : processor(p) {}
     void paint(juce::Graphics&) override;
+    void update(double elapsedSeconds);
+    std::array<float, 2> displayedValues() const noexcept { return levels; }
 
 private:
     PonteMC2000AudioProcessor& processor;
+    std::array<pontedsp::gui::LevelMeterBallistics, 2> ballistics;
+    std::array<float, 2> levels { -100.0f, -100.0f };
 };
 
 class PonteMC2000AudioProcessorEditor final : public juce::AudioProcessorEditor,
@@ -192,6 +203,7 @@ private:
     juce::Component* hoverHelpTarget {};
     juce::Point<int> lastMousePosition;
     double hoverHelpStartedMs {};
+    double lastMeterUpdateMs {};
     juce::String activeHelpText;
     int displayedBandCount { 4 };
     static constexpr int linkedControlCount = 7;

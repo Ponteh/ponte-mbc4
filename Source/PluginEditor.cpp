@@ -325,9 +325,16 @@ BandMeter::BandMeter(PonteMC2000AudioProcessor& p, const int bandIndex)
     setInterceptsMouseClicks(false, false);
 }
 
+void BandMeter::update(const double elapsedSeconds)
+{
+    const auto peaks = processor.getEngine().consumeBandMeter(band);
+    snapshot = { static_cast<float>(inputBallistics.update(peaks.inputDb, elapsedSeconds)),
+                 static_cast<float>(outputBallistics.update(peaks.outputDb, elapsedSeconds)),
+                 static_cast<float>(grBallistics.update(peaks.gainReductionDb, elapsedSeconds)) };
+}
+
 void BandMeter::paint(juce::Graphics& g)
 {
-    const auto snapshot = processor.getEngine().getBandMeter(band);
     auto area = getLocalBounds().toFloat().reduced(2.0f, 1.0f);
     const auto row = area.getHeight() / 3.0f;
     const std::array<float, 3> positions {
@@ -797,9 +804,15 @@ void CompressionPlot::paint(juce::Graphics& g)
     g.drawText("STATIC I/O", 8, 5, 80, 14, juce::Justification::centredLeft);
 }
 
+void OutputMeter::update(const double elapsedSeconds)
+{
+    const auto peaks = processor.getEngine().consumeOutputMeterDb();
+    for (std::size_t channel = 0; channel < levels.size(); ++channel)
+        levels[channel] = static_cast<float>(ballistics[channel].update(peaks[channel], elapsedSeconds));
+}
+
 void OutputMeter::paint(juce::Graphics& g)
 {
-    const auto levels = processor.getEngine().getOutputMeterDb();
     auto area = getLocalBounds().toFloat().reduced(2.0f);
     g.setColour(pontedsp::gui::Palette::text());
     g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
@@ -910,6 +923,10 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
     };
     registerControls(*this);
     updateBandVisualStates();
+    // Discard peaks accumulated while the editor was closed. Every band,
+    // including hidden bands, is consumed exactly once by the timer.
+    processor.getEngine().discardPendingMeterPeaks();
+    lastMeterUpdateMs = juce::Time::getMillisecondCounterHiRes();
     startTimerHz(30);
 }
 
@@ -1143,6 +1160,11 @@ void PonteMC2000AudioProcessorEditor::updateContextHelp()
 
 void PonteMC2000AudioProcessorEditor::timerCallback()
 {
+    const auto now = juce::Time::getMillisecondCounterHiRes();
+    const auto elapsedSeconds = juce::jmax(0.0, (now - lastMeterUpdateMs) * 0.001);
+    lastMeterUpdateMs = now;
+    for (auto& band : bands) band->updateMeters(elapsedSeconds);
+    outputMeter.update(elapsedSeconds);
     updateLinkedControls();
     updateBandCountLayout();
     updateBandVisualStates();

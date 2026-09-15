@@ -1,5 +1,10 @@
 # Ponte MBC4
 
+Version 0.2.2 preserves audio peaks between GUI refreshes and gives IN/OUT/MAIN
+and GR separate display ballistics. Audio compression remains DSP_MODEL_4.
+See the [meter correction report](Research/GUI_METER_TEST_PACK/meter_fix_2026-09-15/REPORT.md)
+for measurements, mathematical rationale and remaining DAW validation.
+
 Clean-room multiband compressor POC derived from the behavioural specification
 in `MC2000_Proof_of_Concept.md`.
 

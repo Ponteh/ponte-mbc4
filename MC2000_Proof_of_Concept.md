@@ -2027,6 +2027,10 @@ che devono restare sempre leggibili e azionabili.
 
 # 36. GUI — comportamento Crossover Display
 
+Per la misura della velocità dei meter e il confronto con la recensione
+dell'esperto, usare [GUI_METER_TEST_PACK](Research/GUI_METER_TEST_PACK/README.md).
+Stimoli pronti dal 2026-09-14; risposta visiva originale ancora da acquisire.
+
 Il grafico deve mostrare:
 
 - asse X logaritmico 20 Hz – 20 kHz;
@@ -3860,3 +3864,111 @@ CONFIDENCE:
 ```
 
 Non cancellare le ipotesi precedenti: marcarle come `rejected` quando un test le esclude. In questo modo rimane tracciabile il percorso di reverse engineering comportamentale.
+
+# Appendice G — acquisizioni GUI 01–03, 2026-09-15
+
+TEST ID: GUI-A1-A2-B0-B1-20260915.
+PLUGIN VERSION: originale MC404 7.3.0.23 visibile; Ponte riferimento pack
+`2b6e97e`, hash della build effettivamente caricata non certificato dal video.
+SAMPLE RATE: WAV 48000 Hz, float32 stereo dual mono. Video 1920×1080/60 fps.
+SETTINGS: protocollo R1, 2:1, knee 0, attack 2.5 ms, release 250 ms, BITE 1,
+threshold -27.5, crossover 100/785/10000. Differenze confermate: MASTER 2 in
+Ponte A1/A2, SOLO 2 spento nel video Ponte B0; il WAV B0 è compatibile con
+SOLO ma la corrispondenza alla passata video non è dimostrata.
+INPUT: sorgenti GUI_METER_TEST_PACK 01/02/03; eventi 02/03 trasformati nel
+tempo a circa 0.780819/0.857656 del sorgente, sequenze complete, non troncate.
+OUTPUT FILE: 8 WAV e 8 MP4 in `Research/GUI_METER_TEST_PACK/audio/`, inventario
+con SHA256 e risultati nel [report](Research/GUI_METER_TEST_PACK/analysis_2026-09-15/REPORT.md).
+MEASURED RESULT: discesa MAIN originale 10→90% dello step da 6 dB circa
+467 ms (banda 2 483 ms), Ponte salto nello stesso frame; step da 12 dB
+circa 683–750 ms originale e 0–33 ms Ponte. Originale cattura 30/30 picchi A2;
+Ponte ne sottorappresenta quattro, di cui uno senza barra rilevabile.
+GR audio B0/B1: plateau 10.319/10.527 dB originale/Ponte, T50 365–369/335–339 ms,
+T10 895–905/849–855 ms. GR visiva plateau circa 9.9/10.5 dB;
+discesa 90→10% circa 867–883/750–783 ms.
+MODEL RESULT: candidata rampa di livello 14.3 dB/s + smoothing 130 ms,
+stimata su A1/315 Hz e verificata su A1/2 kHz. Non modello recuperato univoco.
+ERROR: RMSE held-out 0.16 dB; calibrazione MAIN massimo 0.13 dB sui plateau;
+quantizzazione e trasferimento della scala GR aggiungono alcuni decimi.
+CONCLUSION: confermata necessità di conservare i picchi fra letture GUI e
+introdurre ballistics di livello. GR da trattare separatamente; nessuna
+correzione DSP deducibile solo dalle barre. Ipotesi iniziale di semplici
+export troncati `rejected`: tutti gli eventi sono presenti con tempi diversi.
+CONFIDENCE: alta sulla differenza di discesa e sui picchi registrati;
+condizionata dal setup per GR audio; non conclusiva su voce/R500/banda 3.
+AAC dei video silenzioso, buffer e PRINT/offline ignoti: nessuna stima
+della latenza audio/video assoluta. Nessuna nuova build o modifica DSP/UI.
+
+# Appendice H — take 2, banda 3 e sonda neutra, 2026-09-15
+
+TEST ID: GUI-FOLLOWUP-A2-B0-BAND3-NEUTRAL05-20260915.
+PLUGIN VERSION: originale MC404 7.3.0.23; Ponte riferimento `2b6e97e`,
+hash della build caricata non verificabile dalla cattura.
+SAMPLE RATE: export float32 stereo 48000 Hz; buffer playback **512** dichiarato.
+SETTINGS: A2 take 2 UNLINKED, B0 take 2 SOLO 2; 04 B0/B1 SOLO 3 R250;
+05 **neutro**, IN 2/3 e nessun SOLO, confermato dall'utente. OBS e export
+separati, non PRINT della stessa passata; vecchi WAV mantenuti nei take 2.
+INPUT: sorgenti 02/03/04/05 del GUI_METER_TEST_PACK. Eventi 04/05 completi
+ma con fattori onset 0.857710/0.84607 rispetto ai sorgenti; causa ignota.
+OUTPUT FILE: 8 nuovi MP4 e 6 WAV; inventario/hash, CSV e grafici nel
+[report del secondo giro](Research/GUI_METER_TEST_PACK/analysis_2026-09-15_take2_04_05/REPORT.md).
+MEASURED RESULT: A2 take 2 quattro picchi sottorappresentati, due senza
+barra di banda rilevabile. B0 take 2 GR zero e IN/OUT entro un pixel.
+04 GR audio originale/Ponte 10.365/10.607 dB, T50 364–369/334–339 ms,
+T10 899–905/849–855 ms; GR visiva circa 9.9/10.5 dB e discesa 90→10%
+867–900/750–783 ms. 05 neutro: GR zero; delta RMS Ponte/originale circa
++0.12/+0.19/+0.18 dB a 90/120/180 Hz.
+MODEL RESULT: confermata la priorità di accumulare massimi tra letture GUI;
+il candidato per il meter di livello del primo giro non è stato implementato.
+ERROR: audio circa 10 ms di risoluzione, video almeno 17–33 ms e alcuni
+decimi di dB; allineamento A2 sui sei burst lunghi disperso entro 30.4 ms.
+CONCLUSION: il difetto visivo persiste in UNLINKED; la piccola differenza
+audio R250 si ripete sulla banda 3. 05 neutro non testa la compressione sulla
+fondamentale. Mancano 05 compresso R250/R500, 03/04 R500 e voce dry reale.
+CONFIDENCE: alta su difetto visivo e setup corretto; buona sulle differenze
+audio nei test esportati; non conclusiva sul caso percettivo o sulla latenza A/V.
+Verificati 35 hash invariati e 15 401 nuovi fotogrammi. Nessuna nuova build,
+nessuna modifica al DSP/GUI. Guida completata con parametri e regole di riuso B0.
+
+# Appendix I - Visual meter correction, 2026-09-15 (0.2.2)
+
+STATUS: implementation supersedes the pending-meter status in appendices G/H.
+SPEC: accumulate each band's IN/OUT/GR and both MAIN channel peaks between
+GUI reads. Consume once per timer tick; paint only cached display values.
+The raw per-block analysis API remains available. Lock-free atomic mailboxes,
+no allocation or mutex in the audio producer; bounded strong-CAS retry with
+one producer and one resetting consumer.
+MODEL: immediate attack to the accumulated peak; IN/OUT/MAIN fall uses a
+14.3 dB/s ramp followed by a 130 ms one-pole in dB. Integrate actual elapsed
+time analytically, including arrival at target. GR uses a separate one-pole
+return in GR dB, tau 150 ms. No fixed GR offset; constant plateaus preserved.
+LIFECYCLE: consume hidden bands too; discard pending peaks when opening the
+editor; drain towards silence without new callbacks; DSP reset clears raw
+and pending readings. Repaint count never changes ballistics.
+EVIDENCE: A1 level fit and held-out 2 kHz check, plus A2 take 2 peak losses.
+GR engineering check uses export-derived 10 ms RMS envelopes: 03 normalized
+return-interval RMSE improves from 83 to 13 ms, 04 from 89 to 18 ms. A grid
+minimum at 160 ms is indistinguishable at capture resolution from the chosen
+150 ms; this is not an identified McDSP internal constant.
+RATIONALE: MC2000 is a digital plugin modeling multiple compressor behaviours,
+not a verified replica of a physical MC2000 compressor. Analog peak-meter
+capacitor discharge and mechanical pointer damping explain plausible meter
+ballistics. A free RC discharge becomes a linear dB fall, 8.686/tau dB/s;
+14.3 dB/s corresponds to approximately 0.61 s. This analogy does not prove a
+specific circuit implementation; the added pole is in the display dB domain.
+Readable short peaks and stable motion are plausible design purposes, not
+statements of McDSP's unpublished intent. Audio release and display return
+are separate. The display model alone cannot explain a steady GR offset.
+VALIDATION: DSP and UI suites cover capture, concurrency, stereo, audio
+invariance under GUI reads, clock-rate/jitter independence, repaint, stop,
+reopen and existing focus/resize/SOLO regressions. Build/test outcomes are
+recorded in the release verification note.
+LIMITS: no change to the audio transfer or DSP_MODEL_4. R250 GR plateaus,
+R500, compressed fundamental probe and real voice still require follow-up.
+A new DAW capture must verify the complete meter after this implementation.
+
+[Technical note, measurements and sources](Research/GUI_METER_TEST_PACK/meter_fix_2026-09-15/REPORT.md).
+
+Verifica automatica 0.2.2: suite DSP/GUI **2/2 PASS**, modello numerico PASS,
+35 file sorgenti invariati. Corretta la dipendenza della risorsa versione
+Windows nelle build incrementali. Hash finali nel pacchetto di release.
