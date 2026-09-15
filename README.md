@@ -1,7 +1,7 @@
 # Ponte MBC4
 
 Version 0.2.2 preserves audio peaks between GUI refreshes and gives IN/OUT/MAIN
-and GR separate display ballistics. Audio compression remains DSP_MODEL_4.
+and GR separate display ballistics. Audio compression algorithms remain DSP_MODEL_4; SOLO no longer forces compression on when IN is off.
 See the [meter correction report](Research/GUI_METER_TEST_PACK/meter_fix_2026-09-15/REPORT.md)
 for measurements, mathematical rationale and remaining DAW validation.
 
@@ -30,16 +30,31 @@ editing or using a menu. Knobs, selectors, buttons and numeric fields share
 one visual focus controller. Captions sit below the knobs;
 no layout space is reserved for hidden values. Active knobs use a slightly brighter
 accent; unfocused controls retain their original saturation. See POC sections
-71–73 for the interaction contract. SOLO temporarily overrides the displayed
-IN states without overwriting them: every IN button is off and disabled during
-SOLO, including the isolated bands. Releasing the last SOLO restores the saved
-IN configuration. The initial editor size is 1100 × 738; resizing is preserved
+71–73 for the interaction contract. IN and SOLO are independent:
+IN enables compression; with IN off the band passes without compression.
+SOLO selects band outputs without changing IN. Any combination is allowed,
+including all IN and all SOLO buttons on. Active SOLO uses a lime outline
+and text on the existing ink background. The initial editor size is 1100 × 738; resizing is preserved
 across band-count changes, editor reopening and session save/restore.
 
 CROSSOVER starts at the left edge of the band display. The context help area
 above the input/output knobs is 168 × 54, with up to four full-size text lines.
-Band responses and the spectrum share a vertical display range of -48 dB at
+Band responses and the spectrum share a vertical display range of -60 dB at
 the bottom to 0 dB at the top; crossover markers sit on the 0 dB line.
+Band/master meters and both STATIC I/O axes use the same -60..0 scale (GR
+0..60 dB reduction). Parameter ranges, including Threshold, are unchanged.
+
+Double-clicking a knob opens its editable value without resetting it first;
+the value overlay remains directly editable. STATIC I/O markers reuse the
+smoothed band-input readings. The input spectrum uses the same level-display
+ballistics, stereo peak magnitudes and continuous LR4 weighting of IN bands,
+including filter tails beyond crossover frequencies. SOLO affects output
+monitoring, not the input spectrum selection. The analyzer discards stale
+queue contents instead of replaying them after an editor stall/reopening.
+A 2048-sample Hann window (42.7 ms at 48 kHz) remains necessary for analysis;
+this display window is not audio-path latency.
+
+Version 0.2.2 is prepared for review; publication requires the user's OK.
 
 Current public parameter ranges are: Input/Output and per-band Gain
 `-24.0..+24.0 dB`, Threshold `-48.0..0.0 dB`, Ratio `1.00:1..10.00:1`,

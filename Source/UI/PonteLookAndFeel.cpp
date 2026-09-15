@@ -69,6 +69,15 @@ void PonteLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& but
                                              const juce::Colour& base, bool highlighted, bool down)
 {
     auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
+    if (button.getToggleState() && static_cast<bool>(button.getProperties()["pontedspOutlineActive"]))
+    {
+        g.setColour(Palette::ink());
+        g.fillRoundedRectangle(bounds, 5.0f);
+        const auto focused = static_cast<bool>(button.getProperties()["pontedspControlActive"]);
+        g.setColour(focused ? Palette::lime().brighter(0.08f) : Palette::lime());
+        g.drawRoundedRectangle(bounds, 5.0f, 1.25f);
+        return;
+    }
     auto colour = button.getToggleState() ? Palette::lime() : base;
     const auto focused = button.getProperties().contains("pontedspControlActive")
         ? static_cast<bool>(button.getProperties()["pontedspControlActive"]) : highlighted;
@@ -83,7 +92,9 @@ void PonteLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& but
 void PonteLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button, bool, bool)
 {
     g.setFont(juce::FontOptions(12.5f, juce::Font::bold));
-    g.setColour(button.getToggleState() ? Palette::ink() : Palette::text());
+    g.setColour(button.getToggleState()
+        ? (static_cast<bool>(button.getProperties()["pontedspOutlineActive"]) ? Palette::lime() : Palette::ink())
+        : Palette::text());
     g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(8, 3),
                      juce::Justification::centred, 1);
 }

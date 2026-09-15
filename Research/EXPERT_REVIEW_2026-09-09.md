@@ -443,3 +443,23 @@ buffer 512 e uno diverso, Warp OFF e durata sorgente invariata.
 Verifica automatica 0.2.2: suite DSP/GUI **2/2 PASS**, modello numerico PASS,
 35 file sorgenti invariati. Corretta la dipendenza della risorsa versione
 Windows nelle build incrementali. Hash finali nel pacchetto di release.
+
+## Integrazione finale UI 0.2.2 prima del rilascio
+
+Estesa la dinamica ai punti STATIC I/O e allo spettro; MAIN gia allineato.
+FFT stereo con code LR4 continue oltre i crossover, letture recenti senza
+replay dello storico e ritorno dipendente dal tempo. Finestra 2048 campioni:
+42.67 ms a 48 kHz, oltre a blocchi e scheduling GUI; non e latenza audio.
+Scale grafiche fino a -60 dB; doppio click knob per editing senza reset.
+IN/SOLO indipendenti anche simultaneamente su tutte le bande; IN bypassa
+la compressione da spento, SOLO seleziona l'uscita senza forzare IN.
+SOLO attivo con contorno/testo lime e interno ink. Questa regola sostituisce
+le precedenti note che spegnevano/bloccavano IN durante SOLO.
+
+Le registrazioni storiche restano riferite alla vecchia GUI (-48 dB e
+precedente routing). Per le nuove catture annotare build e nuova scala.
+Versione 0.2.2, commit/push previsti; release in attesa dell'OK dell'utente.
+
+Verifica integrazione finale: suite DSP PASS e GUI PASS, compresi FIFO
+recente, finestra FFT parziale a basso sample rate, punti/meter coerenti,
+code crossover, stereo L=-R, doppio click e IN/SOLO indipendenti.

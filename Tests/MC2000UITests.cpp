@@ -133,30 +133,38 @@ void testEditorAndSolo()
         for (int b = 0; b < 4; ++b)
         {
             auto* button = find<juce::TextButton>(*editor, bandId(b, "enabled"));
-            expect(button && button->getToggleState() == ((mask & (1u << b)) != 0), "IN display is off during SOLO and restored afterwards");
-            expect(button && button->isEnabled() == editable, "IN is temporarily locked during SOLO");
+            expect(button && button->getToggleState() == ((mask & (1u << b)) != 0), "IN display is independent of SOLO");
+            expect(button && button->isEnabled() == editable, "IN stays editable during SOLO");
             expect((p.state.getRawParameterValue(bandId(b, "enabled"))->load() > .5f) == (b == 1 || b == 2),
                    "SOLO never overwrites saved IN values");
         }
     };
     checkIn(6, true);
-    clickSolo(3); checkIn(0, false);
+    clickSolo(3); checkIn(6, true);
     LinkRuntime runtime;
     auto snapshot = readSnapshot(p.state, runtime);
-    expect(snapshot.bands[3].solo && snapshot.bands[3].enabled, "SOLO enables DSP compression even when saved IN is off");
-    clickSolo(1); checkIn(0, false);
-    clickSolo(3); checkIn(0, false);
+    expect(snapshot.bands[3].solo && !snapshot.bands[3].enabled, "SOLO never enables compression when IN is off");
     clickSolo(1); checkIn(6, true);
+    clickSolo(3); checkIn(6, true);
+    clickSolo(1); checkIn(6, true);
+    for (int b = 0; b < 4; ++b) set(p, bandId(b, "solo"), 1.0f);
+    pump(); checkIn(6, true);
+    auto* in4 = find<juce::TextButton>(*editor, bandId(3, "enabled"));
+    in4->triggerClick(); pump();
+    expect(in4->getToggleState() && p.state.getRawParameterValue(bandId(3, "solo"))->load() > .5f,
+           "IN can be toggled on while all SOLO buttons stay on");
+    in4->triggerClick(); pump();
+    for (int b = 0; b < 4; ++b) set(p, bandId(b, "solo"), 0.0f);
     // Automation uses the same presentation and does not depend on button callbacks.
-    set(p, bandId(3, "solo"), 1.0f); pump(); checkIn(0, false);
+    set(p, bandId(3, "solo"), 1.0f); pump(); checkIn(6, true);
     set(p, bandCount, 0.0f); pump(); checkIn(6, true);
-    set(p, bandCount, 2.0f); pump(); checkIn(0, false);
+    set(p, bandCount, 2.0f); pump(); checkIn(6, true);
     juce::MemoryBlock saved;
     p.getStateInformation(saved);
     editor.reset();
     editor.reset(p.createEditor()); host.addAndMakeVisible(*editor);
     expect(editor->getWidth() == 1330 && editor->getHeight() == 950, "editor reopen preserves chosen size");
-    checkIn(0, false);
+    checkIn(6, true);
     set(p, bandId(3, "solo"), 0.0f); pump(); checkIn(6, true);
 
     PonteMC2000AudioProcessor restored;
@@ -167,7 +175,8 @@ void testEditorAndSolo()
         expect((restored.state.getRawParameterValue(bandId(b, "enabled"))->load() > .5f) == (b == 1 || b == 2),
                "saving in SOLO preserves baseline IN on reload");
 
-    // Produce a real JUCE rendering at the minimum size for visual review.
+    // Produce a real JUCE rendering with IN and SOLO simultaneously active.
+    for (int b = 0; b < 4; ++b) set(p, bandId(b, "solo"), 1.0f);
     for (int b = 0; b < 4; ++b) set(p, bandId(b, "enabled"), 1.0f);
     pump();
     editor->setSize(1100, 738);
@@ -220,6 +229,24 @@ void testKnobEditing()
     firstValue->hideEditor(true);
     expect(std::abs(p.state.getRawParameterValue(inputGain)->load() + 12.3f) < 0.001f,
            "cancelling numeric edit retains previous parameter value");
+    auto* slider = find<juce::Slider>(first);
+    expect(slider && !slider->isDoubleClickReturnEnabled(), "attachment cannot reinstate double-click reset");
+    if (slider)
+    {
+        const auto now = juce::Time::getCurrentTime();
+        juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(), { 20, 20 },
+            {}, 1.0f, 0, 0, 0, 0, slider, slider, now, { 20, 20 }, now, 2, false);
+        slider->mouseDoubleClick(event);
+        first.mouseDoubleClick(event);
+        expect(firstValue->isBeingEdited(), "double-click on knob opens numeric editor");
+        expect(std::abs(p.state.getRawParameterValue(inputGain)->load() + 12.3f) < .001f,
+               "double-click edits without resetting the parameter first");
+        if (auto* text = firstValue->getCurrentTextEditor()) text->setText("-8.4 dB");
+        firstValue->hideEditor(false);
+        expect(std::abs(p.state.getRawParameterValue(inputGain)->load() + 8.4f) < .001f,
+               "knob double-click edit commits through automation attachment");
+    }
+
 }
 
 void testSoloAudioRouting()
@@ -273,6 +300,106 @@ void testSoloAudioRouting()
         expect(energy > .01 && maxError < 2.0e-6, "SOLO audio contains exactly selected crossover bands; no SOLO restores full sum");
     }
 }
+void testSpectrumTimingAndTails()
+{
+    using namespace pontedsp::mc2000::parameters;
+    PonteMC2000AudioProcessor p;
+    p.prepareToPlay(48000, 512);
+    CrossoverPlot plot(p);
+    plot.setSize(570, 200);
+    juce::MidiBuffer midi;
+    const auto sendTone = [&](int samples)
+    {
+        juce::AudioBuffer<float> audio(2, samples);
+        for (int i = 0; i < samples; ++i)
+        {
+            const auto value = static_cast<float>(.5 * std::sin(2 * juce::MathConstants<double>::pi * 375 * i / 48000));
+            audio.setSample(0, i, value); audio.setSample(1, i, -value);
+        }
+        p.processBlock(audio, midi);
+    };
+    sendTone(2048);
+    plot.updateSpectrum(2048.0 / 48000);
+    const auto peak = plot.displayedSpectrumDb(16);
+    expect(std::abs(peak + 6.0206f) < .03f,
+           "first full FFT reaches input peak immediately, including anti-phase stereo");
+    const auto image = plot.createComponentSnapshot(plot.getLocalBounds());
+    expect(image.isValid() && plot.displayedSpectrumDb(16) == peak, "FFT repaint is passive");
+    pontedsp::gui::LevelMeterBallistics reference;
+    reference.update(peak, 0);
+    plot.updateSpectrum(.25);
+    expect(std::abs(plot.displayedSpectrumDb(16) - reference.update(-100, .25)) < .001,
+           "spectrum and level meter share the same elapsed-time fall");
+    for (int b = 0; b < 4; ++b) set(p, bandId(b, "enabled"), b == 1 ? 1.0f : 0.0f);
+    plot.updateSpectrum(.033);
+    const auto below = plot.inputResponseDb(50);
+    expect(below > -26 && below < -24, "band 2 retains its LR4 tail below the 100 Hz crossover");
+    expect(std::abs(plot.inputResponseDb(99.9) - plot.inputResponseDb(100.1)) < .05,
+           "spectrum response is continuous across crossover markers");
+    set(p, bandId(3, "solo"), 1.0f);
+    expect(plot.inputResponseDb(50) == below, "output SOLO does not crop the input spectrum");
+    plot.updateSpectrum(12);
+    expect(plot.displayedSpectrumDb(16) < -99, "spectrum empties after audio callbacks stop");
+
+    // Empty GUI reads between normal, small host blocks must not prevent
+    // the first FFT window from ever completing at a low sample rate.
+    p.prepareToPlay(8000, 512);
+    auto slowRate = std::make_unique<CrossoverPlot>(p);
+    for (int block = 0; block < 4; ++block)
+    {
+        sendTone(512);
+        slowRate->updateSpectrum(.033);
+        if (block < 3) slowRate->updateSpectrum(.031);
+    }
+    expect(slowRate->displayedSpectrumDb(16) > -60, "partial FFT survives normal gaps between host blocks");
+    p.prepareToPlay(48000, 512);
+    // FIFO overload must not replay a backlog; normal truncation keeps the latest samples.
+    for (int block = 0; block < 9; ++block) sendTone(4096);
+    std::array<PonteMC2000AudioProcessor::SpectrumSample, 32> recent;
+    bool gap = false;
+    expect(p.popSpectrumSamples(recent.data(), 32, gap) == 0 && gap,
+           "overflow discards stale audio instead of drawing it late");
+    juce::AudioBuffer<float> fresh(2, 512);
+    for (int i = 0; i < 512; ++i)
+    {
+        fresh.setSample(0, i, static_cast<float>(i) / 1024);
+        fresh.setSample(1, i, -static_cast<float>(i) / 1024);
+    }
+    p.processBlock(fresh, midi);
+    const auto count = p.popSpectrumSamples(recent.data(), 32, gap);
+    expect(count == 32 && gap && recent.front()[0] == 480.0f / 1024
+           && recent.back()[1] == -511.0f / 1024,
+           "bounded spectrum read returns newest stereo samples, not oldest samples");
+    sendTone(512);
+    CrossoverPlot reopened(p);
+    expect(p.popSpectrumSamples(recent.data(), 32, gap) == 0,
+           "opening a spectrum discards the closed-editor history");
+}
+
+void testDotMeterCoherence()
+{
+    PonteMC2000AudioProcessor p;
+    p.prepareToPlay(48000, 512);
+    PonteMC2000AudioProcessorEditor editor(p);
+    auto* band = find<BandMeter>(editor);
+    auto* plot = find<CompressionPlot>(editor);
+    juce::AudioBuffer<float> audio(2, 512);
+    for (int i = 0; i < 512; ++i)
+    {
+        const auto value = static_cast<float>(.5 * std::sin(2 * juce::MathConstants<double>::pi * 50 * i / 48000));
+        audio.setSample(0, i, value); audio.setSample(1, i, value);
+    }
+    juce::MidiBuffer midi;
+    p.processBlock(audio, midi);
+    pump();
+    expect(band && plot && plot->displayedInputDb(0) == band->displayedValues().inputDb
+           && plot->displayedInputDb(0) > -30,
+           "STATIC I/O dot uses the same captured and smoothed input as its band meter");
+    pump();
+    expect(plot->displayedInputDb(0) == band->displayedValues().inputDb,
+           "dot and meter decay remain synchronized without callbacks");
+}
+
 void testMeterPaintingAndReopen()
 {
     PonteMC2000AudioProcessor processor;
@@ -333,6 +460,8 @@ int main()
     testKnobEditing();
     testSoloAudioRouting();
     testMeterPaintingAndReopen();
+    testSpectrumTimingAndTails();
+    testDotMeterCoherence();
     if (failures == 0) std::cout << "All Ponte MC2000 UI/state tests passed\n";
     return failures == 0 ? 0 : 1;
 }

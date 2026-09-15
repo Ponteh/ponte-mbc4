@@ -13,6 +13,7 @@ PonteMC2000AudioProcessor::PonteMC2000AudioProcessor()
 void PonteMC2000AudioProcessor::prepareToPlay(const double sampleRate, const int samplesPerBlock)
 {
     spectrumFifo.reset();
+    spectrumOverflow.store(false, std::memory_order_relaxed);
     processingSampleRate.store(sampleRate, std::memory_order_relaxed);
     engine.setParameters(pontedsp::mc2000::parameters::readSnapshot(state, linkRuntime));
     engine.prepare(sampleRate, samplesPerBlock, getTotalNumInputChannels());
@@ -64,21 +65,49 @@ void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<floa
     {
         for (int sample = 0; sample < count; ++sample)
         {
-            auto mono = 0.0f;
-            for (int channel = 0; channel < channels; ++channel)
-                mono += buffer.getSample(channel, sourceStart + sample);
-            spectrumSamples[static_cast<std::size_t>(fifoStart + sample)] = mono / channels;
+            const auto left = buffer.getSample(0, sourceStart + sample);
+            const auto right = buffer.getSample(std::min(1, channels - 1), sourceStart + sample);
+            spectrumSamples[static_cast<std::size_t>(fifoStart + sample)] = {
+                std::isfinite(left) ? left : 0.0f, std::isfinite(right) ? right : 0.0f };
         }
     };
     writeRange(start1, size1, 0);
     writeRange(start2, size2, size1);
     spectrumFifo.finishedWrite(size1 + size2);
+    if (size1 + size2 < buffer.getNumSamples())
+        spectrumOverflow.store(true, std::memory_order_release);
 }
 
-int PonteMC2000AudioProcessor::popSpectrumSamples(float* const destination,
-                                                   const int maximumSamples) noexcept
+void PonteMC2000AudioProcessor::discardSpectrumSamples() noexcept
 {
+    spectrumOverflow.exchange(false, std::memory_order_acquire);
+    int start1 {}, size1 {}, start2 {}, size2 {};
+    spectrumFifo.prepareToRead(spectrumFifo.getNumReady(), start1, size1, start2, size2);
+    spectrumFifo.finishedRead(size1 + size2);
+}
+
+int PonteMC2000AudioProcessor::popSpectrumSamples(SpectrumSample* const destination,
+                                                   const int maximumSamples,
+                                                   bool& discontinuity) noexcept
+{
+    discontinuity = false;
     if (destination == nullptr || maximumSamples <= 0) return 0;
+    if (spectrumOverflow.exchange(false, std::memory_order_acquire))
+    {
+        // The queue may contain audio from before a closed/stalled editor.
+        // Drain it instead of replaying old sound; the next callback is fresh.
+        discardSpectrumSamples();
+        discontinuity = true;
+        return 0;
+    }
+    const auto ready = spectrumFifo.getNumReady();
+    if (ready > maximumSamples)
+    {
+        int start1 {}, size1 {}, start2 {}, size2 {};
+        spectrumFifo.prepareToRead(ready - maximumSamples, start1, size1, start2, size2);
+        spectrumFifo.finishedRead(size1 + size2);
+        discontinuity = true;
+    }
     int start1 {}, size1 {}, start2 {}, size2 {};
     spectrumFifo.prepareToRead(maximumSamples, start1, size1, start2, size2);
     std::copy_n(spectrumSamples.data() + start1, size1, destination);

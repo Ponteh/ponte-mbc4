@@ -19,6 +19,7 @@ public:
     void parentHierarchyChanged() override;
     void mouseDown(const juce::MouseEvent&) override;
     void registerFocus(pontedsp::gui::ControlFocus&);
+    void mouseDoubleClick(const juce::MouseEvent&) override;
 
 private:
     void timerCallback() override;
@@ -93,8 +94,8 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void setActiveVisual(bool active);
-    void updateInState(bool anySolo);
     void updateMeters(double elapsedSeconds) { meter.update(elapsedSeconds); }
+    pontedsp::mc2000::dsp::BandMeterSnapshot displayedMeters() const noexcept { return meter.displayedValues(); }
     void mouseDown(const juce::MouseEvent&) override;
     void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void focusOfChildComponentChanged(FocusChangeType) override;
@@ -108,7 +109,7 @@ private:
     ParameterKnob gain, threshold, ratio, knee, bite, attack, release;
     juce::ComboBox timeConstant;
     BandMeter meter;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> soloAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> enabledAttachment, soloAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> timeConstantAttachment;
     bool activeVisual { true };
 };
@@ -118,7 +119,10 @@ class CrossoverPlot final : public juce::Component
 public:
     explicit CrossoverPlot(PonteMC2000AudioProcessor&);
     void paint(juce::Graphics&) override;
-    void updateSpectrum();
+    void updateSpectrum(double elapsedSeconds);
+    double inputResponseDb(double frequency) const noexcept;
+    float displayedSpectrumDb(int bin) const noexcept { return spectrumDb[static_cast<std::size_t>(bin)]; }
+    static constexpr int spectrumSize = 2048;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
     void mouseUp(const juce::MouseEvent&) override;
@@ -128,7 +132,7 @@ private:
     double xToFrequency(float x) const noexcept;
     int currentBandCount() const noexcept;
     bool bandIsAudible(int band) const noexcept;
-    int bandForFrequency(double frequency) const noexcept;
+
     PonteMC2000AudioProcessor& processor;
     int draggedCrossover { -1 };
     static constexpr int fftOrder = 11;
@@ -136,7 +140,14 @@ private:
     juce::dsp::FFT fft { fftOrder };
     juce::dsp::WindowingFunction<float> fftWindow {
         fftSize, juce::dsp::WindowingFunction<float>::hann, true };
-    std::array<float, fftSize> fftInput {};
+    std::array<std::array<float, fftSize>, 2> fftInput {};
+    std::array<PonteMC2000AudioProcessor::SpectrumSample, 16384> incoming {};
+    std::array<pontedsp::gui::LevelMeterBallistics, fftSize / 2> spectrumBallistics;
+    std::array<float, fftSize / 2> latestSpectrumDb {};
+    pontedsp::mc2000::dsp::CrossoverNetwork displayResponse;
+    std::array<bool, 4> inputBands { true, true, true, true };
+    int responseBandCount { 4 };
+    double withoutSpectrumSamplesSeconds {};
     std::array<float, fftSize * 2> fftWork {};
     std::array<float, fftSize / 2> spectrumDb {};
     int fftInputCount {};
@@ -149,10 +160,13 @@ public:
     explicit CompressionPlot(PonteMC2000AudioProcessor& p) : processor(p) {}
     void paint(juce::Graphics&) override;
     void setForegroundBand(int band);
+    void setDisplayedMeters(const std::array<pontedsp::mc2000::dsp::BandMeterSnapshot, 4>& values) { displayedMeters = values; }
+    float displayedInputDb(int band) const { return displayedMeters[static_cast<std::size_t>(band)].inputDb; }
 
 private:
     PonteMC2000AudioProcessor& processor;
     int foregroundBand { 0 };
+    std::array<pontedsp::mc2000::dsp::BandMeterSnapshot, 4> displayedMeters;
 };
 
 class OutputMeter final : public juce::Component

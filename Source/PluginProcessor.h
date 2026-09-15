@@ -32,7 +32,9 @@ public:
 
     pontedsp::mc2000::dsp::MultiBandCompressor& getEngine() noexcept { return engine; }
     const pontedsp::mc2000::dsp::MultiBandCompressor& getEngine() const noexcept { return engine; }
-    int popSpectrumSamples(float* destination, int maximumSamples) noexcept;
+    using SpectrumSample = std::array<float, 2>;
+    int popSpectrumSamples(SpectrumSample* destination, int maximumSamples, bool& discontinuity) noexcept;
+    void discardSpectrumSamples() noexcept;
     double getProcessingSampleRate() const noexcept { return processingSampleRate.load(std::memory_order_relaxed); }
 
     juce::AudioProcessorValueTreeState state;
@@ -44,7 +46,8 @@ private:
     static constexpr int spectrumFifoCapacity = 32768;
     pontedsp::mc2000::dsp::MultiBandCompressor engine;
     pontedsp::mc2000::parameters::LinkRuntime linkRuntime;
-    std::array<float, spectrumFifoCapacity> spectrumSamples {};
+    std::array<SpectrumSample, spectrumFifoCapacity> spectrumSamples {};
+    std::atomic<bool> spectrumOverflow { false };
     juce::AbstractFifo spectrumFifo { spectrumFifoCapacity };
     std::atomic<double> processingSampleRate { 48000.0 };
 

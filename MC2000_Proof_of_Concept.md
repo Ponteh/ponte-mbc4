@@ -3972,3 +3972,36 @@ A new DAW capture must verify the complete meter after this implementation.
 Verifica automatica 0.2.2: suite DSP/GUI **2/2 PASS**, modello numerico PASS,
 35 file sorgenti invariati. Corretta la dipendenza della risorsa versione
 Windows nelle build incrementali. Hash finali nel pacchetto di release.
+
+# Appendix J - Unified visual response and independent controls (0.2.2)
+
+This revision supersedes earlier IN/SOLO presentation rules and the raw
+STATIC I/O marker policy. IN and SOLO are independent, including all four
+IN and SOLO buttons simultaneously on. IN off bypasses compression; SOLO
+only selects output bands and never forces the IN parameter/engine flag.
+Active SOLO has lime outline/text and ink fill. Core compression algorithms
+remain MODEL_4, but IN-off/SOLO-on now deliberately bypasses compression.
+
+All meter/graph dB scales end at -60 dB, GR at 60 dB reduction. Audio parameter
+ranges are unchanged. Knob double click opens numeric editing without a
+parameter reset; editing the overlay directly remains supported.
+STATIC I/O dots reuse the same smoothed IN samples as band meters, projected
+onto the static curve; bypassed bands use the identity curve. MAIN already
+shares level ballistics. The FFT input spectrum uses stereo peak magnitudes,
+continuous LR4 weighting of IN bands and the same timed level ballistics.
+It retains filter skirts across crossover markers, rather than masking whole
+frequency intervals. Its input tap remains before global INPUT gain.
+
+FFT latency audit: 2048-sample Hann window/1024 hop (42.67/21.33 ms at 48 kHz),
+plus block delivery and GUI scheduling. Remove the old 0.72/0.28 frame-based
+smoothing, discard closed-editor/overflow backlogs, take recent bounded reads,
+reset overlap on a discontinuity, and drain visual state without callbacks.
+The response is not zero-delay and spectral short-burst amplitudes differ
+from time-domain peak meters. The visual LR4 weighting is an approximation,
+not per-band waveform capture. See the technical report for regression scope.
+
+Commit and push are authorized; release publication awaits explicit user OK.
+
+Verifica integrazione finale: suite DSP PASS e GUI PASS, compresi FIFO
+recente, finestra FFT parziale a basso sample rate, punti/meter coerenti,
+code crossover, stereo L=-R, doppio click e IN/SOLO indipendenti.

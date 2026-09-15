@@ -1,6 +1,6 @@
 # Test visivi MC2000 / Ponte MBC4 — pack 1
 
-**Correzione 0.2.2:** [implementazione, modello matematico e verifiche](meter_fix_2026-09-15/REPORT.md).
+**Build 0.2.2, release in attesa di OK:** [implementazione, modello matematico e verifiche](meter_fix_2026-09-15/REPORT.md).
 Le analisi sottostanti riguardano la build precedente. Per validare la nuova
 GUI ripetere 01/02 e 03/04 R250; le prove R500/voce restano da completare.
 
@@ -231,3 +231,18 @@ ignorati dal repository del prodotto; sorgenti, guida e manifest ne
 conservano la provenienza. Non è stato necessario estrarre il vecchio ZIP.
 Build Ponte di riferimento: commit `2b6e97e`, SHA256 del binario
 `55535E64A4632E81A7FB4F3D320F5A20F614541F9A4035303DD7883593A95FAD`.
+
+### Nuove catture dopo la revisione UI 0.2.2
+
+Le scale Ponte ora coprono -60..0 dB (GR 0..60), mentre i CSV storici
+riguardano la scala precedente. Non riusare la calibrazione pixel/dB Ponte
+vecchia. IN e SOLO sono indipendenti: nei test B1 SOLO 2/3 mettere anche
+IN 2/3 acceso per attivare la compressione; SOLO da solo non la attiva piu.
+Il test B0 mantiene ratio 1:1 con lo stesso routing. Annotare il commit
+caricato per distinguere le build preliminari con la stessa versione 0.2.2.
+
+Per verificare lo spettro usare anche stereo L=-R, stop/riapertura e IN 1
+spento con crossover a 100 Hz: devono restare le code delle bande IN
+rimanenti a sinistra del marker. Il grafico mostra ingresso pre-gain INPUT
+pesato per i filtri IN, non l'uscita compressa. La finestra FFT resta 2048
+campioni; il ritorno lento e intenzionale, il replay di audio vecchio no.

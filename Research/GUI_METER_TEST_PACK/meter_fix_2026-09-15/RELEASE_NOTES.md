@@ -1,6 +1,8 @@
-Ponte MBC4 v0.2.2 fixes short peaks disappearing between GUI updates and the overly fast meter return. IN, OUT and stereo MAIN OUTPUT now retain peaks and use the measured level-display profile; GR has a separate 150 ms visual return. Audio processing remains DSP_MODEL_4, with no change to compressor release or artificial GR offset.
+**Prepared v0.2.2 notes - publication awaits user OK.**
 
-This release also includes the UI refinements since v0.2.0: editable knob-value overlays, consistent hover/keyboard focus, clearer labels, preserved IN settings during SOLO, persistent editor size, aligned MAIN OUTPUT and CROSSOVER, larger contextual help and a 0 to -48 dB band display.
+Ponte MBC4 v0.2.2 fixes short peaks disappearing between GUI updates and the overly fast meter return. IN, OUT and stereo MAIN OUTPUT now retain peaks and use the measured level-display profile; GR has a separate 150 ms visual return. Compression algorithms remain DSP_MODEL_4, with no change to compressor release or artificial GR offset. IN and SOLO are now independent; SOLO no longer enables compression when IN is off.
+
+This release also includes the UI refinements since v0.2.0: editable knob-value overlays, consistent hover/keyboard focus, clearer labels, independent IN and SOLO controls, persistent editor size, aligned MAIN OUTPUT and CROSSOVER, larger contextual help and -60..0 dB meter/graph scales. Knob double-click opens numeric editing without reset; active SOLO has lime text/outline on ink fill. STATIC I/O points share the band-meter ballistics. The stereo FFT uses the same level-display ballistics, retains crossover filter tails and discards stale queued audio.
 
 The research pack, capture reports, POC and meter technical note document measurements and limitations. The shared CompanyGUI profile has been updated in the PonteDSP workspace.
 

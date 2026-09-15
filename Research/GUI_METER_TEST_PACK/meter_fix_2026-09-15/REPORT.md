@@ -26,9 +26,9 @@ lettura. Un reset del motore svuota anche letture grezze e accumulatori.
 | IN, OUT, MAIN OUTPUT | Massimo disponibile al prossimo tick GUI | Rampa 14.3 dB/s seguita da un polo, tau 130 ms |
 | GR | Massimo disponibile al prossimo tick GUI | Un polo sulla GR in dB, tau 150 ms |
 
-Le scale grafiche rimangono quelle Ponte. Non vengono sottratti dB alla GR:
+Le scale grafiche finali vanno da -60 a 0 dB; la GR indica 0..60 dB di riduzione. Non vengono sottratti dB alla GR:
 uno smoothing a guadagno unitario conserva un plateau costante. I marker
-STATIC I/O continuano a usare le letture grezze; non consumano gli accumulatori.
+STATIC I/O ora riusano i valori IN smussati delle bande; non consumano gli accumulatori.
 
 ## Evidenza e limiti del modello
 
@@ -116,3 +116,74 @@ la regola RC di JUCE 9.0.1 non dipendeva da `Info.txt`, mantenendo 0.2.0 nelle
 proprieta del file nonostante il manifest VST3 riportasse 0.2.2. La dipendenza
 aggiunta in CMake rigenera la risorsa al cambio versione senza modificare JUCE.
 Gli hash del binario e del pacchetto finale sono allegati alla release.
+
+## Integrazione UI richiesta prima della pubblicazione - 0.2.2
+
+Questa integrazione sostituisce il precedente contratto che bloccava IN
+durante SOLO. I due parametri sono indipendenti, entrambi editabili e
+conservati nelle sessioni; SOLO non forza piu IN nel wrapper. IN mantiene
+il bypass della compressione, non un mute della banda. Il caso IN spento
++ SOLO acceso ora monitora la banda senza compressione. Le formule DSP
+restano MODEL_4; cambia intenzionalmente questa combinazione di routing.
+SOLO attivo: contorno e testo lime, fondo ink, con i colori della palette.
+
+STATIC I/O usa lo stesso IN smussato del meter e colloca il punto sulla curva
+statica della banda, senza applicare un secondo smoothing. IN spento mostra
+la curva di bypass. MAIN OUTPUT usa gia il medesimo modello di livello.
+Tutti i meter e grafici arrivano a -60 dB (GR 60 dB di riduzione); i range dei
+parametri audio non cambiano. Il doppio click sul knob apre l'overlay
+editabile senza reset; il reset doppio click viene disabilitato DOPO la
+creazione dello SliderAttachment, che altrimenti lo riabilita.
+
+Lo spettro era una FFT mono della media L+R prima del processing, con
+smoothing `0.72 * precedente + 0.28 * nuovo` a ogni FFT e taglio verticale
+alle frequenze crossover. Ora analizza L e R separatamente e conserva il
+massimo per bin (evitando la cancellazione stereo in opposizione di fase).
+Le risposte LR4 delle bande IN vengono sommate in ampiezza e applicate al
+livello dei bin prima della stessa ballistics 14.3 dB/s + 130 ms. Questo e
+uno spettro d'ingresso pesato sulle bande IN, non una FFT dell'uscita
+compressa; SOLO, gain di banda e GR non ritagliano questo ingresso.
+Il prelievo resta prima del gain INPUT globale, come nella versione precedente.
+L'approssimazione delle risposte visualizzate resta quella LR4 gia usata
+per le curve del grafico; non si rivendica una misura diretta di ogni uscita
+dei filtri o la loro ricostruzione temporale al campione.
+
+Con IN 1 spento e IN 2 acceso, sotto 100 Hz resta la coda del passa-alto
+banda 2: circa -24.6 dB a 50 Hz con crossover 100/1000/10000. Nessun salto
+verticale a 100 Hz. Le altre bande eventualmente IN contribuiscono con le
+proprie code. Le discese e lo spegnimento seguono la dinamica del display.
+
+Audit del ritardo: la coda precedente conteneva fino a 32767 campioni,
+circa 683 ms a 48 kHz, e la GUI ne leggeva al massimo 4096 per tick.
+Ora la riapertura scarta lo storico; un overflow scarta dati obsoleti e
+riparte con il callback successivo; una lettura limitata conserva i campioni
+piu recenti. Nessun replay deliberato del backlog. Il massimo per bin include
+le FFT completate nel tick, con stato visivo avanzato una volta in base al
+tempo trascorso. Il paint e passivo e in assenza di callback lo spettro scende.
+
+Resta il limite della trasformata: finestra Hann 2048 campioni, hop 1024,
+rispettivamente 42.67 e 21.33 ms a 48 kHz, piu consegna del blocco e tick GUI
+nominale 33 ms. Non e una rappresentazione senza ritardo, non si aggiunge
+latenza all'audio e non si attribuisce un'unica latenza fissa a ogni segnale.
+Un tono stabile e correttamente mostrato alla prima finestra completa;
+un burst molto piu breve della finestra non ha lo stesso livello per bin
+che avrebbe un tono continuo o un meter di picco nel dominio del tempo.
+
+Nuove regressioni: marker/meter sincronizzati, primo frame FFT senza vecchio
+smoothing di salita, stereo in opposizione di fase, decadimento a callback
+sospesi, code e continuita a crossover, SOLO senza effetto sulla selezione
+spettrale di ingresso, FIFO recente/overflow/riapertura, doppio click senza
+reset, IN editabile con tutti i SOLO attivi. Esito delle suite: DSP PASS (3.77 s); GUI PASS, inclusa la verifica finale
+delle finestre parziali a basso sample rate (4.81 s).
+
+**Pubblicazione sospesa su richiesta dell'utente: commit e push autorizzati,
+release soltanto dopo OK esplicito. Versione mantenuta a 0.2.2.**
+
+La lettura dei parametri IN per pesare lo spettro avviene una volta per tick,
+non per bin, evitando costruzioni di ID/ricerche ripetute nel ciclo FFT.
+Una lettura vuota non elimina subito una finestra parziale: ai sample rate
+bassi possono esserci normali tick GUI fra due blocchi audio. Lo storico
+parziale viene azzerato dopo un vuoto superiore a max(100 ms, due finestre),
+o subito se e segnalata una discontinuita/overflow.
+
+![UI finale al minimo: IN e SOLO simultanei e scale fino a -60](GUI_0.2.2.png)

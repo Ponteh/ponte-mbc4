@@ -124,7 +124,7 @@ dsp::GlobalParameters readSnapshot(const juce::AudioProcessorValueTreeState& sta
     {
         auto& p = snapshot.bands[static_cast<std::size_t>(band)];
         p.solo = value(state, bandId(band, "solo")) > 0.5f;
-        p.enabled = p.solo || value(state, bandId(band, "enabled")) > 0.5f;
+        p.enabled = value(state, bandId(band, "enabled")) > 0.5f;
         for (int parameter = 0; parameter < LinkRuntime::linkedParameters; ++parameter)
             raw[static_cast<std::size_t>(band)][static_cast<std::size_t>(parameter)] =
                 value(state, bandId(band, linkedSuffixes[static_cast<std::size_t>(parameter)]));
