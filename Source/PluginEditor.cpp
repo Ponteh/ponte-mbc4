@@ -425,7 +425,7 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
     enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         p.state, pontedsp::mc2000::parameters::bandId(band, "enabled"), enabled);
     timeConstant.addItemList({ "R1", "R2", "AUTO" }, 1);
-    setContextHelp(enabled, "Enable this band's compression independently of SOLO.");
+    setContextHelp(enabled, "Enable this band's input. IN off mutes the band independently of SOLO.");
     setContextHelp(solo, "Monitor one or more band outputs without changing their IN settings.");
     setContextHelp(timeConstant, "Choose Pure Peak R1, adaptive release R2, or program-dependent Auto timing.");
     setContextHelp(meter, "Monitor band input, output and gain reduction levels.");
@@ -790,7 +790,7 @@ void CompressionPlot::paint(juce::Graphics& g)
         for (int point = 0; point <= 120; ++point)
         {
             const auto input = -60.0 + 60.0 * static_cast<double>(point) / 120.0;
-            const auto output = enabled ? processor.getEngine().getStaticOutputDb(band, input) : input;
+            const auto output = enabled ? processor.getEngine().getStaticOutputDb(band, input) : -100.0;
             const auto x = plot.getX() + plot.getWidth() * static_cast<float>(point) / 120.0f;
             const auto y = juce::jmap(static_cast<float>(juce::jlimit(-60.0, 0.0, output)),
                                       -60.0f, 0.0f, plot.getBottom(), plot.getY());
@@ -804,7 +804,7 @@ void CompressionPlot::paint(juce::Graphics& g)
             const auto meter = displayedMeters[static_cast<std::size_t>(band)];
             const auto liveInput = juce::jlimit(-60.0f, 0.0f, meter.inputDb);
             const auto liveOutput = juce::jlimit(-60.0f, 0.0f,
-                static_cast<float>(enabled ? processor.getEngine().getStaticOutputDb(band, liveInput) : liveInput));
+                static_cast<float>(enabled ? processor.getEngine().getStaticOutputDb(band, liveInput) : -100.0));
             const auto dotX = juce::jmap(liveInput, -60.0f, 0.0f, plot.getX(), plot.getRight());
             const auto dotY = juce::jmap(liveOutput, -60.0f, 0.0f, plot.getBottom(), plot.getY());
             g.setColour(bandColours[static_cast<std::size_t>(band)].darker(0.3f));

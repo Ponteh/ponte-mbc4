@@ -2,8 +2,9 @@
 
 La correzione conserva i massimi audio tra aggiornamenti GUI e applica una
 dinamica visiva dedicata. Riguarda IN/OUT/GR delle quattro bande e MAIN OUTPUT
-stereo. Il percorso audio, i parametri di compressione e DSP_MODEL_4 restano
-invariati. Non introduce un parametro di velocità da regolare a orecchio.
+stereo. Il solo intervento sui meter non altera la compressione. La successiva
+richiesta IN=mute cambia il routing (DSP_MODEL_5), mantenendo le formule
+di compressione e i range dei parametri. Non introduce un parametro di velocità da regolare a orecchio.
 
 ## Implementazione e motivazione
 
@@ -102,8 +103,9 @@ Validazione successiva in Ableton: ripetere 01/02 con la nuova build,
 UNLINKED, buffer 512 e uno diverso (64/1024 se disponibili), Warp OFF e
 durata originale. Riprendere anche 03/04 R250 per confrontare il nuovo
 ritorno GR. Per chiudere la recensione servono ancora 05 compresso R250/R500,
-03/04 R500 e una voce dry reale. Non occorre rifare il neutro se routing,
-gain e timeline restano identici.
+03/04 R500 e una voce dry reale. Con IN spenti il nuovo routing cambia:
+rifare B0 neutro con gli stessi IN/SOLO del nuovo B1, ratio 1:1. Gli export
+storici restano validi solo per la build e il routing che li hanno prodotti.
 
 Esito CTest: **2/2 PASS**, DSP 7.72 s, GUI 7.09 s (14.86 s complessivi).
 Verifica modello numerico PASS; verifica acquisizioni PASS (35 input invariati,
@@ -115,21 +117,27 @@ Corretto inoltre il metadato Windows della versione nelle build incrementali:
 la regola RC di JUCE 9.0.1 non dipendeva da `Info.txt`, mantenendo 0.2.0 nelle
 proprieta del file nonostante il manifest VST3 riportasse 0.2.2. La dipendenza
 aggiunta in CMake rigenera la risorsa al cambio versione senza modificare JUCE.
-Gli hash del binario e del pacchetto finale sono allegati alla release.
+Gli hash del binario e del pacchetto di verifica sono in BUILD_INFO.txt;
+la release non viene pubblicata prima dell'OK dell'utente.
 
 ## Integrazione UI richiesta prima della pubblicazione - 0.2.2
 
 Questa integrazione sostituisce il precedente contratto che bloccava IN
 durante SOLO. I due parametri sono indipendenti, entrambi editabili e
-conservati nelle sessioni; SOLO non forza piu IN nel wrapper. IN mantiene
-il bypass della compressione, non un mute della banda. Il caso IN spento
-+ SOLO acceso ora monitora la banda senza compressione. Le formule DSP
-restano MODEL_4; cambia intenzionalmente questa combinazione di routing.
+conservati nelle sessioni; SOLO non forza piu IN nel wrapper. L'utente ha
+confermato che IN spento deve silenziare la banda: chiude ingresso audio
+e detector, anche esterno. IN spento + SOLO acceso resta silenzioso.
+La transizione usa una costante esponenziale di 5 ms e si arresta a zero
+sotto 1e-9 (circa 104 ms per il completo assestamento da uno).
+DSP_MODEL_5 distingue questa modifica di routing; le formule di compressione
+restano invariate, cosi come la versione pubblica 0.2.2. Le sessioni con IN
+spenti ora cambiano suono. Questa specifica sostituisce l'interpretazione
+provvisoria di bypass e non costituisce una nuova misura dell'originale.
 SOLO attivo: contorno e testo lime, fondo ink, con i colori della palette.
 
 STATIC I/O usa lo stesso IN smussato del meter e colloca il punto sulla curva
 statica della banda, senza applicare un secondo smoothing. IN spento mostra
-la curva di bypass. MAIN OUTPUT usa gia il medesimo modello di livello.
+l'uscita al fondo della scala. MAIN OUTPUT usa gia il medesimo modello di livello.
 Tutti i meter e grafici arrivano a -60 dB (GR 60 dB di riduzione); i range dei
 parametri audio non cambiano. Il doppio click sul knob apre l'overlay
 editabile senza reset; il reset doppio click viene disabilitato DOPO la
@@ -187,3 +195,7 @@ parziale viene azzerato dopo un vuoto superiore a max(100 ms, due finestre),
 o subito se e segnalata una discontinuita/overflow.
 
 ![UI finale al minimo: IN e SOLO simultanei e scale fino a -60](GUI_0.2.2.png)
+
+Verifica finale IN=mute: CTest 2/2 PASS (DSP 5.58 s, GUI 5.59 s; totale 11.21 s).
+Copertura: intersezione IN/SOLO, tutti accesi/spenti, silenzio anche con SOLO,
+transizioni di spegnimento/riaccensione e chiusura del detector esterno.

@@ -237,8 +237,10 @@ Build Ponte di riferimento: commit `2b6e97e`, SHA256 del binario
 Le scale Ponte ora coprono -60..0 dB (GR 0..60), mentre i CSV storici
 riguardano la scala precedente. Non riusare la calibrazione pixel/dB Ponte
 vecchia. IN e SOLO sono indipendenti: nei test B1 SOLO 2/3 mettere anche
-IN 2/3 acceso per attivare la compressione; SOLO da solo non la attiva piu.
-Il test B0 mantiene ratio 1:1 con lo stesso routing. Annotare il commit
+IN 2/3 acceso per aprire gli ingressi: IN spento ora SILENZIA la banda,
+anche con SOLO acceso. Il test B0 mantiene ratio 1:1 con lo stesso routing.
+Riesportare B0 per i confronti con routing IN modificato; il vecchio 05
+neutro resta riferito al precedente comportamento, non al nuovo mute. Annotare il commit
 caricato per distinguere le build preliminari con la stessa versione 0.2.2.
 
 Per verificare lo spettro usare anche stereo L=-R, stop/riapertura e IN 1

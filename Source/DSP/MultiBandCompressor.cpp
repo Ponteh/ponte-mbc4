@@ -19,7 +19,7 @@ void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlock
     {
         const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
         bandGainCurrent[static_cast<std::size_t>(band)] = decibelsToGain(p.gainDb);
-        enabledMixCurrent[static_cast<std::size_t>(band)] = p.enabled ? 1.0 : 0.0;
+        inputMixCurrent[static_cast<std::size_t>(band)] = p.enabled ? 1.0 : 0.0;
         soloMixCurrent[static_cast<std::size_t>(band)] = 1.0;
     }
     crossoverCurrent = currentParameters.crossoverHz;
@@ -107,7 +107,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     const auto inputTarget = decibelsToGain(currentParameters.inputGainDb);
     const auto outputTarget = decibelsToGain(currentParameters.outputGainDb);
     const auto smoothing = std::exp(-1.0 / (sampleRate * 0.02));
-    const auto bypassSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
+    const auto routingSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
     const auto crossoverSmoothing = 1.0 - std::exp(-1.0 / (sampleRate * 0.02));
     const auto anySolo = [&]
     {
@@ -169,6 +169,18 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
 
         for (int band = 0; band < bandsToProcess; ++band)
         {
+            const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
+            auto& inputMix = inputMixCurrent[static_cast<std::size_t>(band)];
+            inputMix = smoothGain(inputMix, p.enabled ? 1.0 : 0.0, routingSmoothing);
+            if (inputMix < 1.0e-9) inputMix = 0.0;
+            if (inputMix > 1.0 - 1.0e-9) inputMix = 1.0;
+            // IN gates the band input, including its detector. SOLO is an
+            // independent output gate below; it must never reopen this input.
+            for (int channel = 0; channel < maxChannels; ++channel)
+            {
+                bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] *= inputMix;
+                detectorBandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] *= inputMix;
+            }
             auto detector = 0.0;
             const auto detectorChannelTotal = useExternalDetector
                 ? detectorChannelsToProcess : channelsToProcess;
@@ -178,7 +190,6 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                         [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)])));
             inputPeaks[static_cast<std::size_t>(band)] = std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
 
-            const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
             auto targetGr = 0.0;
             if (detector > 1.0e-12)
                 targetGr = gainComputer.computeGainReductionDb(gainToDecibels(detector),
@@ -186,15 +197,13 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
             auto gr = ballistics[static_cast<std::size_t>(band)].process(
                 targetGr, detector, p.attackMs, p.releaseMs, p.tcMode);
             gr = biteProcessors[static_cast<std::size_t>(band)].process(gr, detector, p.bite);
-            auto& enabledMix = enabledMixCurrent[static_cast<std::size_t>(band)];
-            enabledMix = smoothGain(enabledMix, p.enabled ? 1.0 : 0.0, bypassSmoothing);
-            const auto appliedGr = gr * enabledMix;
+            const auto appliedGr = gr;
             maximumGr[static_cast<std::size_t>(band)] = std::max(
                 maximumGr[static_cast<std::size_t>(band)], appliedGr);
             auto& bandGain = bandGainCurrent[static_cast<std::size_t>(band)];
             bandGain = smoothGain(bandGain, decibelsToGain(p.gainDb), smoothing);
             auto& soloMix = soloMixCurrent[static_cast<std::size_t>(band)];
-            soloMix = smoothGain(soloMix, !anySolo || p.solo ? 1.0 : 0.0, bypassSmoothing);
+            soloMix = smoothGain(soloMix, !anySolo || p.solo ? 1.0 : 0.0, routingSmoothing);
             const auto appliedBandGain = bandGain * decibelsToGain(-appliedGr) * soloMix;
 
             for (int channel = 0; channel < channelsToProcess; ++channel)

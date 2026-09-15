@@ -1,7 +1,7 @@
 # Ponte MBC4
 
 Version 0.2.2 preserves audio peaks between GUI refreshes and gives IN/OUT/MAIN
-and GR separate display ballistics. Audio compression algorithms remain DSP_MODEL_4; SOLO no longer forces compression on when IN is off.
+and GR separate display ballistics. DSP_MODEL_5 changes IN to an independent input mute; the compression formulas remain unchanged.
 See the [meter correction report](Research/GUI_METER_TEST_PACK/meter_fix_2026-09-15/REPORT.md)
 for measurements, mathematical rationale and remaining DAW validation.
 
@@ -31,7 +31,9 @@ one visual focus controller. Captions sit below the knobs;
 no layout space is reserved for hidden values. Active knobs use a slightly brighter
 accent; unfocused controls retain their original saturation. See POC sections
 71–73 for the interaction contract. IN and SOLO are independent:
-IN enables compression; with IN off the band passes without compression.
+IN opens the band input; IN off mutes both program and detector input.
+Transitions use a 5 ms exponential time constant to avoid clicks. SOLO cannot
+restore a muted input. Existing sessions with IN off therefore sound different.
 SOLO selects band outputs without changing IN. Any combination is allowed,
 including all IN and all SOLO buttons on. Active SOLO uses a lime outline
 and text on the existing ink background. The initial editor size is 1100 × 738; resizing is preserved

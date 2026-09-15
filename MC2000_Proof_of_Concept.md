@@ -2135,6 +2135,8 @@ METER
 
 ### IN
 
+**Historical contract, superseded by Appendix J (0.2.2 / DSP_MODEL_5): IN off now mutes the band input and is independent of SOLO.**
+
 Bypass del compressore della banda.
 
 Definire con precisione se:
@@ -3495,6 +3497,7 @@ DSP_MODEL_1 = initial POC
 DSP_MODEL_2 = fitted Type2/BITE
 DSP_MODEL_3 = Auto verified
 DSP_MODEL_4 = public v0.2 ranges and BITE 1..10 mapping
+DSP_MODEL_5 = independent IN input mute and SOLO output selection (public 0.2.2)
 ```
 
 Salvare il model version nel preset per garantire backward compatibility.
@@ -3963,7 +3966,8 @@ VALIDATION: DSP and UI suites cover capture, concurrency, stereo, audio
 invariance under GUI reads, clock-rate/jitter independence, repaint, stop,
 reopen and existing focus/resize/SOLO regressions. Build/test outcomes are
 recorded in the release verification note.
-LIMITS: no change to the audio transfer or DSP_MODEL_4. R250 GR plateaus,
+LIMITS: this meter-only stage did not change audio transfer or DSP_MODEL_4;
+Appendix J subsequently changes IN routing to DSP_MODEL_5. R250 GR plateaus,
 R500, compressed fundamental probe and real voice still require follow-up.
 A new DAW capture must verify the complete meter after this implementation.
 
@@ -3977,16 +3981,21 @@ Windows nelle build incrementali. Hash finali nel pacchetto di release.
 
 This revision supersedes earlier IN/SOLO presentation rules and the raw
 STATIC I/O marker policy. IN and SOLO are independent, including all four
-IN and SOLO buttons simultaneously on. IN off bypasses compression; SOLO
-only selects output bands and never forces the IN parameter/engine flag.
-Active SOLO has lime outline/text and ink fill. Core compression algorithms
-remain MODEL_4, but IN-off/SOLO-on now deliberately bypasses compression.
+IN and SOLO buttons simultaneously on. As explicitly confirmed by the user,
+IN off mutes the band input, including its detector; SOLO only selects output
+bands and never forces IN. IN-off/SOLO-on remains silent. Input transitions
+use a 5 ms exponential time constant, clamped to exact silence below 1e-9.
+Active SOLO has lime outline/text and ink fill. DSP_MODEL_5 identifies this
+routing change; compression formulas and public version 0.2.2 are unchanged.
+Stored IN/SOLO values are preserved, but sessions with IN off change sound.
+This replaces the preliminary bypass interpretation, not a verified finding
+about the original plugin. New neutral references are needed for changed routing.
 
 All meter/graph dB scales end at -60 dB, GR at 60 dB reduction. Audio parameter
 ranges are unchanged. Knob double click opens numeric editing without a
 parameter reset; editing the overlay directly remains supported.
 STATIC I/O dots reuse the same smoothed IN samples as band meters, projected
-onto the static curve; bypassed bands use the identity curve. MAIN already
+onto the static curve; muted bands are clamped to the graph floor. MAIN already
 shares level ballistics. The FFT input spectrum uses stereo peak magnitudes,
 continuous LR4 weighting of IN bands and the same timed level ballistics.
 It retains filter skirts across crossover markers, rather than masking whole
@@ -4005,3 +4014,7 @@ Commit and push are authorized; release publication awaits explicit user OK.
 Verifica integrazione finale: suite DSP PASS e GUI PASS, compresi FIFO
 recente, finestra FFT parziale a basso sample rate, punti/meter coerenti,
 code crossover, stereo L=-R, doppio click e IN/SOLO indipendenti.
+
+Verifica finale IN=mute: CTest 2/2 PASS (DSP 5.58 s, GUI 5.59 s; totale 11.21 s).
+Copertura: intersezione IN/SOLO, tutti accesi/spenti, silenzio anche con SOLO,
+transizioni di spegnimento/riaccensione e chiusura del detector esterno.

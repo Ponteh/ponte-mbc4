@@ -11,7 +11,7 @@ namespace pontedsp::mc2000::dsp {
 
 struct BandParameters
 {
-    bool enabled { true };
+    bool enabled { true }; // IN: admit this band's input, otherwise mute it.
     bool solo { false };
     double gainDb {};
     double thresholdDb {};
@@ -45,7 +45,7 @@ class MultiBandCompressor final
 public:
     static constexpr int maxBands = CrossoverNetwork::maxBands;
     static constexpr int maxChannels = CrossoverNetwork::maxChannels;
-    static constexpr int dspModelVersion = 4;
+    static constexpr int dspModelVersion = 5;
 
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
     void reset() noexcept;
@@ -101,7 +101,7 @@ private:
     double inputGainCurrent { 1.0 };
     double outputGainCurrent { 1.0 };
     std::array<double, maxBands> bandGainCurrent { 1.0, 1.0, 1.0, 1.0 };
-    std::array<double, maxBands> enabledMixCurrent { 1.0, 1.0, 1.0, 1.0 };
+    std::array<double, maxBands> inputMixCurrent { 1.0, 1.0, 1.0, 1.0 };
     std::array<double, maxBands> soloMixCurrent { 1.0, 1.0, 1.0, 1.0 };
     std::array<double, 3> crossoverCurrent { 100.0, 1000.0, 10000.0 };
     int crossoverUpdateCountdown {};

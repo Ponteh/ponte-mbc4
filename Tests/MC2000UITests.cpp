@@ -143,7 +143,7 @@ void testEditorAndSolo()
     clickSolo(3); checkIn(6, true);
     LinkRuntime runtime;
     auto snapshot = readSnapshot(p.state, runtime);
-    expect(snapshot.bands[3].solo && !snapshot.bands[3].enabled, "SOLO never enables compression when IN is off");
+    expect(snapshot.bands[3].solo && !snapshot.bands[3].enabled, "SOLO never opens a muted input");
     clickSolo(1); checkIn(6, true);
     clickSolo(3); checkIn(6, true);
     clickSolo(1); checkIn(6, true);
@@ -252,12 +252,14 @@ void testKnobEditing()
 void testSoloAudioRouting()
 {
     using namespace pontedsp::mc2000;
-    for (const auto mask : { 8u, 10u, 0u })
+    for (const auto enabledMask : { 0u, 6u, 15u })
+    for (const auto mask : { 8u, 10u, 15u, 0u })
     {
+        const auto audibleMask = enabledMask & (mask == 0 ? 15u : mask);
         PonteMC2000AudioProcessor p;
         for (int b = 0; b < 4; ++b)
         {
-            set(p, parameters::bandId(b, "enabled"), b == 1 || b == 2 ? 1.0f : 0.0f);
+            set(p, parameters::bandId(b, "enabled"), (enabledMask & (1u << b)) != 0 ? 1.0f : 0.0f);
             set(p, parameters::bandId(b, "solo"), (mask & (1u << b)) != 0 ? 1.0f : 0.0f);
             set(p, parameters::bandId(b, "ratio"), 1.0f);
         }
@@ -282,7 +284,7 @@ void testSoloAudioRouting()
                 std::array<double, 4> split {};
                 reference.processSample(0, sample, split);
                 for (unsigned b = 0; b < 4; ++b)
-                    if (mask == 0 || (mask & (1u << b)) != 0) expected[static_cast<size_t>(n)] += split[b];
+                    if ((audibleMask & (1u << b)) != 0) expected[static_cast<size_t>(n)] += split[b];
             }
             p.processBlock(audio, midi);
             // SOLO uses a 5 ms exponential time constant, not a finite 5 ms ramp.
@@ -295,9 +297,11 @@ void testSoloAudioRouting()
                     energy += value * value;
                 }
         }
-        if (!(energy > .01 && maxError < 2.0e-6))
-            std::cerr << "SOLO routing mask=" << mask << " error=" << maxError << " energy=" << energy << '\n';
-        expect(energy > .01 && maxError < 2.0e-6, "SOLO audio contains exactly selected crossover bands; no SOLO restores full sum");
+        const auto expectedEnergy = audibleMask == 0 ? energy == 0 : energy > .01;
+        if (!(expectedEnergy && maxError < 2.0e-6))
+            std::cerr << "IN/SOLO masks=" << enabledMask << "/" << mask << " error=" << maxError << '\n';
+        expect(expectedEnergy && maxError < 2.0e-6,
+               "audio contains only IN bands allowed by SOLO, including silence and all bands together");
     }
 }
 void testSpectrumTimingAndTails()

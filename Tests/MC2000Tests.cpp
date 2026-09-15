@@ -536,6 +536,39 @@ void testMeterCapture()
     expect(maximum == 99999, "concurrent GUI exchange cannot erase the final audio peak");
 }
 
+void testInputMuteTransition()
+{
+    using namespace pontedsp::mc2000::dsp;
+    MultiBandCompressor engine;
+    GlobalParameters parameters;
+    for (auto& band : parameters.bands) band.enabled = false;
+    parameters.bands[0].enabled = true;
+    parameters.bands[0].solo = true;
+    engine.setParameters(parameters);
+    engine.prepare(48000, 128, 2);
+    std::vector<float> left(6400, .25f), right(6400, .25f), key(6400, .5f);
+    float* audio[] { left.data(), right.data() };
+    const float* detector[] { key.data(), key.data() };
+    engine.process(audio, 2, detector, 2, 6400);
+    parameters.bands[0].enabled = false;
+    engine.setParameters(parameters);
+    std::fill(left.begin(), left.end(), .25f); std::fill(right.begin(), right.end(), .25f);
+    engine.process(audio, 2, detector, 2, 6400);
+    expect(left[0] > .24f && left[128] > .13f && left[128] < .16f,
+           "IN mute starts with a smooth 5 ms input fade, not a hard click");
+    expect(left.back() == 0 && right.back() == 0, "IN off reaches exact silence even while SOLO is on");
+    std::fill(left.begin(), left.end(), .25f); std::fill(right.begin(), right.end(), .25f);
+    engine.process(audio, 2, detector, 2, 6400);
+    expect(engine.getBandMeter(0).inputDb == -100 && engine.getBandMeter(0).outputDb == -100,
+           "muted IN also closes the external detector and output meters");
+    parameters.bands[0].enabled = true;
+    engine.setParameters(parameters);
+    std::fill(left.begin(), left.end(), .25f); std::fill(right.begin(), right.end(), .25f);
+    engine.process(audio, 2, detector, 2, 6400);
+    expect(left[0] > 0 && left[0] < .002f && left.back() > .24f,
+           "re-enabling IN fades up smoothly while keeping SOLO independent");
+}
+
 void testVisualMeterBallistics()
 {
     using namespace pontedsp::gui;
@@ -587,6 +620,7 @@ int main()
     testArbitraryBlocksAndInvalidInput();
     testMeterCapture();
     testVisualMeterBallistics();
+    testInputMuteTransition();
     if (failures == 0)
         std::cout << "All Ponte MC2000 DSP tests passed\n";
     return failures == 0 ? 0 : 1;

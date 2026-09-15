@@ -451,15 +451,23 @@ FFT stereo con code LR4 continue oltre i crossover, letture recenti senza
 replay dello storico e ritorno dipendente dal tempo. Finestra 2048 campioni:
 42.67 ms a 48 kHz, oltre a blocchi e scheduling GUI; non e latenza audio.
 Scale grafiche fino a -60 dB; doppio click knob per editing senza reset.
-IN/SOLO indipendenti anche simultaneamente su tutte le bande; IN bypassa
-la compressione da spento, SOLO seleziona l'uscita senza forzare IN.
+IN/SOLO indipendenti anche simultaneamente su tutte le bande. Come confermato
+dall'utente, IN spento silenzia ingresso e detector della banda; SOLO seleziona
+l'uscita senza forzare IN. DSP_MODEL_5 identifica questo cambio di routing,
+con transizione esponenziale tau 5 ms, senza modificare le formule di compressione.
 SOLO attivo con contorno/testo lime e interno ink. Questa regola sostituisce
 le precedenti note che spegnevano/bloccavano IN durante SOLO.
 
 Le registrazioni storiche restano riferite alla vecchia GUI (-48 dB e
 precedente routing). Per le nuove catture annotare build e nuova scala.
+Rifare i neutri B0 quando gli IN spenti cambiano il segnale; il vecchio 05
+neutro non verifica la nuova selezione degli ingressi.
 Versione 0.2.2, commit/push previsti; release in attesa dell'OK dell'utente.
 
 Verifica integrazione finale: suite DSP PASS e GUI PASS, compresi FIFO
 recente, finestra FFT parziale a basso sample rate, punti/meter coerenti,
 code crossover, stereo L=-R, doppio click e IN/SOLO indipendenti.
+
+Verifica finale IN=mute: CTest 2/2 PASS (DSP 5.58 s, GUI 5.59 s; totale 11.21 s).
+Copertura: intersezione IN/SOLO, tutti accesi/spenti, silenzio anche con SOLO,
+transizioni di spegnimento/riaccensione e chiusura del detector esterno.
