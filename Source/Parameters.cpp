@@ -3,11 +3,9 @@
 namespace pontedsp::mc2000::parameters {
 namespace {
 
-float value(const juce::AudioProcessorValueTreeState& state, const juce::String& id) noexcept
+float value(const std::atomic<float>* raw) noexcept
 {
-    if (const auto* raw = state.getRawParameterValue(id))
-        return raw->load(std::memory_order_relaxed);
-    return 0.0f;
+    return raw != nullptr ? raw->load(std::memory_order_relaxed) : 0.0f;
 }
 
 juce::NormalisableRange<float> logarithmicRange(const float minimum, const float maximum,
@@ -108,13 +106,34 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 dsp::GlobalParameters readSnapshot(const juce::AudioProcessorValueTreeState& state,
                                    LinkRuntime& runtime) noexcept
 {
+    return SnapshotReader(state).read(runtime);
+}
+
+SnapshotReader::SnapshotReader(const juce::AudioProcessorValueTreeState& state)
+{
+    const std::array<const char*, 5> names { inputGain, outputGain, phaseInvert, bandCount, linkMaster };
+    for (std::size_t i = 0; i < globals.size(); ++i) globals[i] = state.getRawParameterValue(names[i]);
+    for (int i = 0; i < 3; ++i) crossovers[static_cast<std::size_t>(i)] = state.getRawParameterValue(crossoverId(i));
+    for (int band = 0; band < 4; ++band)
+    {
+        auto& pointers = bands[static_cast<std::size_t>(band)];
+        for (std::size_t p = 0; p < linkedSuffixes.size(); ++p)
+            pointers[p] = state.getRawParameterValue(bandId(band, linkedSuffixes[p]));
+        pointers[7] = state.getRawParameterValue(bandId(band, "solo"));
+        pointers[8] = state.getRawParameterValue(bandId(band, "enabled"));
+        pointers[9] = state.getRawParameterValue(bandId(band, "tcMode"));
+    }
+}
+
+dsp::GlobalParameters SnapshotReader::read(LinkRuntime& runtime) const noexcept
+{
     dsp::GlobalParameters snapshot;
-    snapshot.inputGainDb = value(state, inputGain);
-    snapshot.outputGainDb = value(state, outputGain);
-    snapshot.phaseInvert = value(state, phaseInvert) > 0.5f;
-    snapshot.numBands = std::clamp(static_cast<int>(value(state, bandCount)) + 2, 2, 4);
+    snapshot.inputGainDb = value(globals[0]);
+    snapshot.outputGainDb = value(globals[1]);
+    snapshot.phaseInvert = value(globals[2]) > 0.5f;
+    snapshot.numBands = std::clamp(static_cast<int>(value(globals[3])) + 2, 2, 4);
     for (int crossover = 0; crossover < 3; ++crossover)
-        snapshot.crossoverHz[static_cast<std::size_t>(crossover)] = value(state, crossoverId(crossover));
+        snapshot.crossoverHz[static_cast<std::size_t>(crossover)] = value(crossovers[static_cast<std::size_t>(crossover)]);
     snapshot.crossoverHz[0] = std::clamp(snapshot.crossoverHz[0], 20.0, 18000.0);
     snapshot.crossoverHz[1] = std::clamp(snapshot.crossoverHz[1], snapshot.crossoverHz[0] + 1.0, 19000.0);
     snapshot.crossoverHz[2] = std::clamp(snapshot.crossoverHz[2], snapshot.crossoverHz[1] + 1.0, 20000.0);
@@ -123,16 +142,17 @@ dsp::GlobalParameters readSnapshot(const juce::AudioProcessorValueTreeState& sta
     for (int band = 0; band < 4; ++band)
     {
         auto& p = snapshot.bands[static_cast<std::size_t>(band)];
-        p.solo = value(state, bandId(band, "solo")) > 0.5f;
-        p.enabled = value(state, bandId(band, "enabled")) > 0.5f;
+        const auto& pointers = bands[static_cast<std::size_t>(band)];
+        p.solo = value(pointers[7]) > 0.5f;
+        p.enabled = value(pointers[8]) > 0.5f;
         for (int parameter = 0; parameter < LinkRuntime::linkedParameters; ++parameter)
             raw[static_cast<std::size_t>(band)][static_cast<std::size_t>(parameter)] =
-                value(state, bandId(band, linkedSuffixes[static_cast<std::size_t>(parameter)]));
+                value(pointers[static_cast<std::size_t>(parameter)]);
         p.tcMode = static_cast<dsp::TCMode>(std::clamp(
-            static_cast<int>(value(state, bandId(band, "tcMode"))), 0, 2));
+            static_cast<int>(value(pointers[9])), 0, 2));
     }
 
-    const auto selectedMaster = std::clamp(static_cast<int>(value(state, linkMaster)) - 1, -1, 3);
+    const auto selectedMaster = std::clamp(static_cast<int>(value(globals[4])) - 1, -1, 3);
     const auto sourceRaw = raw;
     if (!runtime.initialised || selectedMaster != runtime.masterBand)
     {

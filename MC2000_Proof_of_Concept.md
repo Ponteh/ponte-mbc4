@@ -4018,3 +4018,25 @@ code crossover, stereo L=-R, doppio click e IN/SOLO indipendenti.
 Verifica finale IN=mute: CTest 2/2 PASS (DSP 5.58 s, GUI 5.59 s; totale 11.21 s).
 Copertura: intersezione IN/SOLO, tutti accesi/spenti, silenzio anche con SOLO,
 transizioni di spegnimento/riaccensione e chiusura del detector esterno.
+
+# Appendix K - CPU work and release header, 2026-09-18 (0.2.3 test build)
+
+The Auto law is unchanged pending new original renders. This iteration caches
+sample-rate coefficients for Auto/BITE, the manual attack coefficient and BITE
+control mapping; band gain targets move outside the sample loop. The wrapper
+resolves APVTS parameter atomics once instead of constructing IDs per block. DSP_MODEL_5
+and parameter/state schemas are preserved. The spectrum producer skips FIFO
+writes with no editor consumer; LR4 bin weights are cached until their inputs
+change. This is not complete DSP sleep and does not change the FFT or ballistics.
+
+The header shows the CMake version next to MBC4 and an optional newer stable
+GitHub version. A shared cancellable background worker checks the public latest
+release, at most hourly per loaded module, without credentials or audio data.
+The notification alternates gray/yellow every second while visible; context
+help replaces the whole header. No automatic installation. Oversampling text
+is not shown until an oversampling implementation has passed its own gate.
+
+[Implementation, benchmark method and results](Research/PERFORMANCE_2026-09-18.md).
+The 0.2.2 baseline is published; 0.2.3 is for local evaluation, not a published
+release. New original-render test pack and the remaining temporary checklist
+are tracked with this work. Nap, Auto fitting and oversampling remain open.

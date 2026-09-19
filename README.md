@@ -1,5 +1,12 @@
 # Ponte MBC4
 
+**0.2.3 test build:** cached DSP coefficients and FFT filter responses reduce
+repeated work; the spectrum FIFO stops when the editor is closed. The header
+shows the installed version and checks public GitHub releases in a background
+worker, with a gray/yellow notification for newer stable versions. Context help
+replaces the header. No Auto-law change, oversampling or complete DSP nap yet.
+See [implementation and verification](Research/PERFORMANCE_2026-09-18.md).
+
 Version 0.2.2 preserves audio peaks between GUI refreshes and gives IN/OUT/MAIN
 and GR separate display ballistics. DSP_MODEL_5 changes IN to an independent input mute; the compression formulas remain unchanged.
 See the [meter correction report](Research/GUI_METER_TEST_PACK/meter_fix_2026-09-15/REPORT.md)
@@ -56,7 +63,8 @@ queue contents instead of replaying them after an editor stall/reopening.
 A 2048-sample Hann window (42.7 ms at 48 kHz) remains necessary for analysis;
 this display window is not audio-path latency.
 
-Version 0.2.2 is prepared for review; publication requires the user's OK.
+Version 0.2.2 is the published baseline. Version 0.2.3 is a local test build;
+publishing the next release requires separate authorization.
 
 Current public parameter ranges are: Input/Output and per-band Gain
 `-24.0..+24.0 dB`, Threshold `-48.0..0.0 dB`, Ratio `1.00:1..10.00:1`,

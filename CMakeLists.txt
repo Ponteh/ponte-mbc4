@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(PonteMC2000 VERSION 0.2.2 LANGUAGES C CXX)
+project(PonteMC2000 VERSION 0.2.3 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -95,11 +95,28 @@ if (MC2000_BUILD_TESTS)
         Source/UI/PonteLookAndFeel.cpp)
     target_include_directories(MC2000UITests PRIVATE Source Source/UI)
     target_compile_definitions(MC2000UITests PRIVATE
-        JucePlugin_Name="Ponte MBC4" JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+        JucePlugin_Name="Ponte MBC4" JucePlugin_VersionString="${PROJECT_VERSION}"
+        PONTE_DISABLE_NETWORK_CHECK=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_REPORT_APP_USAGE=0 JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(MC2000UITests PRIVATE
         juce::juce_audio_utils juce::juce_audio_processors juce::juce_dsp juce::juce_gui_extra)
     add_test(NAME MC2000UITests COMMAND MC2000UITests)
+
+    juce_add_console_app(MC2000UpdateProbe PRODUCT_NAME "Ponte Update Check Probe")
+    target_sources(MC2000UpdateProbe PRIVATE Tests/UpdateCheckProbe.cpp)
+    target_include_directories(MC2000UpdateProbe PRIVATE Source)
+    target_compile_definitions(MC2000UpdateProbe PRIVATE JUCE_USE_CURL=0)
+    target_link_libraries(MC2000UpdateProbe PRIVATE juce::juce_core)
+
+    add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
+    target_include_directories(MC2000Performance PRIVATE Source)
+    set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
+    if (MC2000_BASELINE_SOURCE_DIR)
+        add_executable(MC2000PerformanceBaseline Research/PerformanceBenchmark.cpp
+            "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
+            "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
+        target_include_directories(MC2000PerformanceBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
+    endif()
 
     juce_add_console_app(MC2000BlackBoxAnalysis PRODUCT_NAME "Ponte MBC4 Black Box Analysis")
     target_sources(MC2000BlackBoxAnalysis PRIVATE

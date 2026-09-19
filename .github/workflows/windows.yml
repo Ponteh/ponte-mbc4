@@ -17,7 +17,7 @@ jobs:
         run: cmake -S . -B build -A x64 -DMC2000_BUILD_TESTS=ON
 
       - name: Build tests and VST3
-        run: cmake --build build --config Release --target MC2000Tests MC2000UITests PonteMC2000_VST3
+        run: cmake --build build --config Release --target MC2000Tests MC2000UITests MC2000Performance PonteMC2000_VST3
 
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure

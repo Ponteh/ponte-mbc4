@@ -12,6 +12,9 @@ public:
     void prepare(const double newSampleRate) noexcept
     {
         sampleRate = std::max(1.0, newSampleRate);
+        peakRelease = std::exp(-1.0 / (sampleRate * 0.08));
+        rmsCoefficient = std::exp(-1.0 / (sampleRate * 0.05));
+        cachedAttackMs = -1.0;
         reset();
     }
 
@@ -38,11 +41,15 @@ public:
         }
 
         const auto displayedAttackMs = clampFinite(attackMs, 0.25, 250.0, 10.0);
-        // T08 fit: the displayed value is not the one-pole 63.2% time constant.
-        const auto attackScale = 0.51 / (1.0 + displayedAttackMs / 800.0);
-        const auto attackSeconds = displayedAttackMs * attackScale * 0.001;
+        if (displayedAttackMs != cachedAttackMs)
+        {
+            // Same T08 calculation, only when its inputs change.
+            const auto attackScale = 0.51 / (1.0 + displayedAttackMs / 800.0);
+            const auto attackSeconds = displayedAttackMs * attackScale * 0.001;
+            attackCoefficient = std::exp(-1.0 / (sampleRate * attackSeconds));
+            cachedAttackMs = displayedAttackMs;
+        }
         const auto releaseSeconds = clampFinite(releaseMs, 25.0, 2500.0, 250.0) * 0.001;
-        const auto attackCoefficient = std::exp(-1.0 / (sampleRate * attackSeconds));
 
         if (mode != previousMode)
         {
@@ -106,10 +113,6 @@ private:
 
     double processAuto(const double targetDb, const double detectorLinear) noexcept
     {
-        constexpr double peakReleaseSeconds = 0.08;
-        constexpr double rmsSeconds = 0.05;
-        const auto peakRelease = std::exp(-1.0 / (sampleRate * peakReleaseSeconds));
-        const auto rmsCoefficient = std::exp(-1.0 / (sampleRate * rmsSeconds));
         peakEnvelope = detectorLinear > peakEnvelope ? detectorLinear
                                                       : peakRelease * peakEnvelope;
         rmsSquared = rmsCoefficient * rmsSquared
@@ -129,6 +132,9 @@ private:
     }
 
     double sampleRate { 48000.0 };
+    double peakRelease { std::exp(-1.0 / (48000.0 * 0.08)) };
+    double rmsCoefficient { std::exp(-1.0 / (48000.0 * 0.05)) };
+    double cachedAttackMs { -1.0 }, attackCoefficient {};
     double gainReductionDb {};
     double releaseStartDb {};
     double releaseAgeSeconds {};
@@ -146,6 +152,12 @@ public:
     void prepare(const double newSampleRate) noexcept
     {
         sampleRate = std::max(1.0, newSampleRate);
+        fastAttack = coefficient(0.0005);
+        fastRelease = coefficient(0.012);
+        slowAttack = coefficient(0.003);
+        slowRelease = coefficient(0.080);
+        referenceRelease = coefficient(0.150);
+        memoryRelease = coefficient(0.018);
         reset();
     }
 
@@ -159,23 +171,21 @@ public:
     double process(const double normalGainReductionDb, const double detectorLinear,
                    const double biteValue) noexcept
     {
-        const auto fastAttack = coefficient(0.0005);
-        const auto fastRelease = coefficient(0.012);
-        const auto slowAttack = coefficient(0.003);
-        const auto slowRelease = coefficient(0.080);
         fastEnvelope = follow(fastEnvelope, detectorLinear, fastAttack, fastRelease);
         slowEnvelope = follow(slowEnvelope, detectorLinear, slowAttack, slowRelease);
-        const auto referenceRelease = coefficient(0.150);
         referencePeak = detectorLinear > referencePeak ? detectorLinear
                                                        : referenceRelease * referencePeak;
         const auto transient = std::max(0.0, fastEnvelope - slowEnvelope);
         const auto transientNorm = std::clamp(
             transient / std::max(0.487 * referencePeak, 1.0e-12), 0.0, 1.0);
         lastTransientNormalised = transientNorm;
-        const auto biteNorm = controlShape(biteValue);
+        if (biteValue != cachedBite)
+        {
+            cachedBite = biteValue;
+            biteNorm = controlShape(biteValue);
+        }
         const auto requestedRelief = std::min(normalGainReductionDb,
                                               3.2 * transientShape(transientNorm));
-        const auto memoryRelease = coefficient(0.018);
         reliefMemoryDb = requestedRelief > reliefMemoryDb ? requestedRelief
             : memoryRelease * reliefMemoryDb;
         const auto reliefDb = std::min(normalGainReductionDb, biteNorm * reliefMemoryDb);
@@ -231,6 +241,10 @@ private:
     }
 
     double sampleRate { 48000.0 };
+    double fastAttack { coefficient(0.0005) }, fastRelease { coefficient(0.012) };
+    double slowAttack { coefficient(0.003) }, slowRelease { coefficient(0.080) };
+    double referenceRelease { coefficient(0.150) }, memoryRelease { coefficient(0.018) };
+    double cachedBite { -1.0 }, biteNorm {};
     double fastEnvelope {}, slowEnvelope {}, referencePeak {}, lastTransientNormalised {};
     double reliefMemoryDb {};
 };

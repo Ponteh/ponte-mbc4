@@ -15,7 +15,7 @@ void PonteMC2000AudioProcessor::prepareToPlay(const double sampleRate, const int
     spectrumFifo.reset();
     spectrumOverflow.store(false, std::memory_order_relaxed);
     processingSampleRate.store(sampleRate, std::memory_order_relaxed);
-    engine.setParameters(pontedsp::mc2000::parameters::readSnapshot(state, linkRuntime));
+    engine.setParameters(parameterReader.read(linkRuntime));
     engine.prepare(sampleRate, samplesPerBlock, getTotalNumInputChannels());
 }
 
@@ -36,7 +36,7 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 {
     juce::ignoreUnused(midi);
     juce::ScopedNoDenormals noDenormals;
-    engine.setParameters(pontedsp::mc2000::parameters::readSnapshot(state, linkRuntime));
+    engine.setParameters(parameterReader.read(linkRuntime));
 
     auto mainBuffer = getBusBuffer(buffer, false, 0);
     auto sidechainBuffer = getBusBuffer(buffer, true, 1);
@@ -56,6 +56,7 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 
 void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<float>& buffer) noexcept
 {
+    if (spectrumConsumers.load(std::memory_order_acquire) == 0) return;
     const auto channels = buffer.getNumChannels();
     if (channels <= 0) return;
 

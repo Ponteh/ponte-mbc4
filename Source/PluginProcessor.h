@@ -35,15 +35,20 @@ public:
     using SpectrumSample = std::array<float, 2>;
     int popSpectrumSamples(SpectrumSample* destination, int maximumSamples, bool& discontinuity) noexcept;
     void discardSpectrumSamples() noexcept;
+    // Message-thread ownership; the audio thread only reads this counter.
+    void addSpectrumConsumer() noexcept { spectrumConsumers.fetch_add(1, std::memory_order_release); }
+    void removeSpectrumConsumer() noexcept { spectrumConsumers.fetch_sub(1, std::memory_order_release); }
     double getProcessingSampleRate() const noexcept { return processingSampleRate.load(std::memory_order_relaxed); }
 
     juce::AudioProcessorValueTreeState state;
     std::atomic<int> editorWidth { 1100 }, editorHeight { 738 };
 
 private:
+    pontedsp::mc2000::parameters::SnapshotReader parameterReader { state };
     void pushSpectrumSamples(const juce::AudioBuffer<float>&) noexcept;
 
     static constexpr int spectrumFifoCapacity = 32768;
+    std::atomic<int> spectrumConsumers {};
     pontedsp::mc2000::dsp::MultiBandCompressor engine;
     pontedsp::mc2000::parameters::LinkRuntime linkRuntime;
     std::array<SpectrumSample, spectrumFifoCapacity> spectrumSamples {};

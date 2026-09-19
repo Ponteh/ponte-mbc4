@@ -109,6 +109,10 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     const auto smoothing = std::exp(-1.0 / (sampleRate * 0.02));
     const auto routingSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
     const auto crossoverSmoothing = 1.0 - std::exp(-1.0 / (sampleRate * 0.02));
+    std::array<double, maxBands> bandGainTargets;
+    for (int band = 0; band < maxBands; ++band)
+        bandGainTargets[static_cast<std::size_t>(band)] = decibelsToGain(
+            currentParameters.bands[static_cast<std::size_t>(band)].gainDb);
     const auto anySolo = [&]
     {
         for (int band = 0; band < bandsToProcess; ++band)
@@ -201,7 +205,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
             maximumGr[static_cast<std::size_t>(band)] = std::max(
                 maximumGr[static_cast<std::size_t>(band)], appliedGr);
             auto& bandGain = bandGainCurrent[static_cast<std::size_t>(band)];
-            bandGain = smoothGain(bandGain, decibelsToGain(p.gainDb), smoothing);
+            bandGain = smoothGain(bandGain, bandGainTargets[static_cast<std::size_t>(band)], smoothing);
             auto& soloMix = soloMixCurrent[static_cast<std::size_t>(band)];
             soloMix = smoothGain(soloMix, !anySolo || p.solo ? 1.0 : 0.0, routingSmoothing);
             const auto appliedBandGain = bandGain * decibelsToGain(-appliedGr) * soloMix;

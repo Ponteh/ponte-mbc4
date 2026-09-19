@@ -304,6 +304,99 @@ void testSoloAudioRouting()
                "audio contains only IN bands allowed by SOLO, including silence and all bands together");
     }
 }
+void testHeaderVersions()
+{
+    using namespace pontedsp::gui;
+    expect(isNewerRelease("v0.2.10", "0.2.9"), "versions compare numerically");
+    expect(!isNewerRelease("0.2.2", "0.2.3") && !isNewerRelease("0.2.3", "0.2.3"), "no notification for old or same version");
+    expect(!isNewerRelease("0.2.4-beta", "0.2.3") && !parseReleaseVersion("1..3")
+           && !parseReleaseVersion("9999999.0.0"), "malformed and prerelease tags are rejected");
+    expect(versionFromReleaseJson(R"({"tag_name":"v0.2.4","draft":false,"prerelease":false})") == "0.2.4", "stable release JSON accepted");
+    expect(versionFromReleaseJson(R"({"tag_name":"v0.2.4","draft":true,"prerelease":false})").isEmpty()
+           && versionFromReleaseJson(R"({"tag_name":"v0.2.4","draft":false,"prerelease":true})").isEmpty()
+           && versionFromReleaseJson(R"({"message":"API rate limit exceeded"})").isEmpty()
+           && versionFromReleaseJson("offline").isEmpty(), "drafts, prereleases and network errors cannot advertise an update");
+    ContextHeader header;
+    header.setSize(168, 54);
+    expect(header.versionText() == JucePlugin_VersionString, "header uses build version");
+    auto parts = *parseReleaseVersion(JucePlugin_VersionString);
+    const auto nextVersion = juce::String(parts[0]) + "." + juce::String(parts[1]) + "." + juce::String(parts[2] + 1);
+    const auto laterVersion = juce::String(parts[0]) + "." + juce::String(parts[1]) + "." + juce::String(parts[2] + 2);
+    header.setLatestVersion(nextVersion);
+    expect(header.versionText().contains(nextVersion), "header shows newer version");
+    header.setHelpText("Help replaces the complete header.");
+    const auto before = header.createComponentSnapshot(header.getLocalBounds());
+    header.setLatestVersion(laterVersion);
+    const auto after = header.createComponentSnapshot(header.getLocalBounds());
+    bool equal = true;
+    for (int y = 0; y < before.getHeight(); ++y)
+        for (int x = 0; x < before.getWidth(); ++x)
+            equal = equal && before.getPixelAt(x, y) == after.getPixelAt(x, y);
+    expect(equal && header.isShowingHelp(), "help completely hides changing version notification");
+    header.setHelpText({});
+    expect(header.versionText().contains(laterVersion) && !header.isShowingHelp(), "closing help restores current notification");
+}
+
+void testClosedSpectrumAudio()
+{
+    PonteMC2000AudioProcessor closed, opened;
+    closed.prepareToPlay(48000, 512); opened.prepareToPlay(48000, 512);
+    std::array<PonteMC2000AudioProcessor::SpectrumSample, 512> samples;
+    juce::MidiBuffer midi;
+    auto plot = std::make_unique<CrossoverPlot>(opened);
+    for (int block = 0; block < 8; ++block)
+    {
+        juce::AudioBuffer<float> a(2,512), b(2,512);
+        for (int i = 0; i < 512; ++i)
+            for (int ch = 0; ch < 2; ++ch)
+                a.setSample(ch,i,static_cast<float>(.4*std::sin((block*512+i)*.04)));
+        b.makeCopyOf(a);
+        closed.processBlock(a,midi); opened.processBlock(b,midi);
+        bool identical = true;
+        for (int ch=0; ch<2; ++ch) for (int i=0; i<512; ++i)
+            identical = identical && a.getSample(ch,i)==b.getSample(ch,i);
+        expect(identical, "opening analyzer does not change a single audio sample");
+        bool gap = false;
+        expect(closed.popSpectrumSamples(samples.data(),512,gap)==0, "closed GUI produces no spectrum traffic");
+        expect(opened.popSpectrumSamples(samples.data(),512,gap)==512, "open analyzer captures current samples");
+    }
+    plot.reset();
+    juce::AudioBuffer<float> silence(2,512); silence.clear();
+    opened.processBlock(silence,midi);
+    bool gap = false;
+    expect(opened.popSpectrumSamples(samples.data(),512,gap)==0, "destroying last analyzer stops FIFO production");
+}
+
+void testCachedParameterRestore()
+{
+    using namespace pontedsp::mc2000::parameters;
+    PonteMC2000AudioProcessor p;
+    p.prepareToPlay(48000, 64);
+    set(p,inputGain,3.0f);
+    set(p,bandId(1,"ratio"),4.0f);
+    set(p,bandId(1,"tcMode"),2.0f);
+    juce::MemoryBlock saved; p.getStateInformation(saved);
+    const auto process = [&]
+    {
+        juce::AudioBuffer<float> audio(2,64); audio.clear(); juce::MidiBuffer midi;
+        p.processBlock(audio,midi);
+    };
+    set(p,inputGain,-6.0f); set(p,bandId(1,"ratio"),8.0f);
+    process();
+    expect(p.getEngine().getParameters().inputGainDb == -6
+           && p.getEngine().getParameters().bands[1].ratio == 8, "cached parameter handles follow automation");
+    p.setStateInformation(saved.getData(),static_cast<int>(saved.getSize())); process();
+    expect(p.getEngine().getParameters().inputGainDb == 3
+           && p.getEngine().getParameters().bands[1].ratio == 4
+           && p.getEngine().getParameters().bands[1].tcMode == pontedsp::mc2000::dsp::TCMode::automatic,
+           "cached parameter handles survive state replacement");
+    set(p,linkMaster,2.0f); process();
+    set(p,bandId(1,"ratio"),5.0f); process();
+    expect(p.getEngine().getParameters().bands[0].ratio == 2
+           && p.getEngine().getParameters().bands[1].ratio == 5,
+           "cached snapshot preserves relative linked control offsets");
+}
+
 void testSpectrumTimingAndTails()
 {
     using namespace pontedsp::mc2000::parameters;
@@ -459,6 +552,9 @@ int main()
 {
     juce::ScopedJuceInitialiser_GUI gui;
     testTiming();
+    testHeaderVersions();
+    testClosedSpectrumAudio();
+    testCachedParameterRestore();
     testFocusController();
     testEditorAndSolo();
     testKnobEditing();

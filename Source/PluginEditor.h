@@ -4,6 +4,7 @@
 #include "PonteLookAndFeel.h"
 #include "UI/ControlFocus.h"
 #include "UI/MeterBallistics.h"
+#include "UI/ReleaseCheck.h"
 #include <array>
 #include <functional>
 #include <juce_dsp/juce_dsp.h>
@@ -33,14 +34,22 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
 };
 
-class ContextHeader final : public juce::Component
+class ContextHeader final : public juce::Component, private juce::Timer
 {
 public:
+    ContextHeader();
     void setHelpText(const juce::String& text);
     void setBandCount(int count);
+    void setLatestVersion(const juce::String& version);
+    juce::String versionText() const;
+    bool isShowingHelp() const noexcept { return helpText.isNotEmpty(); }
     void paint(juce::Graphics&) override;
 
 private:
+    void timerCallback() override;
+    juce::SharedResourcePointer<pontedsp::gui::ReleaseCheck> releaseCheck;
+    juce::String availableVersion;
+    bool yellow {};
     juce::String helpText;
     int bandCount { 4 };
 };
@@ -118,6 +127,7 @@ class CrossoverPlot final : public juce::Component
 {
 public:
     explicit CrossoverPlot(PonteMC2000AudioProcessor&);
+    ~CrossoverPlot() override;
     void paint(juce::Graphics&) override;
     void updateSpectrum(double elapsedSeconds);
     double inputResponseDb(double frequency) const noexcept;
@@ -148,6 +158,11 @@ private:
     std::array<bool, 4> inputBands { true, true, true, true };
     int responseBandCount { 4 };
     double withoutSpectrumSamplesSeconds {};
+    std::array<double, fftSize / 2> responseDb {};
+    std::array<double, 3> cachedResponseFrequencies {};
+    std::array<bool, 4> cachedInputBands {};
+    int cachedResponseBandCount {};
+    double cachedResponseSampleRate {};
     std::array<float, fftSize * 2> fftWork {};
     std::array<float, fftSize / 2> spectrumDb {};
     int fftInputCount {};

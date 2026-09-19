@@ -188,6 +188,30 @@ void ParameterKnob::resized()
     positionValueDisplay();
 }
 
+ContextHeader::ContextHeader() { startTimerHz(4); }
+
+juce::String ContextHeader::versionText() const
+{
+    return juce::String(JucePlugin_VersionString) + (availableVersion.isNotEmpty()
+        ? juce::String::fromUTF8(" \xe2\x86\x92 ") + availableVersion : juce::String());
+}
+
+void ContextHeader::setLatestVersion(const juce::String& version)
+{
+    const auto next = pontedsp::gui::isNewerRelease(version, JucePlugin_VersionString) ? version : juce::String();
+    if (next == availableVersion) return;
+    availableVersion = next;
+    if (!isShowingHelp()) repaint();
+}
+
+void ContextHeader::timerCallback()
+{
+    setLatestVersion(releaseCheck->latest());
+    if (!isShowing() || isShowingHelp() || availableVersion.isEmpty()) return;
+    const auto next = std::fmod(juce::Time::getMillisecondCounterHiRes(), 2000.0) >= 1000.0;
+    if (yellow != next) { yellow = next; repaint(); }
+}
+
 void ContextHeader::setHelpText(const juce::String& text)
 {
     if (helpText == text) return;
@@ -220,7 +244,11 @@ void ContextHeader::paint(juce::Graphics& g)
     g.drawFittedText("PONTE DSP", title, juce::Justification::centredLeft, 1);
     g.setColour(pontedsp::gui::Palette::mutedText());
     g.setFont(juce::FontOptions(13.0f));
-    g.drawFittedText("MBC4", subtitle, juce::Justification::centredLeft, 1);
+    g.drawFittedText("MBC4", subtitle.removeFromLeft(40), juce::Justification::centredLeft, 1);
+    g.setColour(availableVersion.isNotEmpty() && yellow
+        ? pontedsp::gui::Palette::lime() : pontedsp::gui::Palette::mutedText());
+    g.setFont(juce::FontOptions(11.0f));
+    g.drawFittedText(versionText(), subtitle, juce::Justification::centredLeft, 1);
 }
 
 CrossoverField::CrossoverField(juce::AudioProcessorValueTreeState& valueTreeState,
@@ -508,6 +536,7 @@ void BandStrip::setActiveVisual(const bool active)
 
 CrossoverPlot::CrossoverPlot(PonteMC2000AudioProcessor& p) : processor(p)
 {
+    processor.addSpectrumConsumer();
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
     spectrumDb.fill(-100.0f);
     latestSpectrumDb.fill(-100.0f);
@@ -515,6 +544,8 @@ CrossoverPlot::CrossoverPlot(PonteMC2000AudioProcessor& p) : processor(p)
     displayResponse.prepare(processor.getProcessingSampleRate(), 1);
     updateSpectrum(0.0);
 }
+
+CrossoverPlot::~CrossoverPlot() { processor.removeSpectrumConsumer(); }
 
 int CrossoverPlot::currentBandCount() const noexcept
 {
@@ -565,6 +596,17 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
         frequencies[static_cast<std::size_t>(band)] = processor.state.getRawParameterValue(
             pontedsp::mc2000::parameters::crossoverId(band))->load();
     displayResponse.setFrequencies(frequencies);
+    const auto sampleRate = processor.getProcessingSampleRate();
+    if (frequencies != cachedResponseFrequencies || inputBands != cachedInputBands
+        || responseBandCount != cachedResponseBandCount || sampleRate != cachedResponseSampleRate)
+    {
+        for (std::size_t bin = 0; bin < responseDb.size(); ++bin)
+            responseDb[bin] = inputResponseDb(static_cast<double>(bin) * sampleRate / fftSize);
+        cachedResponseFrequencies = frequencies;
+        cachedInputBands = inputBands;
+        cachedResponseBandCount = responseBandCount;
+        cachedResponseSampleRate = sampleRate;
+    }
     bool discontinuity = false;
     const auto count = processor.popSpectrumSamples(incoming.data(),
         static_cast<int>(incoming.size()), discontinuity);
@@ -608,8 +650,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
     }
     for (std::size_t bin = 0; bin < spectrumDb.size(); ++bin)
     {
-        const auto frequency = static_cast<double>(bin) * processor.getProcessingSampleRate() / fftSize;
-        const auto target = latestSpectrumDb[bin] + inputResponseDb(frequency);
+        const auto target = latestSpectrumDb[bin] + responseDb[bin];
         spectrumDb[bin] = static_cast<float>(spectrumBallistics[bin].update(target, elapsedSeconds));
     }
 }
