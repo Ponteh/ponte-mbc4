@@ -471,3 +471,15 @@ code crossover, stereo L=-R, doppio click e IN/SOLO indipendenti.
 Verifica finale IN=mute: CTest 2/2 PASS (DSP 5.58 s, GUI 5.59 s; totale 11.21 s).
 Copertura: intersezione IN/SOLO, tutti accesi/spenti, silenzio anche con SOLO,
 transizioni di spegnimento/riaccensione e chiusura del detector esterno.
+
+## Nuovi render del 19 settembre: Auto, build di prova 0.2.3
+
+La nuova acquisizione permette di correggere Auto nel DSP_MODEL_6: rilascio
+del controllo lineare con tau 102 ms, cattura rapida dei picchi, indipendenza
+dai tempi manuali. Migliorano tutti i 13 confronti Auto utilizzabili, incluso
+il segnale armonico tenuto fuori dal fit. R1/R2 e i meter restano invariati.
+Questi export audio non chiudono il problema visivo segnalato dall'esperto:
+servono ancora voce reale, prove R1 a 500 ms e registrazioni video aggiornate.
+Sette render di automazione sono muti e il B0 del rumore e un duplicato;
+le condizioni BITE/ripetizione richiedono chiarimenti. Sidechain non acquisita.
+[Rapporto, limiti e acquisizioni prioritarie](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).

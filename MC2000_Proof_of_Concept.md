@@ -4040,3 +4040,38 @@ is not shown until an oversampling implementation has passed its own gate.
 The 0.2.2 baseline is published; 0.2.3 is for local evaluation, not a published
 release. New original-render test pack and the remaining temporary checklist
 are tracked with this work. Nap, Auto fitting and oversampling remain open.
+
+# Appendix L - Measured Auto correction, 2026-09-19 (0.2.3 test build)
+
+This appendix supersedes the Auto fallback described earlier. Of 47 original
+renders delivered, seven automation exports are wholly silent, the noise B0
+duplicates the multitonal B0, and BITE/manual/repeat conditions need checking.
+The sidechain group was not acquired. A reproducible audit retains original
+hashes and excludes those files from calibration without modifying them.
+
+The valid MC404/48 kHz falling steps follow
+`g(t) = 20 s log10(1 + A exp(-t/tau))`, `s = 1 - 1/ratio`,
+with tau approximately 102 ms across four bands, levels, ratio 2/4 and threshold
+changes at knee 0. Knee -5 also fits; positive knee has a remaining discrepancy.
+This mathematical observation does not identify proprietary code or hardware.
+
+Ballistics transforms instantaneous target GR into linear control normalised
+by ratio, captures rising peaks with a 20 microsecond approximation, and lets
+excess control over unity decay with tau 102 ms. Manual Attack/Release do not
+control Auto. Ratio 1 is neutral; state remapping preserves current GR across
+non-unity ratio changes and mode changes; prepare/reset clear memory. Conversion
+is bounded near unity ratio. The public version stays 0.2.3; DSP_MODEL_6 records
+the intentional Auto sound change. Parameter IDs and state schema are stable.
+No recalibration of R1, R2, BITE, crossovers, routing or visual meter ballistics.
+
+Full-engine comparison improves all 13 usable Auto conditions. Effective
+attenuation MAE on the independent synthetic phrase changes from 0.514 to
+0.099 dB; this includes audible low-level intervals and is not a waveform-null
+or GUI-meter metric. Separate compression-active metrics and p95 are retained.
+Do not reuse the older 54/54 bit-identity claim for the changed Auto model.
+
+[Technical report, mathematical fit, acquisition audit and reproduction](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).
+Remaining validation: noise with correct B0, BITE/repeat clarification, audible
+automation, other plugin models, native sample rates, external sidechain,
+R1 expert probes at 500 ms, meter recordings and real voice. Local numerical
+sample-rate and routing tests do not replace original-plugin acquisitions.

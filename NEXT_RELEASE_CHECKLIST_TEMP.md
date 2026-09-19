@@ -17,9 +17,12 @@ MBC4 e avviso asincrono delle nuove release, sostituzione dell'header con help.
 Aggiunti benchmark A/B contro 0.2.2 e regressioni locali.
 [Dettagli e risultati](Research/PERFORMANCE_2026-09-18.md).
 
-I render del pack restano da eseguire. Auto non e stato ricalibrato; nap DSP
-completo e oversampling restano aperti. Nap e studio aliasing possono essere
-sviluppati con test locali; i render originali servono per il fit e il confronto.
+Aggiornamento 2026-09-19: ricevuti 47 render, analizzati con audit dei file e
+confronto del motore completo. Auto ricalibrato nel DSP_MODEL_6: tutti i 13
+confronti utilizzabili migliorano. Sette export muti, neutro rumore duplicato
+e impostazioni BITE/ripetizione da chiarire impediscono di chiudere la matrice.
+[Rapporto e priorita delle acquisizioni](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).
+Nap DSP completo e oversampling restano aperti; possono procedere con test locali.
 
 ## 1. Obiettivi e ordine del lavoro
 

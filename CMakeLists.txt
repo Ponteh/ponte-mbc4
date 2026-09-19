@@ -110,6 +110,8 @@ if (MC2000_BUILD_TESTS)
 
     add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
     target_include_directories(MC2000Performance PRIVATE Source)
+    add_executable(MC2000OriginalPackRender Research/OriginalPackRender.cpp ${MC2000_DSP_SOURCES})
+    target_include_directories(MC2000OriginalPackRender PRIVATE Source)
     set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
     if (MC2000_BASELINE_SOURCE_DIR)
         add_executable(MC2000PerformanceBaseline Research/PerformanceBenchmark.cpp

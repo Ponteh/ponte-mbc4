@@ -1,0 +1,247 @@
+{
+  "null_pairs": [
+    {
+      "first": 2,
+      "second": 37,
+      "identical": false,
+      "max_abs_error": 0.08012387156486511,
+      "relative_error_db": -36.66663727812021
+    },
+    {
+      "first": 27,
+      "second": 28,
+      "identical": false,
+      "max_abs_error": 5.960464477539063e-08,
+      "relative_error_db": -151.38589325695423
+    },
+    {
+      "first": 27,
+      "second": 35,
+      "identical": false,
+      "max_abs_error": 5.960464477539063e-08,
+      "relative_error_db": -151.38589325695423
+    },
+    {
+      "first": 27,
+      "second": 36,
+      "identical": false,
+      "max_abs_error": 5.960464477539063e-08,
+      "relative_error_db": -151.38589325695423
+    },
+    {
+      "first": 27,
+      "second": 37,
+      "identical": false,
+      "max_abs_error": 5.960464477539063e-08,
+      "relative_error_db": -151.38589325695423
+    },
+    {
+      "first": 29,
+      "second": 30,
+      "identical": false,
+      "max_abs_error": 7.450580596923828e-08,
+      "relative_error_db": -151.23583974544647
+    },
+    {
+      "first": 35,
+      "second": 36,
+      "identical": true,
+      "max_abs_error": 0.0,
+      "relative_error_db": null
+    },
+    {
+      "first": 21,
+      "second": 23,
+      "identical": true,
+      "max_abs_error": 0.0,
+      "relative_error_db": null
+    }
+  ],
+  "release_fits": [
+    {
+      "id": "T002",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 9.964230943256323,
+      "tau_s": 0.10202442822953914,
+      "rmse_db": 0.0031433629838999305
+    },
+    {
+      "id": "T002",
+      "step_end_s": 33,
+      "slope": 0.5,
+      "amplitude": 1.6782706072406945,
+      "tau_s": 0.10194925458279881,
+      "rmse_db": 0.0017266909983053027
+    },
+    {
+      "id": "T002",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 4.419982981343423,
+      "tau_s": 0.10199570517701238,
+      "rmse_db": 0.0025101813134219522
+    },
+    {
+      "id": "T010",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 10.086617893705917,
+      "tau_s": 0.10202546886880855,
+      "rmse_db": 0.0007013773722485107
+    },
+    {
+      "id": "T010",
+      "step_end_s": 33,
+      "slope": 0.5,
+      "amplitude": 1.7071908783425669,
+      "tau_s": 0.10195193136689722,
+      "rmse_db": 0.0005722341432169507
+    },
+    {
+      "id": "T010",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 4.480927107693657,
+      "tau_s": 0.10199727220603148,
+      "rmse_db": 0.0006120954254409088
+    },
+    {
+      "id": "T018",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 9.995683540732808,
+      "tau_s": 0.1020278961643004,
+      "rmse_db": 0.002346476780150581
+    },
+    {
+      "id": "T018",
+      "step_end_s": 33,
+      "slope": 0.5,
+      "amplitude": 1.6696206688939332,
+      "tau_s": 0.10195704755689404,
+      "rmse_db": 0.0013186445107371116
+    },
+    {
+      "id": "T018",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 4.428907547987266,
+      "tau_s": 0.10200089508940519,
+      "rmse_db": 0.0018827287698954156
+    },
+    {
+      "id": "T020",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 9.088414113937898,
+      "tau_s": 0.10202158283829474,
+      "rmse_db": 0.0006794281029476662
+    },
+    {
+      "id": "T020",
+      "step_end_s": 33,
+      "slope": 0.5,
+      "amplitude": 1.4707970571067528,
+      "tau_s": 0.10194172906117972,
+      "rmse_db": 0.0005663483203244324
+    },
+    {
+      "id": "T020",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 3.9905440092049904,
+      "tau_s": 0.10199301687743914,
+      "rmse_db": 0.0006061120816413781
+    },
+    {
+      "id": "T031",
+      "step_end_s": 22,
+      "slope": 0.75,
+      "amplitude": 9.964570010612421,
+      "tau_s": 0.10202077057866381,
+      "rmse_db": 0.004628709063829353
+    },
+    {
+      "id": "T031",
+      "step_end_s": 33,
+      "slope": 0.75,
+      "amplitude": 1.6784041300640555,
+      "tau_s": 0.10193484292542482,
+      "rmse_db": 0.0025580539139407506
+    },
+    {
+      "id": "T031",
+      "step_end_s": 43,
+      "slope": 0.75,
+      "amplitude": 4.420199569960315,
+      "tau_s": 0.10198912607380183,
+      "rmse_db": 0.003694589362011183
+    },
+    {
+      "id": "T032",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 2.6893058046677947,
+      "tau_s": 0.10203861095371898,
+      "rmse_db": 0.0020204661869971403
+    },
+    {
+      "id": "T032",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 0.8337907728712439,
+      "tau_s": 0.10201376019595582,
+      "rmse_db": 0.0011007815756635918
+    },
+    {
+      "id": "T033",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 10.50823665923014,
+      "tau_s": 0.10202708290812507,
+      "rmse_db": 0.0031827374996198556
+    },
+    {
+      "id": "T033",
+      "step_end_s": 33,
+      "slope": 0.5,
+      "amplitude": 2.174928592925648,
+      "tau_s": 0.10196548003692289,
+      "rmse_db": 0.0019295679946669338
+    },
+    {
+      "id": "T033",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 4.935854173937543,
+      "tau_s": 0.10200026848212224,
+      "rmse_db": 0.002599638612417478
+    },
+    {
+      "id": "T034",
+      "step_end_s": 22,
+      "slope": 0.5,
+      "amplitude": 10.063625363121123,
+      "tau_s": 0.07421201633264321,
+      "rmse_db": 0.03263287589096501
+    },
+    {
+      "id": "T034",
+      "step_end_s": 33,
+      "slope": 0.5,
+      "amplitude": 0.876358957028915,
+      "tau_s": 0.0714068767239935,
+      "rmse_db": 0.0015990903947100206
+    },
+    {
+      "id": "T034",
+      "step_end_s": 43,
+      "slope": 0.5,
+      "amplitude": 3.4090051343278054,
+      "tau_s": 0.07225435063530115,
+      "rmse_db": 0.007330522799565284
+    }
+  ],
+  "caution": "Fit describes observed audio, not proprietary implementation. Positive knee differs; overrides and silent files excluded."
+}

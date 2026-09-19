@@ -4,8 +4,16 @@
 repeated work; the spectrum FIFO stops when the editor is closed. The header
 shows the installed version and checks public GitHub releases in a background
 worker, with a gray/yellow notification for newer stable versions. Context help
-replaces the header. No Auto-law change, oversampling or complete DSP nap yet.
+replaces the header. Oversampling and complete DSP nap remain open.
 See [implementation and verification](Research/PERFORMANCE_2026-09-18.md).
+
+**September 19 Auto correction, DSP_MODEL_6:** new original renders support
+rapid peak capture and release of excess linear control with a 102 ms time
+constant, replacing the crest-factor fallback. All 13 usable Auto comparisons
+improve, including the independent synthetic phrase (mean attenuation error
+0.514 to 0.099 dB). Existing Auto presets change sound; R1/R2 are unchanged.
+This is partial MC404/48 kHz validation, not a full equivalence claim.
+See [acquisition problems, measurements and remaining tests](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).
 
 Version 0.2.2 preserves audio peaks between GUI refreshes and gives IN/OUT/MAIN
 and GR separate display ballistics. DSP_MODEL_5 changes IN to an independent input mute; the compression formulas remain unchanged.

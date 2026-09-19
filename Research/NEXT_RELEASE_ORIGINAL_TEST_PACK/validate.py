@@ -6,10 +6,18 @@ import json
 import math
 import re
 import struct
+import tempfile
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent
+
+
+def render_matches(directory, row):
+    """Accept planned take names or an unambiguous short ID; keep original files intact."""
+    take = re.compile(re.escape(row['output'].replace('_take1.wav', '')) + r'_take[1-9][0-9]*\.wav$', re.I)
+    short = re.compile(re.escape(row['id']) + r'(?:\s*-.*)?\.wav$', re.I)
+    return sorted(p for p in directory.glob('*.wav') if take.fullmatch(p.name) or short.fullmatch(p.name))
 
 
 def wav_info(raw):
@@ -72,6 +80,14 @@ def self_test():
         try:wav_info(bad)
         except (ValueError,struct.error):pass
         else:raise AssertionError('Malformed file accepted')
+    assert wav_info(make(3,32,struct.pack('<ff',0,0)))['all_silent']
+    with tempfile.TemporaryDirectory() as directory:
+        folder=Path(directory)
+        row=dict(id='T001',output='T001_ORIG_MC404_01_B2_B0_48000Hz_take1.wav')
+        names=['T001.wav','T001 - observed automation.wav',row['output'].replace('take1','take2'),
+               'T0010.wav','T001_NOT_THE_PLAN_take1.wav','T001.wav.asd']
+        for name in names:(folder/name).touch()
+        assert {p.name for p in render_matches(folder,row)}==set(names[:3])
 
 
 def main():
@@ -94,6 +110,7 @@ def main():
             info=wav_info(raw)
             assert info['frames']==60*f['sample_rate'] and info['channels']==2
             assert info['sample_rate']==f['sample_rate'] and info['bits']==24
+            assert not info['all_silent'], 'Source is entirely silent'
             result['source_checks'].append(f['file'])
         except Exception as e:result['errors'].append(f['file']+': '+str(e))
     known=set()
@@ -108,8 +125,9 @@ def main():
         assert len(r['IN'])==len(r['band_settings'])==count and all(r['IN'])
         assert all(1<=b<=count for b in r['SOLO'])
         if r['sidechain']:assert source_map[r['sidechain']]['sample_rate']==r['sample_rate']
-        matches=sorted((ROOT/'renders').glob(r['output'].replace('_take1.wav','_take*.wav')))
-        matches=[p for p in matches if re.search(r'_take[1-9][0-9]*\.wav$',p.name)]
+        matches=render_matches(ROOT/'renders',r)
+        if len(matches)>1:
+            result['warnings'].append(r['id']+': multiple candidates; analysis must explicitly select a take')
         if not matches:
             if r['id'] not in unsupported:result['missing'].append(dict(id=r['id'],output=r['output'],stage=r['stage']))
             elif not str(unsupported[r['id']]).strip():result['errors'].append(r['id']+': unsupported needs a reason')
@@ -123,10 +141,16 @@ def main():
                 if info['all_silent']:raise ValueError('Entire output is silent: check routing/IN/SOLO')
                 if info['samples_at_or_over_full_scale']:
                     result['warnings'].append(p.name+': full-scale samples; inspect clipping or legitimate float overshoot')
-                result['render_checks'].append(dict(file=p.name,sha256=hashlib.sha256(raw).hexdigest(),**info))
+                result['render_checks'].append(dict(id=r['id'],file=p.name,sha256=hashlib.sha256(raw).hexdigest(),**info))
             except Exception as e:result['errors'].append(p.name+': '+str(e))
     for k in unsupported:
         if k not in ids:result['errors'].append('Unknown unsupported test ID '+k)
+    by_id={r['id']:r for r in plan}
+    by_hash={}
+    for checked in result['render_checks']:
+        previous=by_hash.setdefault(checked['sha256'],checked)
+        if previous is not checked and by_id[previous['id']]['source']!=by_id[checked['id']]['source']:
+            result['errors'].append(previous['id']+'/'+checked['id']+': identical audio assigned to different sources')
     for p in (ROOT/'renders').glob('*.wav'):
         if p.name in known:continue
         if p.name.startswith('VOICE_'):

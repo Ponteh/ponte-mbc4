@@ -45,7 +45,7 @@ class MultiBandCompressor final
 public:
     static constexpr int maxBands = CrossoverNetwork::maxBands;
     static constexpr int maxChannels = CrossoverNetwork::maxChannels;
-    static constexpr int dspModelVersion = 5;
+    static constexpr int dspModelVersion = 6;
 
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
     void reset() noexcept;

@@ -185,6 +185,63 @@ void testBallisticsModels()
     }
 }
 
+void testMeasuredAutoRelease()
+{
+    using namespace pontedsp::mc2000::dsp;
+    // Original T002/T010: ~10.37 dB before the falling step, 3.81 dB
+    // 200 ms later and 0.79 dB after 400 ms. T031 scales by 1.5 at 4:1.
+    // Higher rates are numerical invariance checks, not original acquisitions.
+    for (const auto rate : {44100.0, 48000.0, 88200.0, 96000.0, 192000.0})
+    for (const auto ratio : {2.0, 4.0})
+    {
+        const auto scale = ratio == 2.0 ? 1.0 : 1.5;
+        Ballistics state;
+        state.prepare(rate);
+        double gr = 0;
+        for (int n=0; n<static_cast<int>(rate*.02); ++n)
+            gr=state.process(10.37*scale,.5,2.5,250,TCMode::automatic,ratio);
+        expectNear(gr,10.37*scale,.002,"Auto captures the step rapidly (including sub-sample peak-release ripple)");
+        for (int n=0; n<static_cast<int>(rate*.2); ++n)
+            gr=state.process(0,.001,.25,25,TCMode::automatic,ratio);
+        expectNear(gr,3.81*scale,.10*scale,"Auto measured 200 ms release anchor");
+        for (int n=0; n<static_cast<int>(rate*.2); ++n)
+            gr=state.process(0,.001,250,2500,TCMode::automatic,ratio);
+        expectNear(gr,.79*scale,.05*scale,"Auto measured 400 ms release anchor");
+        const auto previous=gr;
+        gr=state.process(0,0,2.5,250,TCMode::automatic,3.0);
+        expect(std::abs(gr-previous)<.005,"Auto ratio changes preserve its current envelope");
+        gr=state.process(0,0,2.5,250,TCMode::type1,3.0);
+        expect(std::abs(gr-previous)<.01,"Leaving Auto preserves release continuity");
+        gr=state.process(0,0,2.5,250,TCMode::automatic,3.0);
+        expect(std::abs(gr-previous)<.01,"Entering Auto preserves release continuity");
+        expectNear(state.process(0,.5,2.5,250,TCMode::automatic,1.0),0,0,"Auto ratio 1 is neutral");
+        state.reset();
+        expectNear(state.process(0,0,2.5,250,TCMode::automatic,ratio),0,0,"Auto reset clears memory");
+        for (const auto r : {1.00000001,2.0,10.0,std::numeric_limits<double>::quiet_NaN()})
+            expect(std::isfinite(state.process(160,1.e6,2.5,250,TCMode::automatic,r)),
+                   "Auto control transform stays finite near ratio 1 and extreme inputs");
+    }
+    const auto render=[](const int blockSize)
+    {
+        MultiBandCompressor engine;
+        GlobalParameters p;
+        for (auto& b:p.bands) { b.tcMode=TCMode::automatic; b.ratio=2; b.thresholdDb=-27.5; }
+        engine.setParameters(p);engine.prepare(48000,1024,2);
+        std::vector<float> left(24000),right(24000);
+        for (int n=0;n<24000;++n)
+            left[n]=right[n]=static_cast<float>((n<12000?.5:.004)*std::sin(2*3.141592653589793*315*n/48000));
+        for (int pos=0;pos<24000;)
+        {
+            const auto count=std::min(blockSize==0?1+pos%701:blockSize,24000-pos);
+            float* channels[]{left.data()+pos,right.data()+pos};
+            engine.process(channels,2,count);pos+=count;
+        }
+        return left;
+    };
+    const auto reference=render(512);
+    expect(reference==render(32) && reference==render(0),"Auto audio is independent of host block partitioning");
+}
+
 double maximumBiteRelief(const double riseSeconds, const double biteValue = 10.0)
 {
     using namespace pontedsp::mc2000::dsp;
@@ -612,6 +669,7 @@ int main()
     testFourBandFlatSum();
     testGainComputer();
     testBallisticsModels();
+    testMeasuredAutoRelease();
     testBiteModel();
     testStereoDetectorAndFiniteOutput();
     testExternalSidechain();

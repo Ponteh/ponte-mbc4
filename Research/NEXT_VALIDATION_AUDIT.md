@@ -1,5 +1,10 @@
 # Next DSP Validation Pack Audit
 
+**September 19 follow-up:** a separate controlled 60-second acquisition pack
+now supports replacing the Auto crest-factor fallback with the DSP_MODEL_6
+linear-control release model. This historical audit and its incompatible
+datasets remain unchanged as evidence. See the [new audit and limitations](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).
+
 ## Scope and reproducibility
 
 This audit covers the renders added to `MC2000_Next_DSP_Validation_Pack`.

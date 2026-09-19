@@ -12,9 +12,9 @@ public:
     void prepare(const double newSampleRate) noexcept
     {
         sampleRate = std::max(1.0, newSampleRate);
-        peakRelease = std::exp(-1.0 / (sampleRate * 0.08));
-        rmsCoefficient = std::exp(-1.0 / (sampleRate * 0.05));
         cachedAttackMs = -1.0;
+        autoRelease = std::exp(-1.0 / (sampleRate * 0.102));
+        autoAttack = std::exp(-1.0 / (sampleRate * 0.00002));
         reset();
     }
 
@@ -23,21 +23,35 @@ public:
         gainReductionDb = releaseStartDb = releaseAgeSeconds = 0.0;
         detectorEnvelope = releaseStartDetector = 0.0;
         releasing = false;
-        rmsSquared = peakEnvelope = 0.0;
         previousMode = TCMode::type1;
+        autoControl = 1.0;
+        previousAutoSlope = 0.0;
     }
 
     double process(const double targetDb, const double detectorLinear,
-                   const double attackMs, const double releaseMs, const TCMode mode) noexcept
+                   const double attackMs, const double releaseMs, const TCMode mode,
+                   const double ratio = 2.0) noexcept
     {
         const auto target = clampFinite(targetDb, 0.0, 160.0, 0.0);
         const auto detector = clampFinite(detectorLinear, 0.0, 1.0e6, 0.0);
 
         if (mode == TCMode::automatic)
         {
+            const auto slope = 1.0 - 1.0 / clampFinite(ratio, 1.0, 10.0, 2.0);
+            if (slope <= 1.0e-9)
+            {
+                autoControl = 1.0;
+                gainReductionDb = 0.0;
+                previousAutoSlope = 0.0;
+                previousMode = mode;
+                return 0.0;
+            }
+            if (previousMode != mode || previousAutoSlope != slope)
+                autoControl = decibelsToGain(std::min(160.0, gainReductionDb / slope));
             previousMode = mode;
+            previousAutoSlope = slope;
             releasing = false;
-            return processAuto(target, detector);
+            return processAuto(target, slope);
         }
 
         const auto displayedAttackMs = clampFinite(attackMs, 0.25, 250.0, 10.0);
@@ -111,39 +125,32 @@ private:
         releasing = true;
     }
 
-    double processAuto(const double targetDb, const double detectorLinear) noexcept
+    double processAuto(const double targetDb, const double slope) noexcept
     {
-        peakEnvelope = detectorLinear > peakEnvelope ? detectorLinear
-                                                      : peakRelease * peakEnvelope;
-        rmsSquared = rmsCoefficient * rmsSquared
-                   + (1.0 - rmsCoefficient) * detectorLinear * detectorLinear;
-        const auto crest = peakEnvelope / std::max(std::sqrt(rmsSquared), 1.0e-9);
-        const auto crestNorm = std::clamp((crest - 1.0) / 5.0, 0.0, 1.0);
-        // Conservative crest-factor fallback.  The available Auto renders are
-        // internally inconsistent across MC303/MC404 and BITE test families,
-        // so a single replacement law would over-fit one series and regress
-        // another until a cross-model trajectory fit is available.
-        const auto attackSeconds = 0.030 - 0.028 * crestNorm;
-        const auto releaseSeconds = 0.600 - 0.480 * crestNorm;
-        const auto coefficient = std::exp(-1.0 / (sampleRate
-            * (targetDb > gainReductionDb ? attackSeconds : releaseSeconds)));
-        gainReductionDb = coefficient * gainReductionDb + (1.0 - coefficient) * targetDb;
+        // 2026-09-19 MC404 step fit: excess linear control decays with ~102 ms,
+        // giving level-dependent release in dB. Ratio normalisation preserves
+        // the measured identical release shape at 2:1 and 4:1. The fast 20 us
+        // peak capture is an approximation, not a measured front-panel attack.
+        // See Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19.
+        const auto targetControl = decibelsToGain(std::min(160.0, targetDb / slope));
+        autoControl = targetControl > autoControl
+            ? autoAttack * autoControl + (1.0 - autoAttack) * targetControl
+            : 1.0 + autoRelease * (autoControl - 1.0);
+        gainReductionDb = slope * gainToDecibels(autoControl);
         return gainReductionDb;
     }
 
     double sampleRate { 48000.0 };
-    double peakRelease { std::exp(-1.0 / (48000.0 * 0.08)) };
-    double rmsCoefficient { std::exp(-1.0 / (48000.0 * 0.05)) };
     double cachedAttackMs { -1.0 }, attackCoefficient {};
     double gainReductionDb {};
     double releaseStartDb {};
     double releaseAgeSeconds {};
     double detectorEnvelope {};
     double releaseStartDetector {};
-    double rmsSquared {};
-    double peakEnvelope {};
     bool releasing {};
     TCMode previousMode { TCMode::type1 };
+    double autoControl { 1.0 }, previousAutoSlope {};
+    double autoAttack {}, autoRelease {};
 };
 
 class BiteProcessor final

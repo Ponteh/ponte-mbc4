@@ -1,5 +1,12 @@
 # Test originali MC2000 — prossima release
 
+**Analisi della consegna del 19 settembre:**
+[risultati, correzione Auto e file da rifare](analysis_2026-09-19/REPORT.md).
+47 export ricevuti; T055–T061 muti, T023 duplica T021, condizioni BITE/repeat
+da confermare. Sidechain non acquisita. Non occorre rifare tutti i test.
+Il validatore ora accetta anche `T001.wav` e `T001 - note.wav`; il nome breve
+identifica la riga ma non certifica le impostazioni effettive del plugin.
+
 Preparato il 2026-09-17 per il **punto 2 dell'ordine di lavoro** della
 [checklist](../../NEXT_RELEASE_CHECKLIST_TEMP.md): completare le misure
 dell'originale, soprattutto Auto. Non è il benchmark CPU della sezione 2.
