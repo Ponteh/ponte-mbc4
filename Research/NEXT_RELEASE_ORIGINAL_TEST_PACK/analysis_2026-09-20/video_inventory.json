@@ -1,0 +1,298 @@
+{
+  "T087-in": {
+    "ffmpeg_version": "7.1-essentials_build-www.gyan.dev built with gcc 14.2.0 (Rev1, Built by MSYS2 project)",
+    "codec": "h264",
+    "pix_fmt": "yuv420p(progressive)",
+    "audio_codec": "aac",
+    "fps": 60.0,
+    "source_size": [
+      1920,
+      1080
+    ],
+    "size": [
+      1920,
+      1080
+    ],
+    "rotate": 0,
+    "duration": 66.42,
+    "sha256": "cff624ca5a6a21d7d9a89abd2c5af8351004b8e6499a08bae5e75fda71a6bd4d",
+    "frames": 3985,
+    "min_frame_interval": 0.016665999999986525,
+    "max_frame_interval": 0.03333400000001063,
+    "audio_peak": 0.0,
+    "audio_nonzero_samples": 0,
+    "rois": [
+      [
+        "main",
+        951,
+        426,
+        583,
+        "yellow"
+      ],
+      [
+        "main_r",
+        951,
+        441,
+        583,
+        "yellow"
+      ],
+      [
+        "b1",
+        1502,
+        563,
+        234,
+        "yellow"
+      ],
+      [
+        "b2",
+        1502,
+        662,
+        234,
+        "yellow"
+      ],
+      [
+        "b3",
+        1502,
+        760,
+        234,
+        "yellow"
+      ],
+      [
+        "b4",
+        1502,
+        860,
+        234,
+        "yellow"
+      ],
+      [
+        "play",
+        786,
+        56,
+        16,
+        "green"
+      ]
+    ]
+  },
+  "T087-out": {
+    "ffmpeg_version": "7.1-essentials_build-www.gyan.dev built with gcc 14.2.0 (Rev1, Built by MSYS2 project)",
+    "codec": "h264",
+    "pix_fmt": "yuv420p(progressive)",
+    "audio_codec": "aac",
+    "fps": 60.0,
+    "source_size": [
+      1920,
+      1080
+    ],
+    "size": [
+      1920,
+      1080
+    ],
+    "rotate": 0,
+    "duration": 66.0,
+    "sha256": "bc2ecb16ef8703d0082094eadbe3c54ee1cbe4ffcbe217b6c8aeb8fe2be272c1",
+    "frames": 3959,
+    "min_frame_interval": 0.016665999999986525,
+    "max_frame_interval": 0.016667000000012422,
+    "audio_peak": 0.0,
+    "audio_nonzero_samples": 0,
+    "rois": [
+      [
+        "main",
+        951,
+        426,
+        583,
+        "yellow"
+      ],
+      [
+        "main_r",
+        951,
+        441,
+        583,
+        "yellow"
+      ],
+      [
+        "b1",
+        1502,
+        563,
+        234,
+        "yellow"
+      ],
+      [
+        "b2",
+        1502,
+        662,
+        234,
+        "yellow"
+      ],
+      [
+        "b3",
+        1502,
+        760,
+        234,
+        "yellow"
+      ],
+      [
+        "b4",
+        1502,
+        860,
+        234,
+        "yellow"
+      ],
+      [
+        "play",
+        786,
+        56,
+        16,
+        "green"
+      ]
+    ]
+  },
+  "T088-in": {
+    "ffmpeg_version": "7.1-essentials_build-www.gyan.dev built with gcc 14.2.0 (Rev1, Built by MSYS2 project)",
+    "codec": "h264",
+    "pix_fmt": "yuv420p(progressive)",
+    "audio_codec": "aac",
+    "fps": 60.0,
+    "source_size": [
+      1920,
+      1080
+    ],
+    "size": [
+      1920,
+      1080
+    ],
+    "rotate": 0,
+    "duration": 64.7,
+    "sha256": "b24b6bd5c5b8a94735af0afd6036b644fc8ba031d59ac4be08d738b9203bb1a2",
+    "frames": 3881,
+    "min_frame_interval": 0.016665999999986525,
+    "max_frame_interval": 0.03333299999999895,
+    "audio_peak": 0.0,
+    "audio_nonzero_samples": 0,
+    "rois": [
+      [
+        "main",
+        951,
+        426,
+        583,
+        "yellow"
+      ],
+      [
+        "main_r",
+        951,
+        441,
+        583,
+        "yellow"
+      ],
+      [
+        "b1",
+        1502,
+        563,
+        234,
+        "yellow"
+      ],
+      [
+        "b2",
+        1502,
+        662,
+        234,
+        "yellow"
+      ],
+      [
+        "b3",
+        1502,
+        760,
+        234,
+        "yellow"
+      ],
+      [
+        "b4",
+        1502,
+        860,
+        234,
+        "yellow"
+      ],
+      [
+        "play",
+        786,
+        56,
+        16,
+        "green"
+      ]
+    ]
+  },
+  "T088-out": {
+    "ffmpeg_version": "7.1-essentials_build-www.gyan.dev built with gcc 14.2.0 (Rev1, Built by MSYS2 project)",
+    "codec": "h264",
+    "pix_fmt": "yuv420p(progressive)",
+    "audio_codec": "aac",
+    "fps": 60.0,
+    "source_size": [
+      1920,
+      1080
+    ],
+    "size": [
+      1920,
+      1080
+    ],
+    "rotate": 0,
+    "duration": 66.28,
+    "sha256": "61f9a1a4ecda141be31cafa3877241f88c449d495025110e16c8469a612a8f31",
+    "frames": 3976,
+    "min_frame_interval": 0.016665999999986525,
+    "max_frame_interval": 0.03333399999999642,
+    "audio_peak": 0.0,
+    "audio_nonzero_samples": 0,
+    "rois": [
+      [
+        "main",
+        951,
+        426,
+        583,
+        "yellow"
+      ],
+      [
+        "main_r",
+        951,
+        441,
+        583,
+        "yellow"
+      ],
+      [
+        "b1",
+        1502,
+        563,
+        234,
+        "yellow"
+      ],
+      [
+        "b2",
+        1502,
+        662,
+        234,
+        "yellow"
+      ],
+      [
+        "b3",
+        1502,
+        760,
+        234,
+        "yellow"
+      ],
+      [
+        "b4",
+        1502,
+        860,
+        234,
+        "yellow"
+      ],
+      [
+        "play",
+        786,
+        56,
+        16,
+        "green"
+      ]
+    ]
+  }
+}

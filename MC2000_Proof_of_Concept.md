@@ -4075,3 +4075,40 @@ Remaining validation: noise with correct B0, BITE/repeat clarification, audible
 automation, other plugin models, native sample rates, external sidechain,
 R1 expert probes at 500 ms, meter recordings and real voice. Local numerical
 sample-rate and routing tests do not replace original-plugin acquisitions.
+
+# Appendix M - Additional original measurements, 2026-09-20
+
+Research only: production remains 0.2.3 / DSP_MODEL_6 at commit 5d8bd92.
+The delivery contains 80 WAVs representing 75 planned IDs and four videos.
+61 format-compatible audible conditions were compared with the frozen engine;
+some are diagnostic comparisons with unresolved acquisition settings.
+
+R1 isolated probes at ratio 2:1, knee 0 and BITE 1 fit
+`g(t) = 10 log10(1 + A exp(-t/tau))`, with tau equal to the displayed
+250/500 ms Release. Twelve release segments fit with RMSE below 0.0015 dB.
+The current stretched exponential in dB is a different curve: at 500 ms
+the original reaches half its initial GR around 733–735 ms, Ponte around
+669 ms. This is an audio difference relevant to the expert's concern,
+not proof of the full real-voice/meter explanation. Generalisation to other
+ratios/knees and transition behaviour requires further verification.
+
+Corrected BITE 5/10 recordings show substantially greater and shorter attack
+relief than the current model. At BITE 5, the peak relief relative to BITE 1
+is 3.32/3.80 dB on 315 Hz/2 kHz versus 0.19/0.17 dB in Ponte. Whole-render
+MAE hides these short errors; 1 ms analysis is retained. Both amplitude and
+timing need identification, with regression across R1/R2/Auto.
+
+Auto BITE 1 release near 102 ms is confirmed by the MC202 isolated probe;
+LOW probes at 44.1/48/88.2 kHz also support the current model. This does not
+validate all modes/rates: twelve primary exports remain silent, MC303 isolated
+and several ALL acquisitions show inconsistent routing/compression, and
+96/192 kHz compressed cases and external sidechain remain incomplete.
+
+Original 60 fps neutral videos support a 12 dB meter fall of 667–750 ms
+(10–90%, median 717 ms), close to the current numerical profile's 714 ms.
+For 6 dB, measured 467–600 ms exceeds its 441 ms. Pixel calibration and
+frame uncertainty remain relevant. These are not new Ponte screen captures;
+silent video audio prevents absolute latency measurement, and neutral runs
+do not validate GR. No meter constants were changed from these observations.
+
+[Full report, figures, reproducible scripts and acquisition limitations](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-20/REPORT.md).

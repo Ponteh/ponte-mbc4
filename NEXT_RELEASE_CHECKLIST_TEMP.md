@@ -24,6 +24,23 @@ e impostazioni BITE/ripetizione da chiarire impediscono di chiudere la matrice.
 [Rapporto e priorita delle acquisizioni](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).
 Nap DSP completo e oversampling restano aperti; possono procedere con test locali.
 
+Aggiornamento 2026-09-20, **analisi senza modifica del DSP**: 80 WAV/75 ID e
+quattro video, 61 confronti audio anche diagnostici. R1 a ratio 2:1 segue un
+rilascio del controllo lineare con tau pari alla Release; la curva attuale
+torna a metà GR circa 9% prima nelle sonde 500 ms. BITE sottostima e prolunga
+il transiente. Auto BITE 1 trova conferma sul MC202 isolato e sulle sonde
+LOW a 44,1/48/88,2 kHz. Dodici export primari ancora muti; impostazioni ALL
+non equivalenti in alcuni gruppi. T075–T081 attesi, sidechain non disponibile.
+[Rapporto aggiornato e priorità](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-20/REPORT.md).
+
+- [ ] Prototipare la nuova legge R1 e verificarla fuori dai tratti del fit:
+  ratio/knee, 250/500 ms, attacco, continuità e cambi parametro; poi voce reale.
+- [ ] Ricalibrare ampiezza, mappatura e durata BITE dai T027–T030 corretti;
+  regressioni su tutti i modi, senza correggere soltanto il massimo.
+- [ ] Risolvere export muti e preset incongruenti prima di usarli come test DSP.
+- [ ] Quantificare incertezza pixel/frame e confronto GUI Ponte per i meter:
+  ritorno a 12 dB già vicino, piccoli cali da approfondire; GR ancora aperto.
+
 ## 1. Obiettivi e ordine del lavoro
 
 1. Congelare baseline audio/GUI e misurare il costo attuale.
@@ -107,7 +124,10 @@ o alla validazione di Auto: le attività seguenti restano da completare.
 
 Stato iniziale: le 39 coppie manual min/max dell'audit confermano che Auto
 ignora Attack/Release manuali. La legge crest-factor in `processAuto()` è
-ancora un fallback, non un fit completo dell'originale.
+ancora un fallback, non un fit completo dell'originale. Questo è lo stato
+iniziale della checklist: dal 19 settembre DSP_MODEL_6 usa il modello
+misurato tau 102 ms, descritto nell'appendice L del POC. La matrice completa
+di validazione resta aperta, come precisato nel rapporto del 20 settembre.
 
 - [ ] Creare `AUTO-01`: gradini con portante non nulla fra i picchi, livelli e
   durate diversi, per misurare attacco, plateau e rilascio senza dividere per zero.

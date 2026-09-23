@@ -1,0 +1,1222 @@
+[
+  {
+    "id": "T001",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T002",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05632310940330371,
+      "p95_db": 0.31333961336245153,
+      "maximum_db": 0.9924459702767847
+    },
+    "original_compressing": {
+      "count": 1405,
+      "mae_db": 0.20815825113014622,
+      "p95_db": 0.3135213370856091,
+      "maximum_db": 0.9924459702767847
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T003",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.07708039016612504,
+      "p95_db": 0.31822191026072844,
+      "maximum_db": 0.673549524044712
+    },
+    "original_compressing": {
+      "count": 1903,
+      "mae_db": 0.20787587712197803,
+      "p95_db": 0.41525246407239846,
+      "maximum_db": 0.673549524044712
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T004",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R2",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.08466427771362366,
+      "p95_db": 0.47103081608328523,
+      "maximum_db": 1.024654691717707
+    },
+    "original_compressing": {
+      "count": 1864,
+      "mae_db": 0.22674689024276767,
+      "p95_db": 0.9222458413847914,
+      "maximum_db": 1.024654691717707
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T005",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.017830278447372713
+  },
+  {
+    "id": "T006",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.024086792081958793,
+      "p95_db": 0.17900127681152966,
+      "maximum_db": 0.5855335945693181
+    },
+    "original_compressing": {
+      "count": 1089,
+      "mae_db": 0.11462010379297594,
+      "p95_db": 0.19861567822471926,
+      "maximum_db": 0.5855335945693181
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.017830278447372713
+  },
+  {
+    "id": "T007",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.06761673401629147,
+      "p95_db": 0.35608174805596793,
+      "maximum_db": 0.4341608027654651
+    },
+    "original_compressing": {
+      "count": 1661,
+      "mae_db": 0.21004174371974083,
+      "p95_db": 0.3700389650250848,
+      "maximum_db": 0.4341608027654651
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.017830278447372713
+  },
+  {
+    "id": "T008",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R2",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.14495284292638516,
+      "p95_db": 0.9488489088001959,
+      "maximum_db": 1.0234116322133735
+    },
+    "original_compressing": {
+      "count": 1619,
+      "mae_db": 0.45998448101014455,
+      "p95_db": 1.0062213200432688,
+      "maximum_db": 1.0234116322133735
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.017830278447372713
+  },
+  {
+    "id": "T009",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  },
+  {
+    "id": "T010",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05979049606826188,
+      "p95_db": 0.327998799879734,
+      "maximum_db": 0.9240992038196199
+    },
+    "original_compressing": {
+      "count": 1406,
+      "mae_db": 0.22080660974781774,
+      "p95_db": 0.327998799879734,
+      "maximum_db": 0.9240992038196199
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  },
+  {
+    "id": "T011",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.08316929229680244,
+      "p95_db": 0.32299910841898516,
+      "maximum_db": 0.6872389648604504
+    },
+    "original_compressing": {
+      "count": 1903,
+      "mae_db": 0.22447332952956636,
+      "p95_db": 0.4095529345483859,
+      "maximum_db": 0.6872389648604504
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  },
+  {
+    "id": "T012",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R2",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.08790542870210688,
+      "p95_db": 0.48005779023655126,
+      "maximum_db": 1.037272696813445
+    },
+    "original_compressing": {
+      "count": 1870,
+      "mae_db": 0.23530826468588262,
+      "p95_db": 0.9371659224993145,
+      "maximum_db": 1.037272696813445
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  },
+  {
+    "id": "T013",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 2112,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0022056266824586964
+  },
+  {
+    "id": "T014",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 2112,
+      "mae_db": 0.31922929137471534,
+      "p95_db": 0.3200605219660976,
+      "maximum_db": 0.8981481133912341
+    },
+    "original_compressing": {
+      "count": 2112,
+      "mae_db": 0.31922929137471534,
+      "p95_db": 0.3200605219660976,
+      "maximum_db": 0.8981481133912341
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0022056266824586964
+  },
+  {
+    "id": "T015",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 2112,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0022057299527110654
+  },
+  {
+    "id": "T016",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 2112,
+      "mae_db": 0.24281332674669973,
+      "p95_db": 0.23812767786680844,
+      "maximum_db": 0.5841396748674175
+    },
+    "original_compressing": {
+      "count": 2112,
+      "mae_db": 0.24281332674669973,
+      "p95_db": 0.23812767786680844,
+      "maximum_db": 0.5841396748674175
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0022057299527110654
+  },
+  {
+    "id": "T017",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0048330667998996634
+  },
+  {
+    "id": "T018",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.038382163112575765,
+      "p95_db": 0.24317067013021276,
+      "maximum_db": 0.5758757838083608
+    },
+    "original_compressing": {
+      "count": 1404,
+      "mae_db": 0.14190221981297932,
+      "p95_db": 0.24317067013021276,
+      "maximum_db": 0.5758757838083608
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0048330667998996634
+  },
+  {
+    "id": "T019",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 1.4406153121919511e-05
+  },
+  {
+    "id": "T020",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05722702781670208,
+      "p95_db": 0.3095617100351342,
+      "maximum_db": 0.921001536848006
+    },
+    "original_compressing": {
+      "count": 1398,
+      "mae_db": 0.2125318650522648,
+      "p95_db": 0.3095617100351342,
+      "maximum_db": 0.921001536848006
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 1.4406153121919511e-05
+  },
+  {
+    "id": "T021",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.05296441442920609
+  },
+  {
+    "id": "T022",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.09165003265196409,
+      "p95_db": 0.37880180811233366,
+      "maximum_db": 1.07457564678022
+    },
+    "original_compressing": {
+      "count": 1437,
+      "mae_db": 0.31330501919060066,
+      "p95_db": 0.3853637180666385,
+      "maximum_db": 1.07457564678022
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.05296441442920609
+  },
+  {
+    "id": "T025",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.19522797496997668
+  },
+  {
+    "id": "T026",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.09662234285848623,
+      "p95_db": 0.39957165472388745,
+      "maximum_db": 0.8286998423826155
+    },
+    "original_compressing": {
+      "count": 1700,
+      "mae_db": 0.29522776623959074,
+      "p95_db": 0.43158018659063924,
+      "maximum_db": 0.8286998423826155
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.19522797496997668
+  },
+  {
+    "id": "T027",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_B5",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.056781258029021724,
+      "p95_db": 0.3146051479231806,
+      "maximum_db": 1.455920531084308
+    },
+    "original_compressing": {
+      "count": 1405,
+      "mae_db": 0.20994646051445082,
+      "p95_db": 0.315545745180863,
+      "maximum_db": 1.455920531084308
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T028",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_B10",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05482383475554462,
+      "p95_db": 0.3045132068762513,
+      "maximum_db": 1.7498109612053723
+    },
+    "original_compressing": {
+      "count": 1406,
+      "mae_db": 0.20160523636096528,
+      "p95_db": 0.3056213641556651,
+      "maximum_db": 1.7498109612053723
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T029",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_B5",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05992386728143865,
+      "p95_db": 0.32828243508190535,
+      "maximum_db": 1.3940645915823673
+    },
+    "original_compressing": {
+      "count": 1406,
+      "mae_db": 0.22130810237386414,
+      "p95_db": 0.32828243508190535,
+      "maximum_db": 1.3940645915823673
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  },
+  {
+    "id": "T030",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_B10",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05966396715264211,
+      "p95_db": 0.3282369871208761,
+      "maximum_db": 2.329780449604579
+    },
+    "original_compressing": {
+      "count": 1406,
+      "mae_db": 0.2203748641032565,
+      "p95_db": 0.3282369871208761,
+      "maximum_db": 2.329780449604579
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  },
+  {
+    "id": "T031",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_R4",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.08464867948073812,
+      "p95_db": 0.47003893305058675,
+      "maximum_db": 1.5178086204567922
+    },
+    "original_compressing": {
+      "count": 1429,
+      "mae_db": 0.30772251224568525,
+      "p95_db": 0.47031293012802067,
+      "maximum_db": 1.5178086204567922
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T032",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_TH18",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.03283905002880299,
+      "p95_db": 0.21480190861742754,
+      "maximum_db": 1.0536200947379024
+    },
+    "original_compressing": {
+      "count": 988,
+      "mae_db": 0.17197502850102817,
+      "p95_db": 0.2156327030295957,
+      "maximum_db": 1.0536200947379024
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T033",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_KM5",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.055165301475188756,
+      "p95_db": 0.288260770612105,
+      "maximum_db": 1.4909713014887256
+    },
+    "original_compressing": {
+      "count": 1409,
+      "mae_db": 0.20331638850648587,
+      "p95_db": 0.2892665892955666,
+      "maximum_db": 1.4909713014887256
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T034",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO_KP10",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.17192723096263526,
+      "p95_db": 0.7078643005792946,
+      "maximum_db": 2.055763303260785
+    },
+    "original_compressing": {
+      "count": 1298,
+      "mae_db": 0.6674312862858167,
+      "p95_db": 1.4063301932639725,
+      "maximum_db": 2.055763303260785
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T038",
+    "model": "MC202",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 1.4233506646799448e-07
+  },
+  {
+    "id": "T039",
+    "model": "MC202",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.056364000125295056,
+      "p95_db": 0.31251796809357124,
+      "maximum_db": 0.863795125965725
+    },
+    "original_compressing": {
+      "count": 1406,
+      "mae_db": 0.2081513293688142,
+      "p95_db": 0.31278109131329757,
+      "maximum_db": 0.863795125965725
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 1.4233506646799448e-07
+  },
+  {
+    "id": "T040",
+    "model": "MC202",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.04050671787662526
+  },
+  {
+    "id": "T041",
+    "model": "MC202",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 1.1464020239931239,
+      "p95_db": 5.275850896492397,
+      "maximum_db": 5.315916286078053
+    },
+    "original_compressing": {
+      "count": 1624,
+      "mae_db": 3.6668971318747743,
+      "p95_db": 5.299962295847839,
+      "maximum_db": 5.315916286078053
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.04050671787662526
+  },
+  {
+    "id": "T042",
+    "model": "MC303",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 1066,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 31.697840132958817
+  },
+  {
+    "id": "T043",
+    "model": "MC303",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 1066,
+      "mae_db": 8.024715531209205,
+      "p95_db": 10.56626802354049,
+      "maximum_db": 10.575529325345173
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 31.697840132958817
+  },
+  {
+    "id": "T044",
+    "model": "MC303",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.2806302084996914
+  },
+  {
+    "id": "T045",
+    "model": "MC303",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.30888449390675743,
+      "p95_db": 1.1889087093356077,
+      "maximum_db": 1.877497298878117
+    },
+    "original_compressing": {
+      "count": 1659,
+      "mae_db": 0.9677548582623379,
+      "p95_db": 1.2137217889590417,
+      "maximum_db": 1.877497298878117
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.2806302084996914
+  },
+  {
+    "id": "T046",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0174917216544099
+  },
+  {
+    "id": "T047",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0507354994796395,
+      "p95_db": 0.20217616759747514,
+      "maximum_db": 1.621078947299571
+    },
+    "original_compressing": {
+      "count": 1448,
+      "mae_db": 0.18207494286123183,
+      "p95_db": 0.2030179785374795,
+      "maximum_db": 1.621078947299571
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0174917216544099
+  },
+  {
+    "id": "T048",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.07052582177881443,
+      "p95_db": 0.21827090747449418,
+      "maximum_db": 1.2906985829219826
+    },
+    "original_compressing": {
+      "count": 1804,
+      "mae_db": 0.20228022718508107,
+      "p95_db": 0.35178797886503776,
+      "maximum_db": 1.2906985829219826
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0174917216544099
+  },
+  {
+    "id": "T062",
+    "model": "MC404",
+    "rate": 44100,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.08921668580718232
+  },
+  {
+    "id": "T063",
+    "model": "MC404",
+    "rate": 44100,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.7199056920831641,
+      "p95_db": 3.9726614248853327,
+      "maximum_db": 4.041174480340714
+    },
+    "original_compressing": {
+      "count": 1120,
+      "mae_db": 3.2357690769720526,
+      "p95_db": 4.015428549289162,
+      "maximum_db": 4.041174480340714
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.08921668580718232
+  },
+  {
+    "id": "T064",
+    "model": "MC404",
+    "rate": 44100,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.015954313269778864
+  },
+  {
+    "id": "T065",
+    "model": "MC404",
+    "rate": 44100,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05303740099362084,
+      "p95_db": 0.2668239917060635,
+      "maximum_db": 0.598868030348509
+    },
+    "original_compressing": {
+      "count": 1186,
+      "mae_db": 0.23012368060226518,
+      "p95_db": 0.29405259337464984,
+      "maximum_db": 0.598868030348509
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.015954313269778864
+  },
+  {
+    "id": "T066",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.052969542661901944
+  },
+  {
+    "id": "T067",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.24314050552950248,
+      "p95_db": 0.9444641815905152,
+      "maximum_db": 0.9936533347240427
+    },
+    "original_compressing": {
+      "count": 5200,
+      "mae_db": 0.24317260416847702,
+      "p95_db": 0.9444641815905152,
+      "maximum_db": 0.9936533347240427
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.052969542661901944
+  },
+  {
+    "id": "T068",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.015988609203288328
+  },
+  {
+    "id": "T069",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.05330085862527355,
+      "p95_db": 0.2632942180627671,
+      "maximum_db": 0.5633567432519624
+    },
+    "original_compressing": {
+      "count": 1180,
+      "mae_db": 0.2321755343574761,
+      "p95_db": 0.28991835647595404,
+      "maximum_db": 0.5633567432519624
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.015988609203288328
+  },
+  {
+    "id": "T070",
+    "model": "MC404",
+    "rate": 88200,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.09513184316561868
+  },
+  {
+    "id": "T071",
+    "model": "MC404",
+    "rate": 88200,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.7319162015826814,
+      "p95_db": 3.9827768242720456,
+      "maximum_db": 4.0442309175971305
+    },
+    "original_compressing": {
+      "count": 1093,
+      "mae_db": 3.3142618969580444,
+      "p95_db": 4.029567105224679,
+      "maximum_db": 4.0442309175971305
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.09513184316561868
+  },
+  {
+    "id": "T072",
+    "model": "MC404",
+    "rate": 88200,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01610628956343662
+  },
+  {
+    "id": "T073",
+    "model": "MC404",
+    "rate": 88200,
+    "profile": "AUTO",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0587607191348296,
+      "p95_db": 0.25148108015283466,
+      "maximum_db": 0.7184441631702301
+    },
+    "original_compressing": {
+      "count": 1137,
+      "mae_db": 0.25712665524194567,
+      "p95_db": 0.41858354526974173,
+      "maximum_db": 0.7184441631702301
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01610628956343662
+  },
+  {
+    "id": "T074",
+    "model": "MC404",
+    "rate": 96000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.09621552968440922
+  },
+  {
+    "id": "T082",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "B0",
+    "all_valid": {
+      "count": 4803,
+      "mae_db": 0.0,
+      "p95_db": 0.0,
+      "maximum_db": 0.0
+    },
+    "original_compressing": {
+      "count": 0,
+      "mae_db": null,
+      "p95_db": null,
+      "maximum_db": null
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.02736347632620423
+  },
+  {
+    "id": "T083",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1_250",
+    "all_valid": {
+      "count": 4803,
+      "mae_db": 0.155228914507578,
+      "p95_db": 0.5668451567797983,
+      "maximum_db": 0.8123484543382853
+    },
+    "original_compressing": {
+      "count": 2538,
+      "mae_db": 0.2877604529653173,
+      "p95_db": 0.650261684090472,
+      "maximum_db": 0.8123484543382853
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.02736347632620423
+  },
+  {
+    "id": "T084",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1_500",
+    "all_valid": {
+      "count": 4803,
+      "mae_db": 0.20976117810416614,
+      "p95_db": 0.5966021199658403,
+      "maximum_db": 0.757107249476646
+    },
+    "original_compressing": {
+      "count": 3737,
+      "mae_db": 0.26497059702711667,
+      "p95_db": 0.6121514771346679,
+      "maximum_db": 0.757107249476646
+    },
+    "effective_attenuation": true,
+    "neutral_level_mae_db": 0.02736347632620423
+  },
+  {
+    "id": "T085",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1_500",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.1022713491132685,
+      "p95_db": 0.40837480927178005,
+      "maximum_db": 0.63910166800855
+    },
+    "original_compressing": {
+      "count": 2752,
+      "mae_db": 0.1894372876331215,
+      "p95_db": 0.4292408587292598,
+      "maximum_db": 0.63910166800855
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.01750149694267218
+  },
+  {
+    "id": "T086",
+    "model": "MC404",
+    "rate": 48000,
+    "profile": "R1_500",
+    "all_valid": {
+      "count": 5201,
+      "mae_db": 0.10546494848369638,
+      "p95_db": 0.41921154292880924,
+      "maximum_db": 0.6432227187877526
+    },
+    "original_compressing": {
+      "count": 2754,
+      "mae_db": 0.19529991446119288,
+      "p95_db": 0.4379343479837088,
+      "maximum_db": 0.6432227187877526
+    },
+    "effective_attenuation": false,
+    "neutral_level_mae_db": 0.0001039099556182272
+  }
+]

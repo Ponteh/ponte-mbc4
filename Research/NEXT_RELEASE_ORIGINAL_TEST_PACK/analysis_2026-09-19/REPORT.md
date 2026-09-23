@@ -1,5 +1,9 @@
 # Analisi render originali e correzione Auto — 19 settembre 2026
 
+**Seguito dell'analisi:** [consegna del 20 settembre](../analysis_2026-09-20/REPORT.md).
+Le esclusioni e le acquisizioni mancanti qui sotto descrivono soltanto il
+19 settembre; vedere il seguito per file rifatti, nuovi gruppi e video.
+
 Build di prova **0.2.3**, modello DSP **6**. Baseline codice:
 `2dc55d361bd803537aa4feaf186173887c6f439b` (prima della correzione Auto).
 Questa revisione modifica intenzionalmente il suono di Auto. R1, R2, BITE,

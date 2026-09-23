@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "date": "2026-09-20",
+  "original_wavs_unchanged": 80,
+  "original_videos_unchanged": 4,
+  "source_wavs_verified": 22,
+  "production_sources_unchanged": 23,
+  "renderer_unchanged": true,
+  "engine_outputs_verified": 61,
+  "silent_primary_files": [
+    "T023.wav",
+    "T024.wav",
+    "T035.wav",
+    "T036.wav",
+    "T037.wav",
+    "T055.wav",
+    "T056.wav",
+    "T057.wav",
+    "T058.wav",
+    "T059.wav",
+    "T060.wav",
+    "T061.wav"
+  ],
+  "scripts_sha256": {
+    "analyse_2026_09_20.py": "ee0ff8d8d747bd72a30b1bfd056a36a86c981f895ba1199efc7b23e14689aa49",
+    "diagnose_2026_09_20.py": "af22c377ef300af994ab0b9760432ab610132284b0899964fec9632702a27035",
+    "measure_meters_2026_09_20.py": "7ddd524b73bd951aee3bee6bf40e936411ef9e41794164095f4f4b55f2531130",
+    "verify_2026_09_20.py": "e8132f27c707d867ec116f5167ed0e0651c2ed32abfece1e3a9837b828a5cbcf"
+  },
+  "scope": "Analysis integrity only; not a pass of all acquisition settings, DSP tests or the full release matrix."
+}

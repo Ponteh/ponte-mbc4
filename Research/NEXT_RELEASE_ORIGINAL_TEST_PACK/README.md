@@ -1,6 +1,14 @@
 # Test originali MC2000 — prossima release
 
-**Analisi della consegna del 19 settembre:**
+**Analisi aggiornata al 20 settembre:**
+[nuovi risultati, R1/BITE, video e acquisizioni da controllare](analysis_2026-09-20/REPORT.md).
+80 WAV per 75 ID e quattro video; 61 confronti audio, inclusi quelli diagnostici.
+R1 mostra una diversa curva di rilascio e BITE un transiente troppo ridotto
+in Ponte. Dodici export primari restano muti; alcuni preset ALL non risultano
+equivalenti. T075–T081 ancora attesi. Codice di produzione invariato in questa
+analisi; per lo stato attuale usare il nuovo rapporto.
+
+**Storico della consegna del 19 settembre:**
 [risultati, correzione Auto e file da rifare](analysis_2026-09-19/REPORT.md).
 47 export ricevuti; T055–T061 muti, T023 duplica T021, condizioni BITE/repeat
 da confermare. Sidechain non acquisita. Non occorre rifare tutti i test.

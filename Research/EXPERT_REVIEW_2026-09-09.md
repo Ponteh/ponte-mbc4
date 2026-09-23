@@ -483,3 +483,23 @@ servono ancora voce reale, prove R1 a 500 ms e registrazioni video aggiornate.
 Sette render di automazione sono muti e il B0 del rumore e un duplicato;
 le condizioni BITE/ripetizione richiedono chiarimenti. Sidechain non acquisita.
 [Rapporto, limiti e acquisizioni prioritarie](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19/REPORT.md).
+
+## Nuove sonde e video del 20 settembre — analisi, codice invariato
+
+Le sonde R1 500 ms sono ora disponibili: l'originale raggiunge metà della
+GR iniziale in circa 733–735 ms, Ponte in circa 669 ms. La curva originale
+si adatta al decadimento del controllo lineare con tau pari alla Release;
+quella Ponte usa un'esponenziale stirata in dB. È una differenza audio
+concreta pertinente alla tenuta segnalata dall'esperto, ma resta da collegare
+al confronto su voce e alla lettura del meter con acquisizione sincronizzata.
+
+I BITE 5/10 rifatti mostrano transienti più forti e brevi dell'emulazione.
+Auto BITE 1 trova conferma anche nel MC202 isolato. I quattro nuovi video
+neutri consentono misure relative IN/OUT/MAIN: il ritorno su 12 dB è vicino
+al profilo Ponte, quello su 6 dB più lento. Non verificano GR o latenza
+assoluta, perché manca audio sincrono e non c'è compressione nei video.
+
+Dodici export primari restano muti anche dopo il rifacimento; alcuni gruppi
+ALL hanno compressione su bande diverse dal piano. Le acquisizioni native
+96/192 kHz sono ancora parziali. Nessuna modifica DSP/GUI in questa analisi.
+[Rapporto aggiornato con grafici e verifiche da completare](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-20/REPORT.md).
