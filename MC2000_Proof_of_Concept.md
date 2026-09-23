@@ -4167,3 +4167,62 @@ All twelve measured release segments improve in GR trajectory RMSE.
 Real voice, broader original ratio/knee acquisitions, BITE recalibration,
 complete nap, oversampling decision, CPU benchmark and final DAW validation
 remain open. This change is not a published release or a complete emulation claim.
+
+# Appendix O - Corrected exports and Auto BITE, 2026-09-23
+
+The twelve previously silent primary exports are now audible, stereo 48 kHz,
+60 seconds long. The user confirms the automation values and times in the
+pack plan. T002/T035/T036/T037 null exactly, as do T056/T057: Auto ignores
+manual Attack/Release both statically and during the prescribed automation.
+The new noise neutral is no longer a duplicate of the multitonal reference.
+The suspect MC202/MC303 and ALL sample-rate acquisitions were not replaced;
+their configuration limitations remain. Sidechain and T075–T081 are absent.
+
+Production advances from model 7 (R1 already corrected in `4dadce7`) to
+**DSP_MODEL_8**, retaining public version **0.2.3**. Only Auto with BITE > 1
+changes its intended audio response. R1/R2 retain their existing BITE law.
+Auto retains the model-6 excess-linear-control release with tau 102 ms.
+
+For Auto BITE, a rising-only one-pole smoothing stage follows the normal GR:
+
+```text
+u = clamp((BITE - 1) / 9, 0, 1)
+tau = 0.003 * u^1.875                  # seconds
+a = exp(-1/(Fs*tau)), or 0 at BITE 1
+g = a*g + (1-a)*normalGR              # when normalGR > g
+g = normalGR                         # otherwise
+```
+
+Candidate identification on the original 315 Hz / 2 kHz onsets gives about
+0.654 ms at BITE 5 and 2.987 ms at BITE 10. The rounded interpolation gives
+about 0.656/3 ms. This is a measured approximation of the output behaviour,
+not identification of McDSP's proprietary implementation. Intermediate BITE
+values and other parameter combinations are extrapolations. Other onsets
+in those same files are checks, not independent recording sessions.
+
+Unlike changing the underlying peak detector's attack, this stage preserves
+the long-term Auto memory and constant settled GR. Sinusoidal detector ripple
+can still produce a small residual level difference; full-chain results are
+reported rather than claiming an exact waveform match to the original.
+At BITE 1 the normal GR passes unchanged. Manual BITE envelope states continue
+updating in Auto; manual mode updates the Auto smoother's reference state.
+Reset clears it, and prepare invalidates the sample-rate-dependent cache.
+The new coefficient and power are calculated only when BITE or Fs changes.
+
+The research renderer now accepts explicit automation profiles and splits
+blocks at the prescribed 10-second event boundaries. It never infers the
+automation from filenames. Both model-7 and model-8 outputs use the same
+job settings. Parameter IDs/state schema are unchanged; saved state records
+DSP model 8. Existing Auto presets with BITE > 1 intentionally sound different.
+
+[Corrected acquisition audit, before/after measurements and validation](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-corrected/REPORT.md).
+All four Auto BITE comparisons improve in whole-render MAE; the other
+69 outputs are sample-identical to model 7. Across 36 transient windows,
+20 improve and 16 are unchanged. On the four calibration onsets, relief
+trajectory RMSE falls by approximately 63–80%. Windows Release DSP/GUI
+tests pass 2/2. The corrected noise acquisition exposes a remaining Auto
+error (0.348 dB overall MAE, 1.111 dB on compression-active windows);
+this is retained as a limitation, not hidden by the BITE improvement.
+Full DSP nap, oversampling decision, broader original BITE validation,
+remaining acquisitions, real-voice/GR-video comparison and final DAW testing
+remain open. No release is published by this work.

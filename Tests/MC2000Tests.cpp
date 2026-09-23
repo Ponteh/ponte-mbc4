@@ -288,11 +288,11 @@ void testMeasuredAutoRelease()
             expect(std::isfinite(state.process(160,1.e6,2.5,250,TCMode::automatic,r)),
                    "Auto control transform stays finite near ratio 1 and extreme inputs");
     }
-    const auto render=[](const int blockSize, const TCMode mode)
+    const auto render=[](const int blockSize, const TCMode mode, const double bite)
     {
         MultiBandCompressor engine;
         GlobalParameters p;
-        for (auto& b:p.bands) { b.tcMode=mode; b.ratio=2; b.thresholdDb=-27.5; }
+        for (auto& b:p.bands) { b.tcMode=mode; b.ratio=2; b.thresholdDb=-27.5; b.bite=bite; }
         engine.setParameters(p);engine.prepare(48000,1024,2);
         std::vector<float> left(24000),right(24000);
         for (int n=0;n<24000;++n)
@@ -306,10 +306,11 @@ void testMeasuredAutoRelease()
         return left;
     };
     for (const auto mode : {TCMode::type1, TCMode::type2, TCMode::automatic})
+    for (const auto bite : {1.0, 5.0, 10.0})
     {
-        const auto reference=render(512,mode);
-        expect(reference==render(32,mode) && reference==render(0,mode),
-               "R1/R2/Auto audio is independent of host block partitioning");
+        const auto reference=render(512,mode,bite);
+        expect(reference==render(32,mode,bite) && reference==render(0,mode,bite),
+               "R1/R2/Auto with BITE 1/5/10 is independent of host block partitioning");
     }
 }
 
@@ -347,6 +348,58 @@ void testBiteModel()
         bite.process(6.0, 1.0, 10.0);
     expectNear(bite.process(6.0, 1.0, 10.0), 6.0, 0.001,
                "BITE converges to neutral gain at steady state");
+}
+
+void testAutoBiteTransientAndState()
+{
+    using namespace pontedsp::mc2000::dsp;
+    for (const double rate : {44100.0, 48000.0, 88200.0, 96000.0, 192000.0})
+    {
+        BiteProcessor low, high, neutral;
+        low.prepare(rate); high.prepare(rate); neutral.prepare(rate);
+        double l=0, h=0;
+        for (int n=0;n<static_cast<int>(rate*.05);++n)
+        {
+            l=low.process(10.0, .5, 5.0, TCMode::automatic);
+            h=high.process(10.0, .5, 10.0, TCMode::automatic);
+            expectNear(neutral.process(10.0,.5,1.0,TCMode::automatic),10.0,0.0,
+                       "Auto BITE 1 preserves the underlying GR exactly");
+            expect(h>=0 && h<=l && l<=10.0,"Auto BITE is bounded and monotonic in amount");
+            if (n==static_cast<int>(rate*.003)-1)
+            {
+                expect(h>6.0 && h<6.5,"Auto BITE 10 reaches about 63 percent GR after 3 ms");
+                expect(l>9.8,"Auto BITE 5 has a shorter measured onset than BITE 10");
+            }
+        }
+        expectNear(h,10.0,1e-5,"Auto BITE converges to the unchanged settled GR");
+        expectNear(high.process(3.0,.01,10.0,TCMode::automatic),3.0,0.0,
+                   "Auto BITE does not extend a falling release");
+        expectNear(high.process(0.0,0.0,10.0,TCMode::automatic),0.0,0.0,
+                   "Auto BITE clears when ratio or target GR becomes neutral");
+        high.process(10.0,.5,10.0,TCMode::automatic);
+        expectNear(high.process(10.0,.5,1.0,TCMode::automatic),10.0,0.0,
+                   "Automating BITE to 1 immediately restores normal GR");
+        high.reset();
+        BiteProcessor fresh; fresh.prepare(rate);
+        expectNear(high.process(10.0,.5,10.0,TCMode::automatic),
+                   fresh.process(10.0,.5,10.0,TCMode::automatic),1e-12,"Auto BITE reset clears transient state");
+        high.prepare(rate*2);
+        fresh.prepare(rate*2);
+        expectNear(high.process(10.0,.5,10.0,TCMode::automatic),
+                   fresh.process(10.0,.5,10.0,TCMode::automatic),1e-12,"Auto BITE prepare refreshes cached coefficient");
+        const auto manual=high.process(6.0,.2,1.0,TCMode::type2);
+        expectNear(high.process(manual,.2,10.0,TCMode::automatic),manual,0.0,
+                   "Entering Auto from manual inherits current GR without a fresh onset");
+        BiteProcessor legacy, switching;
+        legacy.prepare(rate);switching.prepare(rate);
+        for (int n=0;n<2000;++n)
+        {
+            const auto detector=n%500<100 ? .5 : .01;
+            const auto expected=legacy.process(6.0,detector,10.0,TCMode::type2);
+            const auto actual=switching.process(6.0,detector,10.0,n<1000 ? TCMode::automatic : TCMode::type2);
+            if (n>=1000) expectNear(actual,expected,0.0,"Auto keeps manual BITE envelopes warm across mode changes");
+        }
+    }
 }
 
 void testStereoDetectorAndFiniteOutput()
@@ -743,6 +796,7 @@ int main()
     testMeasuredR1Release();
     testMeasuredAutoRelease();
     testBiteModel();
+    testAutoBiteTransientAndState();
     testStereoDetectorAndFiniteOutput();
     testExternalSidechain();
     testExternalSidechainAcrossTimeConstants();

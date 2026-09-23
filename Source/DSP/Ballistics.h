@@ -197,18 +197,20 @@ public:
         slowRelease = coefficient(0.080);
         referenceRelease = coefficient(0.150);
         memoryRelease = coefficient(0.018);
+        cachedBite = -1.0;
         reset();
     }
 
     void reset() noexcept
     {
         fastEnvelope = slowEnvelope = referencePeak = lastTransientNormalised = reliefMemoryDb = 0.0;
+        autoGainReductionDb = 0.0;
     }
 
     double getLastTransientNormalised() const noexcept { return lastTransientNormalised; }
 
     double process(const double normalGainReductionDb, const double detectorLinear,
-                   const double biteValue) noexcept
+                   const double biteValue, const TCMode mode = TCMode::type1) noexcept
     {
         fastEnvelope = follow(fastEnvelope, detectorLinear, fastAttack, fastRelease);
         slowEnvelope = follow(slowEnvelope, detectorLinear, slowAttack, slowRelease);
@@ -222,11 +224,28 @@ public:
         {
             cachedBite = biteValue;
             biteNorm = controlShape(biteValue);
+            // Auto BITE fit from isolated original 315 Hz / 2 kHz onsets:
+            // ~0.65 ms at 5, ~3 ms at 10. Intermediate settings are a smooth
+            // interpolation, not additional original measurements.
+            const auto amount = std::clamp((biteValue - 1.0) / 9.0, 0.0, 1.0);
+            const auto seconds = 0.003 * std::pow(amount, 1.875);
+            autoBiteAttack = seconds > 0.0 ? coefficient(seconds) : 0.0;
         }
         const auto requestedRelief = std::min(normalGainReductionDb,
                                               3.2 * transientShape(transientNorm));
         reliefMemoryDb = requestedRelief > reliefMemoryDb ? requestedRelief
             : memoryRelease * reliefMemoryDb;
+        if (mode == TCMode::automatic)
+        {
+            // Smooth rising GR, following falling GR immediately. The underlying
+            // Auto detector retains its 102 ms memory and settled gain. Keep the
+            // manual BITE envelopes warm for a subsequent mode change.
+            autoGainReductionDb = normalGainReductionDb > autoGainReductionDb
+                ? autoBiteAttack * autoGainReductionDb + (1.0 - autoBiteAttack) * normalGainReductionDb
+                : normalGainReductionDb;
+            return autoGainReductionDb;
+        }
+        autoGainReductionDb = normalGainReductionDb;
         const auto reliefDb = std::min(normalGainReductionDb, biteNorm * reliefMemoryDb);
         return std::max(0.0, normalGainReductionDb - reliefDb);
     }
@@ -286,6 +305,7 @@ private:
     double cachedBite { -1.0 }, biteNorm {};
     double fastEnvelope {}, slowEnvelope {}, referencePeak {}, lastTransientNormalised {};
     double reliefMemoryDb {};
+    double autoGainReductionDb {}, autoBiteAttack {};
 };
 
 } // namespace pontedsp::mc2000::dsp

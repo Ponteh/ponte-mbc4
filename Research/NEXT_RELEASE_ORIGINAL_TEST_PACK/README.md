@@ -1,12 +1,20 @@
 # Test originali MC2000 — prossima release
 
-**Implementazione R1 del 23 settembre, DSP_MODEL_7:**
-[confronto con la baseline, test e limiti](analysis_2026-09-23-r1/REPORT.md).
-La legge del controllo lineare sostituisce il vecchio fit R1; Auto/R2/BITE
-restano separati. Il rapporto del 20 settembre qui sotto e storico e mantiene
-il riferimento congelato DSP_MODEL_6.
+**Consegna corretta del 23 settembre e Auto BITE:**
+[analisi e correzione DSP_MODEL_8](analysis_2026-09-23-corrected/REPORT.md).
+I dodici export prima muti sono ora udibili e da 60 s. Ripetizione Auto e
+indipendenza dai tempi manuali confermate; automazioni secondo il piano
+confermate dall'utente. R1 già corretto in modello 7; questa revisione modifica
+Auto BITE e conserva la versione 0.2.3. I gruppi ALL/MC303 sospetti sono
+invariati; sidechain e T075–T081 ancora mancanti.
 
-**Analisi aggiornata al 20 settembre:**
+**Implementazione precedente R1 del 23 settembre, DSP_MODEL_7:**
+[confronto con la baseline, test e limiti](analysis_2026-09-23-r1/REPORT.md).
+La legge del controllo lineare sostituisce il vecchio fit R1. La revisione
+successiva Auto BITE è descritta sopra; il rapporto del 20 settembre conserva
+invece il riferimento storico DSP_MODEL_6.
+
+**Storico dell'analisi al 20 settembre:**
 [nuovi risultati, R1/BITE, video e acquisizioni da controllare](analysis_2026-09-20/REPORT.md).
 80 WAV per 75 ID e quattro video; 61 confronti audio, inclusi quelli diagnostici.
 R1 mostra una diversa curva di rilascio e BITE un transiente troppo ridotto

@@ -1,0 +1,272 @@
+[
+  {
+    "id": "T057",
+    "interval_s": [
+      0,
+      10
+    ],
+    "active_windows": 700,
+    "mae_db": 0.27778676858690693
+  },
+  {
+    "id": "T057",
+    "interval_s": [
+      10,
+      20
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.2876921758493994
+  },
+  {
+    "id": "T057",
+    "interval_s": [
+      20,
+      30
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.28769217584934964
+  },
+  {
+    "id": "T057",
+    "interval_s": [
+      30,
+      40
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.28769217584934964
+  },
+  {
+    "id": "T057",
+    "interval_s": [
+      40,
+      50
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.28769217584934964
+  },
+  {
+    "id": "T057",
+    "interval_s": [
+      50,
+      60
+    ],
+    "active_windows": 506,
+    "mae_db": 0.3129293916920372
+  },
+  {
+    "id": "T058",
+    "interval_s": [
+      0,
+      10
+    ],
+    "active_windows": 700,
+    "mae_db": 0.3283968785075901
+  },
+  {
+    "id": "T058",
+    "interval_s": [
+      10,
+      20
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.10010450370267478
+  },
+  {
+    "id": "T058",
+    "interval_s": [
+      20,
+      30
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.132903917434429
+  },
+  {
+    "id": "T058",
+    "interval_s": [
+      30,
+      40
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.28760490166126157
+  },
+  {
+    "id": "T058",
+    "interval_s": [
+      40,
+      50
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.1002611640267947
+  },
+  {
+    "id": "T058",
+    "interval_s": [
+      50,
+      60
+    ],
+    "active_windows": 506,
+    "mae_db": 0.3128225946212989
+  },
+  {
+    "id": "T059",
+    "interval_s": [
+      0,
+      10
+    ],
+    "active_windows": 700,
+    "mae_db": 0.27984132582369503
+  },
+  {
+    "id": "T059",
+    "interval_s": [
+      10,
+      20
+    ],
+    "active_windows": 280,
+    "mae_db": 0.2773173304551886
+  },
+  {
+    "id": "T059",
+    "interval_s": [
+      20,
+      30
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.3091051865768218
+  },
+  {
+    "id": "T059",
+    "interval_s": [
+      30,
+      40
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.31237358885919947
+  },
+  {
+    "id": "T059",
+    "interval_s": [
+      40,
+      50
+    ],
+    "active_windows": 281,
+    "mae_db": 0.27843601990358463
+  },
+  {
+    "id": "T059",
+    "interval_s": [
+      50,
+      60
+    ],
+    "active_windows": 506,
+    "mae_db": 0.31299031143171036
+  },
+  {
+    "id": "T060",
+    "interval_s": [
+      0,
+      10
+    ],
+    "active_windows": 0,
+    "mae_db": null
+  },
+  {
+    "id": "T060",
+    "interval_s": [
+      10,
+      20
+    ],
+    "active_windows": 0,
+    "mae_db": null
+  },
+  {
+    "id": "T060",
+    "interval_s": [
+      20,
+      30
+    ],
+    "active_windows": 0,
+    "mae_db": null
+  },
+  {
+    "id": "T060",
+    "interval_s": [
+      30,
+      40
+    ],
+    "active_windows": 0,
+    "mae_db": null
+  },
+  {
+    "id": "T060",
+    "interval_s": [
+      40,
+      50
+    ],
+    "active_windows": 0,
+    "mae_db": null
+  },
+  {
+    "id": "T060",
+    "interval_s": [
+      50,
+      60
+    ],
+    "active_windows": 0,
+    "mae_db": null
+  },
+  {
+    "id": "T061",
+    "interval_s": [
+      0,
+      10
+    ],
+    "active_windows": 700,
+    "mae_db": 0.2778132865540869
+  },
+  {
+    "id": "T061",
+    "interval_s": [
+      10,
+      20
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.2968085653962629
+  },
+  {
+    "id": "T061",
+    "interval_s": [
+      20,
+      30
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.2960706752510999
+  },
+  {
+    "id": "T061",
+    "interval_s": [
+      30,
+      40
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.2968085653962629
+  },
+  {
+    "id": "T061",
+    "interval_s": [
+      40,
+      50
+    ],
+    "active_windows": 1000,
+    "mae_db": 0.296052112674074
+  },
+  {
+    "id": "T061",
+    "interval_s": [
+      50,
+      60
+    ],
+    "active_windows": 506,
+    "mae_db": 0.3129293916891653
+  }
+]

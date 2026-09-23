@@ -39,9 +39,15 @@ non equivalenti in alcuni gruppi. T075–T081 attesi, sidechain non disponibile.
   [confronto riproducibile](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-r1/REPORT.md).
 - [ ] Completare R1 su voce reale e nuove acquisizioni originali ratio/knee:
   le prove numeriche oltre ratio 2:1 non certificano equivalenza McDSP.
-- [ ] Ricalibrare ampiezza, mappatura e durata BITE dai T027–T030 corretti;
-  regressioni su tutti i modi, senza correggere soltanto il massimo.
-- [ ] Risolvere export muti e preset incongruenti prima di usarli come test DSP.
+- [x] Ricalibrare Auto BITE dai T027–T030 corretti, confrontando la traiettoria
+  a 1 ms e il motore completo; regressioni R1/R2/Auto. DSP_MODEL_8, POC O e
+  [rapporto della consegna corretta](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-corrected/REPORT.md).
+- [x] Recuperare i dodici export muti: ora tutti udibili, stereo 48 kHz, 60 s.
+  Verificati hash, ripetizione Auto e automazioni manuali secondo il piano.
+- [ ] Confermare/rifare i preset incongruenti MC202/MC303 e ALL 44,1/88,2 kHz:
+  i file sono invariati rispetto al 20 settembre e restano diagnostici.
+- [ ] Validare Auto BITE con sorgenti/sessioni indipendenti e altri ratio/knee;
+  i valori intermedi del controllo restano un'interpolazione. R1/R2 BITE invariati.
 - [ ] Quantificare incertezza pixel/frame e confronto GUI Ponte per i meter:
   ritorno a 12 dB già vicino, piccoli cali da approfondire; GR ancora aperto.
 
@@ -53,6 +59,25 @@ R2, Auto, BITE e meter non sono stati ricalibrati. Nessuna release pubblicata;
 benchmark CPU aggiornato, nap, oversampling e collaudo DAW restano aperti.
 Verifica Windows Release: DSP/GUI 2/2 PASS (11.04 s); migliorano tutti gli
 8 confronti R1 e i 12 tratti di release, altri 53 casi identici alla baseline.
+
+Seconda consegna del 2026-09-23: completato audit dei dodici render corretti
+e aggiunto supporto alle automazioni nel renderer. Auto BITE usa ora uno
+smussamento della salita GR con circa 0,656 ms a 5 e 3 ms a 10; mantiene
+il rilascio Auto 102 ms. Confronto della nuova build contro DSP_MODEL_7;
+risultati e limiti nel rapporto collegato sopra. Versione di prova 0.2.3,
+DSP_MODEL_8. Le spunte seguenti riguardano gli strumenti o le acquisizioni
+effettivamente completati, non la validazione di tutte le 88 righe del piano.
+Verifica modello 8: **73 confronti, quattro Auto BITE migliorati, altri 69
+output bit-identici al modello 7; DSP/GUI 2/2 PASS**. Rumore T024 ancora
+da affinare (MAE 0,348 dB complessiva, 1,111 dB con compressione attiva).
+
+- [x] Confermare nel motore l'indipendenza Auto dai tempi manuali statici e
+  automatizzati: T002/T035/T036/T037 e T056/T057 identici, come nell'originale.
+- [x] Verificare Auto BITE su 44,1/48/88,2/96/192 kHz con test numerici di
+  stato/reset e su blocchi 32/512/irregolari; non equivale a validazione McDSP
+  nativa completa. Report e hash nel gruppo 23-corrected.
+- [ ] Approfondire lo scarto Auto sul rumore ora acquisito: misure separate
+  su attacco/plateau/code e detector, evitando compensazioni globali arbitrarie.
 
 ## 1. Obiettivi e ordine del lavoro
 
@@ -97,8 +122,9 @@ ottimizzazione deve preservare il modello che sta ottimizzando.
   Non dedurre l'efficienza dal solo indicatore CPU della DAW.
 - [ ] Aggiungere contatori di allocazioni/lock nel callback in build diagnostica;
   misurare i tempi con strumentazione leggera, separata dalla build diagnostica.
-- [ ] Generare manifest con seed dei segnali, hash dei WAV e delle build,
+- [x] Generare manifest con seed dei segnali, hash dei WAV e delle build,
   parametri, eventi temporali e associazione input/output.
+  Pack del 17 settembre, rapporti 19/20/23 e rispettivi JSON di verifica.
 
 Matrice comune: 44.1/48/88.2/96/192 kHz; blocchi 32/64/128/256/512/1024/2048
 e dimensioni irregolari; mono/stereo; 2/3/4 bande; R1/R2/Auto; sidechain
@@ -117,20 +143,22 @@ o alla validazione di Auto: le attività seguenti restano da completare.
 
 ### 3.1 Acquisizioni pulite
 
-- [ ] Inventariare i file già disponibili prima di richiedere altre registrazioni.
+- [x] Inventariare i file già disponibili prima di richiedere altre registrazioni.
   Per archivi originali voluminosi, chiedere l'estrazione quando necessaria,
   estrarre solo i file utili e liberare i temporanei dopo la verifica.
 - [ ] Escludere dal fit i file con sample rate reale diverso dal nome e completare
   la matrice nativa: l'audit segnala Solo Low etichettati 88.2/96/192 ma a 48 kHz
   e assenza di All a 192 kHz.
-- [ ] Completare i render originali mancanti di automazione e sidechain.
+- [x] Acquisire i render originali di automazione T055–T061, con valori/tempi
+  del piano confermati dall'utente; confronto quantitativo, non equivalenza perfetta.
+- [ ] Completare i render originali mancanti di sidechain T049–T054.
 - [ ] Usare sorgenti identiche, Warp OFF, normalizzazione/dither OFF, gain noti,
   UNLINKED salvo test del link; annotare versioni e preset dei due plugin.
 - [ ] Acquisire per ogni banda un riferimento neutro ratio 1:1 con routing
   equivalente al test compresso. Non assumere che IN/SOLO abbiano la stessa
   semantica nei due prodotti: verificare l'audio effettivamente presente.
   In Ponte v0.2.2 IN spento silenzia; SOLO non riapre l'ingresso.
-- [ ] Separare export audio per il fit DSP e video per i meter. Un export offline
+- [x] Separare export audio per il fit DSP e video per i meter. Un export offline
   non sincronizzato al video non misura da solo la latenza visiva assoluta.
 
 ### 3.2 Auto: identificazione prima della correzione
@@ -142,12 +170,16 @@ iniziale della checklist: dal 19 settembre DSP_MODEL_6 usa il modello
 misurato tau 102 ms, descritto nell'appendice L del POC. La matrice completa
 di validazione resta aperta, come precisato nel rapporto del 20 settembre.
 
-- [ ] Creare `AUTO-01`: gradini con portante non nulla fra i picchi, livelli e
+- [x] Creare `AUTO-01`: gradini con portante non nulla fra i picchi, livelli e
   durate diversi, per misurare attacco, plateau e rilascio senza dividere per zero.
-- [ ] Creare `AUTO-02`: impulsi/burst e treni con pause variabili; coppie di burst
+  Sorgenti 01/05/06/07 del pack; fit e confronti nei rapporti 19/20/23 settembre.
+- [x] Creare `AUTO-02`: impulsi/burst e treni con pause variabili; coppie di burst
   per rilevare memoria, recupero incompleto e dipendenza dalla storia.
-- [ ] Creare `AUTO-03`: segnali a RMS uguale con crest factor diverso e a picco
+  Sorgente 02_MEMORY, confronto T006 nel rapporto del 19 settembre.
+- [x] Creare `AUTO-03`: segnali a RMS uguale con crest factor diverso e a picco
   uguale con RMS diverso; includere transizioni fra queste condizioni.
+  Sorgenti 03/04_CREST, confronti T014/T016; scarti residui documentati.
+  Queste tre spunte attestano creazione/misura, non equivalenza perfetta del DSP.
 - [ ] Creare `AUTO-04`: tono basso/medio/alto, multitono e rumore a seed fisso;
   provare ogni banda e i modelli 2/3/4 bande, isolando il contributo crossover.
 - [ ] Creare `AUTO-05`: BITE 1 prima, poi 5/10; ratio, threshold e knee diversi.
@@ -161,9 +193,11 @@ di validazione resta aperta, come precisato nel rapporto del 20 settembre.
 - [ ] Misurare traiettorie GR audio da riferimento filtrato: errori in dB su
   attacco/plateau/code, tempi 10/50/90%, overshoot e comportamento sui burst.
   Dichiarare finestre, allineamento, esclusioni vicino allo zero e incertezza.
-- [ ] Confrontare poche leggi candidate motivate dai dati; documentare parametri
+- [x] Confrontare poche leggi candidate motivate dai dati; documentare parametri
   identificabili e ambiguità. Non imporre una legge unica se i modelli originali
   mostrano differenze ripetibili non spiegate dal routing.
+  Auto: rapporto 19 settembre; R1: rapporto 23-r1; Auto BITE: quattro ipotesi
+  e fit nel rapporto 23-corrected. I gruppi con routing dubbio restano esclusi dal fit.
 - [ ] Modificare Auto solo se migliora sulle sorgenti indipendenti, senza regressioni
   materiali nelle altre famiglie. Congelare le tolleranze prima del fit finale.
   Se i dati non bastano, conservare il fallback e dichiarare il limite.

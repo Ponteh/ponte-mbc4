@@ -503,3 +503,16 @@ Dodici export primari restano muti anche dopo il rifacimento; alcuni gruppi
 ALL hanno compressione su bande diverse dal piano. Le acquisizioni native
 96/192 kHz sono ancora parziali. Nessuna modifica DSP/GUI in questa analisi.
 [Rapporto aggiornato con grafici e verifiche da completare](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-20/REPORT.md).
+
+## Consegna corretta e Auto BITE — 23 settembre 2026
+
+I dodici export segnalati muti sono ora validi per formato/durata e contengono
+audio. T002/T035/T036/T037 e T056/T057 sono identici: l'originale Auto ignora
+i tempi manuali anche durante le automazioni confermate dal piano.
+
+Dopo R1 (commit 4dadce7, modello 7), corretto Auto BITE nel modello 8:
+smussamento della salita GR, circa 0,656 ms a BITE 5 e 3 ms a BITE 10,
+in luogo del sollievo transiente condiviso con i modi manuali. R1/R2 BITE,
+rilascio Auto e dinamica visiva invariati. Versione pubblica di prova 0.2.3.
+I nuovi dati non chiudono il confronto su voce reale o sui meter GR compressi.
+[Misure, build/test e limiti](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-corrected/REPORT.md).

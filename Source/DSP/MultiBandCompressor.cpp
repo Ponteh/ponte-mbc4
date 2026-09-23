@@ -200,7 +200,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                                                                 p.thresholdDb, p.ratio, p.knee);
             auto gr = ballistics[static_cast<std::size_t>(band)].process(
                 targetGr, detector, p.attackMs, p.releaseMs, p.tcMode, p.ratio);
-            gr = biteProcessors[static_cast<std::size_t>(band)].process(gr, detector, p.bite);
+            gr = biteProcessors[static_cast<std::size_t>(band)].process(gr, detector, p.bite, p.tcMode);
             const auto appliedGr = gr;
             maximumGr[static_cast<std::size_t>(band)] = std::max(
                 maximumGr[static_cast<std::size_t>(band)], appliedGr);
