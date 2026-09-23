@@ -1,5 +1,11 @@
 # Test originali MC2000 — prossima release
 
+**Implementazione R1 del 23 settembre, DSP_MODEL_7:**
+[confronto con la baseline, test e limiti](analysis_2026-09-23-r1/REPORT.md).
+La legge del controllo lineare sostituisce il vecchio fit R1; Auto/R2/BITE
+restano separati. Il rapporto del 20 settembre qui sotto e storico e mantiene
+il riferimento congelato DSP_MODEL_6.
+
 **Analisi aggiornata al 20 settembre:**
 [nuovi risultati, R1/BITE, video e acquisizioni da controllare](analysis_2026-09-20/REPORT.md).
 80 WAV per 75 ID e quattro video; 61 confronti audio, inclusi quelli diagnostici.

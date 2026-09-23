@@ -13,6 +13,7 @@ public:
     {
         sampleRate = std::max(1.0, newSampleRate);
         cachedAttackMs = -1.0;
+        cachedR1ReleaseSeconds = -1.0;
         autoRelease = std::exp(-1.0 / (sampleRate * 0.102));
         autoAttack = std::exp(-1.0 / (sampleRate * 0.00002));
         reset();
@@ -83,6 +84,36 @@ public:
         if (!releasing)
             beginRelease(detector);
 
+        if (mode == TCMode::type1)
+        {
+            // Isolated original probes (2026-09-20): excess linear control
+            // decays with tau = displayed Release. Ratio scaling beyond 2:1
+            // is a model extrapolation, not an original measurement.
+            const auto slope = 1.0 - 1.0 / clampFinite(ratio, 1.0, 10.0, 2.0);
+            if (releaseSeconds != cachedR1ReleaseSeconds)
+            {
+                r1ReleaseDelta = std::expm1(-1.0 / (sampleRate * releaseSeconds));
+                cachedR1ReleaseSeconds = releaseSeconds;
+            }
+            const auto before = gainReductionDb;
+            if (slope > 0.0)
+            {
+                constexpr double dbPerNeper = 8.685889638065036553;
+                const auto scale = dbPerNeper * slope;
+                // Equivalent to scale*log(1+(exp(g/scale)-1)*exp(-dt/tau)).
+                // Incremental log form avoids overflow near ratio 1 and keeps
+                // current GR continuous when ratio or Release is automated.
+                gainReductionDb += scale * std::log1p(
+                    -std::expm1(-gainReductionDb / scale) * r1ReleaseDelta);
+            }
+            else
+                gainReductionDb = 0.0;
+            if (gainReductionDb < 1.0e-8)
+                gainReductionDb = 0.0;
+            detectorEnvelope *= before > 0.0 ? gainReductionDb / before : 0.0;
+            return gainReductionDb;
+        }
+
         auto ageStep = 1.0 / sampleRate;
         auto effectiveRelease = releaseSeconds;
         if (mode == TCMode::type2)
@@ -142,6 +173,7 @@ private:
 
     double sampleRate { 48000.0 };
     double cachedAttackMs { -1.0 }, attackCoefficient {};
+    double cachedR1ReleaseSeconds { -1.0 }, r1ReleaseDelta {};
     double gainReductionDb {};
     double releaseStartDb {};
     double releaseAgeSeconds {};

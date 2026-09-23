@@ -33,13 +33,26 @@ LOW a 44,1/48/88,2 kHz. Dodici export primari ancora muti; impostazioni ALL
 non equivalenti in alcuni gruppi. T075–T081 attesi, sidechain non disponibile.
 [Rapporto aggiornato e priorità](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-20/REPORT.md).
 
-- [ ] Prototipare la nuova legge R1 e verificarla fuori dai tratti del fit:
-  ratio/knee, 250/500 ms, attacco, continuità e cambi parametro; poi voce reale.
+- [x] Implementare la nuova legge R1 e aggiungere regressioni numeriche:
+  ratio/knee, 250/500 ms, attacco, continuità, cambi parametro e blocchi.
+  DSP_MODEL_7, build locale 0.2.3; POC appendice N e
+  [confronto riproducibile](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-r1/REPORT.md).
+- [ ] Completare R1 su voce reale e nuove acquisizioni originali ratio/knee:
+  le prove numeriche oltre ratio 2:1 non certificano equivalenza McDSP.
 - [ ] Ricalibrare ampiezza, mappatura e durata BITE dai T027–T030 corretti;
   regressioni su tutti i modi, senza correggere soltanto il massimo.
 - [ ] Risolvere export muti e preset incongruenti prima di usarli come test DSP.
 - [ ] Quantificare incertezza pixel/frame e confronto GUI Ponte per i meter:
   ritorno a 12 dB già vicino, piccoli cali da approfondire; GR ancora aperto.
+
+Aggiornamento 2026-09-23: evidenze del 20 settembre conservate nel commit
+`4280b54`, baseline audio DSP_MODEL_6 invariata. R1 ora usa il decadimento
+del controllo lineare con tau pari alla Release e aggiornamento dalla GR
+corrente per gestire l'automazione senza reinterpretare l'eta del rilascio.
+R2, Auto, BITE e meter non sono stati ricalibrati. Nessuna release pubblicata;
+benchmark CPU aggiornato, nap, oversampling e collaudo DAW restano aperti.
+Verifica Windows Release: DSP/GUI 2/2 PASS (11.04 s); migliorano tutti gli
+8 confronti R1 e i 12 tratti di release, altri 53 casi identici alla baseline.
 
 ## 1. Obiettivi e ordine del lavoro
 

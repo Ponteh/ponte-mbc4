@@ -1,5 +1,13 @@
 # Ponte MBC4
 
+**September 23 R1 correction, DSP_MODEL_7 (local 0.2.3 test build):**
+R1 now releases excess linear control with tau equal to the displayed Release.
+Original 250/500 ms probes support this law at ratio 2:1; other ratios remain
+a model extrapolation. Existing R1 presets change sound; R2, Auto, BITE and
+GUI ballistics retain their algorithms. No new public release is published.
+See [verification and remaining limitations](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-r1/REPORT.md)
+and POC appendix N.
+
 **0.2.3 test build:** cached DSP coefficients and FFT filter responses reduce
 repeated work; the spectrum FIFO stops when the editor is closed. The header
 shows the installed version and checks public GitHub releases in a background

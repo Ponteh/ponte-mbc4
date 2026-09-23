@@ -123,7 +123,9 @@ void testBallisticsModels()
     const auto releaseStart = gr;
     for (int n = 0; n < static_cast<int>(sampleRate * 0.1336); ++n)
         gr = type1.process(0.0, 0.0, 0.25, 100.0, TCMode::type1);
-    expectNear(gr / releaseStart, 0.5, 0.003, "Type-1 measured release reaches half at 1.336 R");
+    expectNear(gr, 10.0 * std::log10(1.0 + std::expm1(releaseStart * std::log(10.0) / 10.0)
+                                   * std::exp(-static_cast<int>(sampleRate * 0.1336) / (sampleRate * .1))),
+               1.0e-9, "Type-1 follows measured linear-control release, not the old fixed half-time");
 
     Ballistics seed;
     seed.prepare(sampleRate);
@@ -180,8 +182,73 @@ void testBallisticsModels()
         const auto start = current;
         for (int n = 0; n < static_cast<int>(rate * 0.1336); ++n)
             current = scaled.process(0.0, 0.0, 0.25, 100.0, TCMode::type1);
-        expectNear(current / start, 0.5, 0.003,
+        expectNear(current, 10.0 * std::log10(1.0 + std::expm1(start * std::log(10.0) / 10.0)
+                                            * std::exp(-static_cast<int>(rate * .1336) / (rate * .1))), 1.0e-9,
                    "Type-1 timing remains invariant across sample rates");
+    }
+}
+
+void testMeasuredR1Release()
+{
+    using namespace pontedsp::mc2000::dsp;
+    // Ratio 2 / knee 0 has original 250/500 ms evidence. Other combinations
+    // test the extrapolation's numerical contract, not McDSP equivalence.
+    for (const auto rate : {44100.0, 48000.0, 88200.0, 96000.0, 192000.0})
+    for (const auto release : {25.0, 250.0, 500.0, 2500.0})
+    for (const auto ratio : {1.01, 2.0, 4.0, 10.0})
+    for (const auto knee : {-10.0, 0.0, 15.0})
+    {
+        Ballistics state;
+        GainComputer gain;
+        state.prepare(rate);
+        const auto target = -3.0 - gain.computeOutputDb(-3.0, -24.0, ratio, knee);
+        double gr = 0;
+        // A single attack step must retain the existing manual-attack law.
+        const auto coefficient = std::exp(-1.0 / (rate * (.25 * .51 / (1.0 + .25 / 800.0) * .001)));
+        gr = state.process(target, .7, .25, release, TCMode::type1, ratio);
+        expectNear(gr, (1.0-coefficient)*target, 1.e-12, "R1 attack unchanged");
+        for (int n=1; n<static_cast<int>(rate*.02); ++n)
+            gr=state.process(target,.7,.25,release,TCMode::type1,ratio);
+        const auto start=gr, scale=20.0*(1.0-1.0/ratio)/std::log(10.0);
+        const auto samples=static_cast<int>(rate*.1);
+        for (int n=0; n<samples; ++n)
+        {
+            const auto previous=gr;
+            gr=state.process(0,0,.25,release,TCMode::type1,ratio);
+            expect(std::isfinite(gr) && gr>=0 && gr<=previous, "R1 release finite and monotonic");
+        }
+        const auto expected=scale*std::log1p(std::expm1(start/scale)*std::exp(-samples/(rate*release*.001)));
+        expectNear(gr,expected,1.e-8,"R1 closed-form trajectory across rates, ratios, knees and times");
+        const auto previous=gr;
+        gr=state.process(0,0,.25,25,TCMode::type1,4);
+        const auto changedScale=15.0/std::log(10.0);
+        expectNear(gr,changedScale*std::log1p(std::expm1(previous/changedScale)*std::exp(-1/(rate*.025))),
+                   1.e-8,"R1 ratio/release change advances from current GR without reinterpreting age");
+    }
+    Ballistics state;
+    state.prepare(48000);
+    for (int n=0; n<1000; ++n) state.process(160,1,.25,500,TCMode::type1);
+    auto gr=state.process(0,0,.25,500,TCMode::type1,std::nextafter(1.0,2.0));
+    expect(std::isfinite(gr) && gr>159, "R1 near-unity ratio cannot overflow or erase existing GR");
+    gr=state.process(0,0,.25,500,TCMode::type1,1);
+    expectNear(gr,0,0,"R1 unity ratio clears release state");
+    state.reset();
+    expectNear(state.process(0,0,10,500,TCMode::type1),0,0,"R1 reset is silent");
+
+    // Original plateau ~10.4 dB: half reduction at ~365/734 ms for R250/R500.
+    for (const auto release : {250.0,500.0})
+    {
+        state.prepare(48000);
+        for (int n=0; n<1000; ++n) state.process(10.4,1,.25,release,TCMode::type1);
+        for (int n=0; n<static_cast<int>(48000*release*.001*1.464); ++n)
+            gr=state.process(0,0,.25,release,TCMode::type1);
+        expectNear(gr,5.2,.015,"R1 measured half-reduction anchor at both 250/500 ms");
+        for (const auto mode : {TCMode::type2,TCMode::type1,TCMode::automatic,TCMode::type1})
+        {
+            const auto before=gr;
+            gr=state.process(0,0,.25,release,mode);
+            expect(std::abs(gr-before)<.005,"R1 mode transitions preserve current GR");
+        }
     }
 }
 
@@ -221,11 +288,11 @@ void testMeasuredAutoRelease()
             expect(std::isfinite(state.process(160,1.e6,2.5,250,TCMode::automatic,r)),
                    "Auto control transform stays finite near ratio 1 and extreme inputs");
     }
-    const auto render=[](const int blockSize)
+    const auto render=[](const int blockSize, const TCMode mode)
     {
         MultiBandCompressor engine;
         GlobalParameters p;
-        for (auto& b:p.bands) { b.tcMode=TCMode::automatic; b.ratio=2; b.thresholdDb=-27.5; }
+        for (auto& b:p.bands) { b.tcMode=mode; b.ratio=2; b.thresholdDb=-27.5; }
         engine.setParameters(p);engine.prepare(48000,1024,2);
         std::vector<float> left(24000),right(24000);
         for (int n=0;n<24000;++n)
@@ -238,8 +305,12 @@ void testMeasuredAutoRelease()
         }
         return left;
     };
-    const auto reference=render(512);
-    expect(reference==render(32) && reference==render(0),"Auto audio is independent of host block partitioning");
+    for (const auto mode : {TCMode::type1, TCMode::type2, TCMode::automatic})
+    {
+        const auto reference=render(512,mode);
+        expect(reference==render(32,mode) && reference==render(0,mode),
+               "R1/R2/Auto audio is independent of host block partitioning");
+    }
 }
 
 double maximumBiteRelief(const double riseSeconds, const double biteValue = 10.0)
@@ -669,6 +740,7 @@ int main()
     testFourBandFlatSum();
     testGainComputer();
     testBallisticsModels();
+    testMeasuredR1Release();
     testMeasuredAutoRelease();
     testBiteModel();
     testStereoDetectorAndFiniteOutput();

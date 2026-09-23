@@ -1395,6 +1395,12 @@ new detector > envelope
 
 ## 20.2 Release misurata
 
+**Aggiornamento 2026-09-23:** il fit seguente e storico (DSP_MODEL_2--6).
+Le sonde isolate a 250/500 ms del 20 settembre supportano il rilascio del
+controllo lineare, implementato in DSP_MODEL_7: vedere appendice N.
+I tempi frazionari della GR dipendono ora dal livello iniziale e dal ratio;
+1.336 R non e una costante universale del nuovo modello.
+
 Test con Release:
 
 ```text
@@ -1432,6 +1438,9 @@ Questa non è necessariamente la formula originale, ma è una descrizione effica
 ---
 
 # 21. Type-1 implementation candidate
+
+Le proposte seguenti documentano il vecchio modello; l'implementazione R1
+corrente dal 23 settembre e descritta nell'appendice N. R2 resta invariato.
 
 ### Approccio POC A — release age
 
@@ -3761,7 +3770,7 @@ delta at -3 dBFS ~ +4.069 dB
 ```
 
 ```text
-TYPE-1 RELEASE
+TYPE-1 RELEASE (historical DSP_MODEL_2--6; superseded by Appendix N)
 
 t50  ~ 1.336 R
 t1/e ~ 1.799 R
@@ -4112,3 +4121,49 @@ silent video audio prevents absolute latency measurement, and neutral runs
 do not validate GR. No meter constants were changed from these observations.
 
 [Full report, figures, reproducible scripts and acquisition limitations](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-20/REPORT.md).
+
+# Appendix N - R1 linear-control release, 2026-09-23
+
+The local 0.2.3 test build advances to **DSP_MODEL_7**. R1 replaces the
+historical stretched exponential in dB with the release law supported by
+the September 20 isolated 315 Hz / 2 kHz probes at 250 and 500 ms:
+
+```text
+s = 1 - 1/ratio
+g(t) = 20*s*log10(1 + (10^(g0/(20*s)) - 1)*exp(-t/Release))
+```
+
+Release is in seconds. This is an excess-linear-control decay, not a
+constant fractional decay of GR in dB. The measured original evidence is
+ratio 2:1 / knee 0 / BITE 1. Ratio scaling elsewhere is an explicit model
+extrapolation; numerical tests with other ratios and knees do not establish
+original-plugin equivalence.
+
+The implementation advances from current GR each sample. With
+`scale = 20*s/ln(10)` and `delta = expm1(-1/(Fs*Release))`, it uses
+`g += scale*log1p(-expm1(-g/scale)*delta)`. This avoids exponentiating
+large positive values near unity ratio and avoids reinterpreting elapsed
+release age when Release or ratio changes. The release coefficient is
+cached until its inputs change; prepare invalidates the cache. Unity ratio
+clears the release state; values below 1e-8 dB are flushed to zero.
+
+Manual attack, the lower-event rule, R2, Auto, BITE, crossover and GUI
+ballistics are unchanged. Mode transitions initialise from current GR.
+Parameter IDs/state schema stay unchanged; saved state records model 7.
+Existing R1 presets intentionally sound different; there is no legacy-model
+selector or automatic recreation of the model-6 sound.
+
+Regression coverage includes closed-form release, unchanged attack,
+44.1/48/88.2/96/192 kHz, 25/250/500/2500 ms, ratio/knee combinations,
+near-unity numerical stability, reset, parameter/mode transitions and
+32/512/irregular host blocks. The separate renderer preserves model-6
+binaries and outputs, verifies original/source hashes and checks unchanged
+non-R1 cases sample for sample.
+
+[Results and reproducible comparison](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-r1/REPORT.md).
+Windows Release DSP/GUI tests pass 2/2. All eight available R1 comparisons
+improve in MAE and p95; the other 53 cases are sample-identical to model 6.
+All twelve measured release segments improve in GR trajectory RMSE.
+Real voice, broader original ratio/knee acquisitions, BITE recalibration,
+complete nap, oversampling decision, CPU benchmark and final DAW validation
+remain open. This change is not a published release or a complete emulation claim.
