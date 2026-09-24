@@ -110,3 +110,13 @@ stereo retain their validated implementation. `MC2000NextPackAnalysis` is
 added so future clean render sets can be evaluated with the same associations,
 including the historical `solomdi`/`solomid` label correction and Windows `(2)`
 duplicate suffix.
+
+## September 24 follow-up
+
+The controlled pack now includes corrected model/rate cases, native 96/192
+kHz renders (DAW rate confirmed, buffer 512), and the dry MP3 for two R1
+voice exports. Model 9 improves Auto noise/onsets; T045 remains diagnostic.
+Original external-sidechain acquisition is unavailable in this setup.
+This historical audit is retained; see the
+[current acquisition report](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-24/REPORT.md)
+and [nap/CPU/oversampling implementation](NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md).

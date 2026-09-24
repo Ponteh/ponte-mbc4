@@ -2,7 +2,7 @@
 
 Creato il 2026-09-16. Base: **v0.2.2**, commit
 `f8f2a9c4de1751ba98eb9bac0cefd46d3bc05cea`, DSP_MODEL_5.
-Versione successiva da assegnare alla chiusura del lavoro.
+Versione candidata assegnata: **0.2.3**; pubblicazione ancora separata.
 
 **Questo file è un piano, non un elenco di funzioni già implementate.**
 Spuntare le attività con riferimenti a commit, test e risultati. Eliminarlo
@@ -76,8 +76,38 @@ da affinare (MAE 0,348 dB complessiva, 1,111 dB con compressione attiva).
 - [x] Verificare Auto BITE su 44,1/48/88,2/96/192 kHz con test numerici di
   stato/reset e su blocchi 32/512/irregolari; non equivale a validazione McDSP
   nativa completa. Report e hash nel gruppo 23-corrected.
-- [ ] Approfondire lo scarto Auto sul rumore ora acquisito: misure separate
+- [x] Approfondire lo scarto Auto sul rumore ora acquisito: misure separate
   su attacco/plateau/code e detector, evitando compensazioni globali arbitrarie.
+
+## Stato aggiornato 2026-09-24 - candidato 0.2.3 / DSP_MODEL_9
+
+Le note datate precedenti sono storiche. Le spunte indicano le verifiche
+effettive, non la chiusura automatica di tutta la release.
+[Nota tecnica permanente](Research/NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md),
+[nuove acquisizioni](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-24/REPORT.md).
+
+- [x] Nap implementato e validato: 36 casi, 512 posizioni di impulso,
+  key attiva, segnale 1e-30, cambi di parametri/bande e release R1 massima.
+- [x] Ottimizzazioni DSP verificate a parita' di modello: 54 scenari bit-identici.
+  Il confronto CPU e i suoi limiti sono nella nota tecnica.
+- [x] GUI: repaint selettivo, FFT nulla saltata, consumer nascosto fermato,
+  cache testo knob e pubblicazione atomica delle curve. Suite GUI PASS.
+- [x] Indagato e corretto Auto sul rumore con controllo dei transienti BITE.
+  80 confronti: 40 migliorano, 39 invariati, T045 peggiora e resta diagnostico.
+- [x] Ricevute/certificate dall'utente le acquisizioni native 96/192 kHz,
+  buffer 512; corretti MC202/MC303 isolato e ALL 44,1/48/88,2 kHz.
+- [x] Analizzata voce R1 250/500 ms con sorgente MP3; tutti IN attivi.
+  Manca neutro originale; non sostituisce il caso esperto IN 2/3 e i meter.
+- [x] Valutato oversampling completo: NO-GO 0.2.3, beneficio non uniforme,
+  risposta alterata e costo circa 2-4x. Controlli/UI e test OS-02..06 non
+  applicabili a questo candidato. Prototipo parziale/ascolti non eseguiti.
+- [ ] Collaudo Ableton live input, stop/seek/loop, bypass, stato, molte istanze.
+- [ ] Benchmark GUI/host completo e verifica realtime dei picchi CPU.
+- [ ] Confronto GUI compresso sincronizzato e chiarimento T045 MC303 ALL.
+
+Le righe generali di seguito che includono ulteriori condizioni (preset
+originali, ascolti, profiler/allocazioni, tutte le voci della matrice) restano
+aperte anche quando una parte e' coperta. Non occorre rifare gli 80 render.
 
 ## 1. Obiettivi e ordine del lavoro
 
@@ -151,7 +181,8 @@ o alla validazione di Auto: le attività seguenti restano da completare.
   e assenza di All a 192 kHz.
 - [x] Acquisire i render originali di automazione T055–T061, con valori/tempi
   del piano confermati dall'utente; confronto quantitativo, non equivalenza perfetta.
-- [ ] Completare i render originali mancanti di sidechain T049–T054.
+- [x] Risolta la disponibilita' T049-T054: **N/A nel setup originale**,
+  inclusi i controlli del gruppo. Non acquisiti; copertura Ponte interna separata.
 - [ ] Usare sorgenti identiche, Warp OFF, normalizzazione/dither OFF, gain noti,
   UNLINKED salvo test del link; annotare versioni e preset dei due plugin.
 - [ ] Acquisire per ogni banda un riferimento neutro ratio 1:1 con routing
@@ -220,7 +251,7 @@ di validazione resta aperta, come precisato nel rapporto del 20 settembre.
 - [x] Verificare il beneficio di precalcolare coefficienti dipendenti soltanto da
   sample rate/parametri: Auto, BITE, gain e smoothing. Invalidare correttamente
   le cache su prepare, automazione, ripristino stato e cambio modalità.
-- [ ] Verificare aggiornamenti crossover: oggi il motore ricalcola ogni 16 campioni.
+- [x] Verificare aggiornamenti crossover: oggi il motore ricalcola ogni 16 campioni.
   Evitare lavoro a parametri stabilizzati senza cambiare la traiettoria durante
   automazione né introdurre dipendenza dalla dimensione dei blocchi.
 - [ ] Profilare `exp`, `pow`, conversioni dB e ricostruzione snapshot/ID parametri.
@@ -229,7 +260,7 @@ di validazione resta aperta, come precisato nel rapporto del 20 settembre.
 - [ ] Valutare se evitare lavoro duplicato nel detector senza sidechain esterna.
   Non saltare lo stato di bande non ascoltate se influenza il ritorno da SOLO.
 - [ ] Confermare assenza di allocazioni, mutex, I/O e chiamate GUI nel callback.
-- [ ] Per ogni modifica confrontare con la baseline del modello corrente:
+- [x] Per ogni modifica confrontare con la baseline del modello corrente:
   null test allineato, errore massimo/RMS, inviluppi, crossover, stereo e automazione.
   Preferire equivalenza bit per bit ove possibile; se cambia l'ordine numerico,
   dichiarare e verificare la tolleranza anziché chiamarla equivalenza esatta.
@@ -242,25 +273,25 @@ minimi per rilevare segnale, sidechain e cambiamenti. La sospensione dell'host
 è distinta dal nap interno. GUI chiusa, trasporto fermo, SOLO escluso o tutti
 gli IN spenti non bastano da soli a dimostrare che lo stato DSP sia sacrificabile.
 
-- [ ] Definire gli stati Active / Draining / Sleeping e le condizioni verificabili
+- [x] Definire gli stati Active / Draining / Sleeping e le condizioni verificabili
   di entrata/uscita. Partire da silenzio digitale esatto; un eventuale criterio
   sotto soglia richiede una prova separata su segnali debolissimi e gain massimo.
-- [ ] Ispezionare tutte le memorie: filtri, Auto/R1/R2, BITE, smoothing, meter,
+- [x] Ispezionare tutte le memorie: filtri, Auto/R1/R2, BITE, smoothing, meter,
   FIFO spettro e futuri filtri oversampling. Definire cosa deve continuare a
   decadere e quando può essere azzerato senza alterare il successivo attacco.
-- [ ] Attendere l'esaurimento delle code audio e della memoria rilevante del
+- [x] Attendere l'esaurimento delle code audio e della memoria rilevante del
   detector. Per stati non azzerabili, mantenere un aggiornamento ridotto oppure
   un avanzamento temporale dimostrato equivalente. Non congelare semplicemente
   la GR: il primo evento dopo il silenzio deve avere la memoria corretta.
-- [ ] Sidechain attiva con program silenzioso: continuare gli stati necessari;
+- [x] Sidechain attiva con program silenzioso: continuare gli stati necessari;
   il solo silenzio dell'uscita non autorizza il sonno completo.
-- [ ] Rilevare un nuovo ingresso nello stesso blocco e processare anche il primo
+- [x] Rilevare un nuovo ingresso nello stesso blocco e processare anche il primo
   campione utile; nessun fade-in aggiunto che cancelli il transiente di risveglio.
-- [ ] Gestire parametri/preset/automazione in sleep e il successivo wake senza
+- [x] Gestire parametri/preset/automazione in sleep e il successivo wake senza
   riprodurre vecchie rampe, picchi, dati FFT o code congelate.
-- [ ] Rivedere `getTailLengthSeconds()` (oggi 0) sulla base delle code effettive;
+- [x] Rivedere `getTailLengthSeconds()` (ora 2 s) sulla base delle code effettive;
   non confondere la memoria GR senza uscita audio con una coda audio udibile.
-- [ ] Evitare l'uso di una sospensione che impedisca al callback stesso di
+- [x] Evitare l'uso di una sospensione che impedisca al callback stesso di
   rilevare il risveglio, salvo un meccanismo host esplicitamente verificato.
 
 Test da creare con confronto nap ON/OFF sul medesimo input:
@@ -283,10 +314,10 @@ la presenza di aliasing significativo in questo motore va misurata. Aumentare
 Fs può anche cambiare detector, crossover e suono: non è automaticamente un
 miglioramento né una replica più fedele dell'originale.
 
-- [ ] Creare `OS-01`: sweep, toni alti e multitoni a frequenze non coincidenti,
+- [x] Creare `OS-01`: sweep, toni alti e multitoni a frequenze non coincidenti,
   segnale dinamico a forte compressione, transienti; R1/R2/Auto e BITE 1/5/10.
   Aggiungere ratio 1:1 per isolare gli effetti dei filtri di ricampionamento.
-- [ ] Creare un riferimento ad alto Fs con up/downsampling controllato e filtrato;
+- [x] Creare un riferimento ad alto Fs con up/downsampling controllato e filtrato;
   verificare la convergenza fra due rate elevati. Non chiamarlo automaticamente
   ground truth, perché il modello stesso può dipendere da Fs.
 - [ ] Misurare alias distinguendolo da armoniche legittime, sideband e leakage FFT;
@@ -297,7 +328,7 @@ miglioramento né una replica più fedele dell'originale.
   sovracampionare solo il detector non garantisce l'eliminazione degli alias audio.
 - [ ] Confrontare filtri FIR/IIR con ascolti allineati e level-matched, registrando
   latenza, ringing/fase e beneficio udibile oltre alle misure.
-- [ ] Scrivere decisione GO/NO-GO con budget CPU e benefici prima dell'integrazione.
+- [x] Scrivere decisione GO/NO-GO con budget CPU e benefici prima dell'integrazione.
   Se il beneficio è trascurabile o altera troppo il comportamento, non includerlo;
   il NO-GO documentato chiude questa attività senza una feature inutile.
 
@@ -324,18 +355,18 @@ L'uso della classe va valutato mantenendo il confine attuale fra DSP puro e wrap
 ## 7. Ottimizzazione GUI senza degradare la risposta
 
 - [ ] Profilare timer, FFT, curve STATIC I/O/LR4, letture parametri, layout e paint.
-- [ ] Non alimentare inutilmente la FIFO spettro quando non esiste un consumer
+- [x] Non alimentare inutilmente la FIFO spettro quando non esiste un consumer
   visibile; gestire apertura/chiusura con comunicazione thread-safe senza
   dereferenziare componenti GUI dal thread audio. **Parziale 0.2.3:** completata
   la sospensione della FIFO a editor chiuso; resta il caso editor esistente
   ma nascosto dall'host, da verificare separatamente.
 - [ ] Mettere in cache griglie, testo/layout e curve statiche, invalidandoli su
   parametri, scala, dimensione o tema pertinenti.
-- [ ] Limitare repaint alle aree cambiate; ridurre il lavoro a GUI inattiva dopo
+- [x] Limitare repaint alle aree cambiate; ridurre il lavoro a GUI inattiva dopo
   l'esaurimento delle animazioni, senza lasciare meter o help congelati.
-- [ ] Conservare salita ai picchi, discesa basata sul tempo reale e paint passivo.
+- [x] Conservare salita ai picchi, discesa basata sul tempo reale e paint passivo.
   Un calo del frame rate non deve cambiare ballistics né perdere eventi.
-- [ ] Non degradare FFT/precisione o focus per risparmiare CPU senza una decisione
+- [x] Non degradare FFT/precisione o focus per risparmiare CPU senza una decisione
   esplicita: restano hover iniziale 30 ms, passaggio immediato, uscita 100 ms.
 - [ ] Creare `GUI-PERF-01`: chiusa/aperta ferma/animata/resize e molte istanze;
   `GUI-PERF-02`: confronto traiettorie meter/FFT a clock regolare e irregolare;

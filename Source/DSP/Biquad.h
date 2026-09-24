@@ -40,6 +40,8 @@ public:
         return output;
     }
 
+    bool isQuiet() const noexcept { return std::abs(z1) < 1.0e-24 && std::abs(z2) < 1.0e-24; }
+
     void reset() noexcept { z1 = z2 = 0.0; }
 
 private:

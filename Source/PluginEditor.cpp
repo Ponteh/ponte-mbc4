@@ -71,6 +71,7 @@ ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
     valueDisplay.addMouseListener(this, true);
     valueDisplay.onTextChange = [this, parameter = state.getParameter(parameterId)]
     {
+        valueTextDirty = true;
         const auto requested = slider.getValueFromText(valueDisplay.getText());
         if (std::isfinite(requested))
         {
@@ -111,8 +112,12 @@ void ParameterKnob::setValueVisible(const bool visible)
 
 void ParameterKnob::updateValueText()
 {
-    if (!valueDisplay.isBeingEdited())
-        valueDisplay.setText(slider.getTextFromValue(slider.getValue()), juce::dontSendNotification);
+    if (valueDisplay.isBeingEdited()) return;
+    const auto current = slider.getValue();
+    if (!valueTextDirty && current == lastFormattedValue) return;
+    valueDisplay.setText(slider.getTextFromValue(current), juce::dontSendNotification);
+    lastFormattedValue = current;
+    valueTextDirty = false;
 }
 
 void ParameterKnob::parentHierarchyChanged()
@@ -365,10 +370,12 @@ BandMeter::BandMeter(PonteMC2000AudioProcessor& p, const int bandIndex)
 
 void BandMeter::update(const double elapsedSeconds)
 {
+    const auto before = snapshot;
     const auto peaks = processor.getEngine().consumeBandMeter(band);
     snapshot = { static_cast<float>(inputBallistics.update(peaks.inputDb, elapsedSeconds)),
                  static_cast<float>(outputBallistics.update(peaks.outputDb, elapsedSeconds)),
                  static_cast<float>(grBallistics.update(peaks.gainReductionDb, elapsedSeconds)) };
+    if (snapshot != before) repaint();
 }
 
 void BandMeter::paint(juce::Graphics& g)
@@ -545,7 +552,17 @@ CrossoverPlot::CrossoverPlot(PonteMC2000AudioProcessor& p) : processor(p)
     updateSpectrum(0.0);
 }
 
-CrossoverPlot::~CrossoverPlot() { processor.removeSpectrumConsumer(); }
+CrossoverPlot::~CrossoverPlot() { if (spectrumActive) processor.removeSpectrumConsumer(); }
+
+void CrossoverPlot::setSpectrumActive(const bool active)
+{
+    if (active == spectrumActive) return;
+    spectrumActive = active;
+    if (active) processor.addSpectrumConsumer(); else processor.removeSpectrumConsumer();
+    processor.discardSpectrumSamples();
+    fftInputCount = 0;
+    latestSpectrumDb.fill(-100.0f);
+}
 
 int CrossoverPlot::currentBandCount() const noexcept
 {
@@ -586,6 +603,9 @@ double CrossoverPlot::inputResponseDb(const double frequency) const noexcept
 
 void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
 {
+    const auto previousSpectrum = spectrumDb;
+    const auto wasReady = spectrumReady;
+    auto responseChanged = false;
     responseBandCount = currentBandCount();
     displayResponse.setBandCount(responseBandCount);
     for (int band = 0; band < 4; ++band)
@@ -600,6 +620,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
     if (frequencies != cachedResponseFrequencies || inputBands != cachedInputBands
         || responseBandCount != cachedResponseBandCount || sampleRate != cachedResponseSampleRate)
     {
+        responseChanged = true;
         for (std::size_t bin = 0; bin < responseDb.size(); ++bin)
             responseDb[bin] = inputResponseDb(static_cast<double>(bin) * sampleRate / fftSize);
         cachedResponseFrequencies = frequencies;
@@ -621,18 +642,25 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
         if (++fftInputCount < fftSize) continue;
         for (std::size_t channel = 0; channel < 2; ++channel)
         {
+            // An exactly zero window has a known FFT. Keep overlap/time and
+            // visual decay unchanged, but avoid two transforms during silence.
+            const auto nonzero = std::any_of(fftInput[channel].begin(), fftInput[channel].end(),
+                [](const float value) { return value != 0.0f; });
+            if (!nonzero) continue;
             std::fill(fftWork.begin(), fftWork.end(), 0.0f);
             std::copy(fftInput[channel].begin(), fftInput[channel].end(), fftWork.begin());
             fftWindow.multiplyWithWindowingTable(fftWork.data(), fftSize);
             fft.performFrequencyOnlyForwardTransform(fftWork.data());
+            ++fftTransformCount;
             for (int bin = 0; bin < fftSize / 2; ++bin)
             {
                 const auto db = juce::Decibels::gainToDecibels(
                     fftWork[static_cast<std::size_t>(bin)] * (2.0f / fftSize), -100.0f);
                 peaks[static_cast<std::size_t>(bin)] = std::max(peaks[static_cast<std::size_t>(bin)], db);
             }
-            std::copy(fftInput[channel].begin() + fftSize / 2, fftInput[channel].end(), fftInput[channel].begin());
         }
+        for (auto& input : fftInput)
+            std::copy(input.begin() + fftSize / 2, input.end(), input.begin());
         newFrame = true;
         spectrumReady = true;
         fftInputCount = fftSize / 2;
@@ -653,6 +681,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
         const auto target = latestSpectrumDb[bin] + responseDb[bin];
         spectrumDb[bin] = static_cast<float>(spectrumBallistics[bin].update(target, elapsedSeconds));
     }
+    if (responseChanged || wasReady != spectrumReady || spectrumDb != previousSpectrum) repaint();
 }
 
 void CrossoverPlot::paint(juce::Graphics& g)
@@ -789,6 +818,24 @@ void CompressionPlot::setForegroundBand(const int band)
     repaint();
 }
 
+void CompressionPlot::setDisplayedMeters(
+    const std::array<pontedsp::mc2000::dsp::BandMeterSnapshot, 4>& values)
+{
+    auto parameters = reader.read(linkState);
+    // Effective linked values come from atomic DSP publication, not from the
+    // audio thread's mutable parameter struct or a second guessed link history.
+    for (int i = 0; i < 4; ++i)
+    {
+        const auto curve = processor.getEngine().getStaticCurveParameters(i);
+        parameters.bands[i].thresholdDb = curve[0];
+        parameters.bands[i].ratio = curve[1];
+        parameters.bands[i].knee = curve[2];
+    }
+    if (values != displayedMeters || parameters != curveParameters) repaint();
+    displayedMeters = values;
+    curveParameters = parameters;
+}
+
 void CompressionPlot::paint(juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat();
@@ -831,7 +878,7 @@ void CompressionPlot::paint(juce::Graphics& g)
         for (int point = 0; point <= 120; ++point)
         {
             const auto input = -60.0 + 60.0 * static_cast<double>(point) / 120.0;
-            const auto output = enabled ? processor.getEngine().getStaticOutputDb(band, input) : -100.0;
+            const auto output = enabled ? pontedsp::mc2000::dsp::GainComputer().computeOutputDb(input, curveParameters.bands[band].thresholdDb, curveParameters.bands[band].ratio, curveParameters.bands[band].knee) : -100.0;
             const auto x = plot.getX() + plot.getWidth() * static_cast<float>(point) / 120.0f;
             const auto y = juce::jmap(static_cast<float>(juce::jlimit(-60.0, 0.0, output)),
                                       -60.0f, 0.0f, plot.getBottom(), plot.getY());
@@ -845,7 +892,7 @@ void CompressionPlot::paint(juce::Graphics& g)
             const auto meter = displayedMeters[static_cast<std::size_t>(band)];
             const auto liveInput = juce::jlimit(-60.0f, 0.0f, meter.inputDb);
             const auto liveOutput = juce::jlimit(-60.0f, 0.0f,
-                static_cast<float>(enabled ? processor.getEngine().getStaticOutputDb(band, liveInput) : -100.0));
+                static_cast<float>(enabled ? pontedsp::mc2000::dsp::GainComputer().computeOutputDb(liveInput, curveParameters.bands[band].thresholdDb, curveParameters.bands[band].ratio, curveParameters.bands[band].knee) : -100.0));
             const auto dotX = juce::jmap(liveInput, -60.0f, 0.0f, plot.getX(), plot.getRight());
             const auto dotY = juce::jmap(liveOutput, -60.0f, 0.0f, plot.getBottom(), plot.getY());
             g.setColour(bandColours[static_cast<std::size_t>(band)].darker(0.3f));
@@ -859,9 +906,11 @@ void CompressionPlot::paint(juce::Graphics& g)
 
 void OutputMeter::update(const double elapsedSeconds)
 {
+    const auto before = levels;
     const auto peaks = processor.getEngine().consumeOutputMeterDb();
     for (std::size_t channel = 0; channel < levels.size(); ++channel)
         levels[channel] = static_cast<float>(ballistics[channel].update(peaks[channel], elapsedSeconds));
+    if (levels != before) repaint();
 }
 
 void OutputMeter::paint(juce::Graphics& g)
@@ -1208,6 +1257,12 @@ void PonteMC2000AudioProcessorEditor::updateContextHelp()
 
 void PonteMC2000AudioProcessorEditor::timerCallback()
 {
+    crossoverPlot.setSpectrumActive(isShowing());
+    if (!isShowing())
+    {
+        processor.getEngine().discardPendingMeterPeaks();
+        return;
+    }
     const auto now = juce::Time::getMillisecondCounterHiRes();
     const auto elapsedSeconds = juce::jmax(0.0, (now - lastMeterUpdateMs) * 0.001);
     lastMeterUpdateMs = now;
@@ -1222,8 +1277,6 @@ void PonteMC2000AudioProcessorEditor::timerCallback()
         displayed[band] = bands[band]->displayedMeters();
     compressionPlot.setDisplayedMeters(displayed);
     crossoverPlot.updateSpectrum(elapsedSeconds);
-    for (auto& band : bands) band->repaint();
-    crossoverPlot.repaint();
-    compressionPlot.repaint();
-    outputMeter.repaint();
+    // Components invalidate only their changed visuals. Meter ballistics still
+    // advance at every visible tick; focus timing is owned by ControlFocus.
 }

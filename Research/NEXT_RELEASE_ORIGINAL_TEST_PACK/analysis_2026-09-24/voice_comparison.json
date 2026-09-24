@@ -1,0 +1,91 @@
+{
+  "source_sha256": "d5f3b6612fb8e91b3b9ba6f9471decc11872cd31ecbf61808ad9aa03ca3e7734",
+  "original_sha256": {
+    "T0voc-27.5,21comp,R1,2.5att,250rel,all.wav": "ad28a17a9551f8d18307f51075a8dcbd870d5a99c9e561c40ecb255db12a3767",
+    "T0voc-27.5,21comp,R1,2.5att,500rel,all.wav": "3302fb180dbb709b815c750c6073a62629d91f41d2f259c08fc8497a39247fba"
+  },
+  "mp3_source": "GAFITA Y CHOMBA_Vocal.mp3",
+  "source_duration_s": 192.05225,
+  "source_offset_s": -0.05,
+  "envelope_correlation": 0.9590353507633804,
+  "native_source_rate": 44100,
+  "comparison_rate": 48000,
+  "video_confirmed": {
+    "crossover_hz": [
+      100,
+      785,
+      10000
+    ],
+    "mode": "R1",
+    "all_IN": true,
+    "solo": false
+  },
+  "limitations": [
+    "No original neutral voice export; MP3 decoder/resampler and host clip gain are additional uncertainties."
+  ],
+  "envelope_drift_checks": [
+    {
+      "at_s": 5,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 15,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 25,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 35,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 45,
+      "local_shift_s": 0.0
+    }
+  ],
+  "audio_refinement": [
+    {
+      "at_s": 5,
+      "lag_samples": 57,
+      "correlation": 0.9893993909522495
+    },
+    {
+      "at_s": 15,
+      "lag_samples": 57,
+      "correlation": 0.9892177175432303
+    },
+    {
+      "at_s": 25,
+      "lag_samples": 57,
+      "correlation": 0.9828008680030064
+    },
+    {
+      "at_s": 35,
+      "lag_samples": 57,
+      "correlation": 0.987811884686297
+    },
+    {
+      "at_s": 45,
+      "lag_samples": 57,
+      "correlation": 0.9928536447255537
+    }
+  ],
+  "additional_output_alignment_samples": 57,
+  "comparison": [
+    {
+      "release_ms": 250,
+      "mae_db": 0.13435184070116432,
+      "signed_mean_ponte_minus_original_gr_db": 0.10137441999872364,
+      "p95_db": 0.31774643230430355
+    },
+    {
+      "release_ms": 500,
+      "mae_db": 0.12477105848978562,
+      "signed_mean_ponte_minus_original_gr_db": 0.08818757671091389,
+      "p95_db": 0.2965787736339806
+    }
+  ],
+  "release_contrast_mae_db": 0.03198322424647046
+}

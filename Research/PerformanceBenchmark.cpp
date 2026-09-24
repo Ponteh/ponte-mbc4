@@ -1,3 +1,4 @@
+#include "ResearchNoDenormals.h"
 #include "DSP/MultiBandCompressor.h"
 #include <chrono>
 #include <filesystem>
@@ -9,6 +10,7 @@
 // the current engine. No I/O/allocation inside the timed process() region.
 int main(int argc, char** argv)
 {
+    ResearchNoDenormals noDenormals;
     using namespace pontedsp::mc2000::dsp;
     if (argc != 2) { std::cerr << "Usage: MC2000Performance output-directory\n"; return 1; }
     std::filesystem::create_directories(argv[1]);

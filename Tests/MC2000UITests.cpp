@@ -360,6 +360,19 @@ void testClosedSpectrumAudio()
         expect(closed.popSpectrumSamples(samples.data(),512,gap)==0, "closed GUI produces no spectrum traffic");
         expect(opened.popSpectrumSamples(samples.data(),512,gap)==512, "open analyzer captures current samples");
     }
+    plot->setSpectrumActive(false);
+    juce::AudioBuffer<float> hiddenAudio(2,512); hiddenAudio.clear();
+    opened.processBlock(hiddenAudio,midi);
+    bool hiddenGap=false;
+    expect(opened.popSpectrumSamples(samples.data(),512,hiddenGap)==0, "hidden analyzer stops FIFO production");
+    plot->setSpectrumActive(true);
+    opened.processBlock(hiddenAudio,midi);
+    expect(opened.popSpectrumSamples(samples.data(),512,hiddenGap)==512, "shown analyzer resumes fresh samples");
+    for(int i=0;i<12;++i) { hiddenAudio.clear(); opened.processBlock(hiddenAudio,midi); plot->updateSpectrum(512.0/48000); }
+    const auto silentCount=plot->performedFftTransforms();
+    for(int i=0;i<12;++i) { hiddenAudio.clear(); opened.processBlock(hiddenAudio,midi); plot->updateSpectrum(512.0/48000); }
+    expect(plot->performedFftTransforms()==silentCount, "fully silent overlapping windows need no FFT transforms");
+    expect(opened.getTailLengthSeconds()==2.0, "host receives conservative crossover audio tail");
     plot.reset();
     juce::AudioBuffer<float> silence(2,512); silence.clear();
     opened.processBlock(silence,midi);
@@ -478,6 +491,7 @@ void testDotMeterCoherence()
     PonteMC2000AudioProcessor p;
     p.prepareToPlay(48000, 512);
     PonteMC2000AudioProcessorEditor editor(p);
+    offscreenPeer(editor);
     auto* band = find<BandMeter>(editor);
     auto* plot = find<CompressionPlot>(editor);
     juce::AudioBuffer<float> audio(2, 512);
@@ -548,9 +562,12 @@ void testMeterPaintingAndReopen()
 }
 } // namespace
 
-int main()
+#include "../Research/OversamplingCost.h"
+
+int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if (argc > 1 && std::string(argv[1]) == "--oversampling-cost") return benchmarkOversamplingCost();
     testTiming();
     testHeaderVersions();
     testClosedSpectrumAudio();

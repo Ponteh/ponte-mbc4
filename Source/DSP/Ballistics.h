@@ -15,7 +15,7 @@ public:
         cachedAttackMs = -1.0;
         cachedR1ReleaseSeconds = -1.0;
         autoRelease = std::exp(-1.0 / (sampleRate * 0.102));
-        autoAttack = std::exp(-1.0 / (sampleRate * 0.00002));
+        autoAttack = std::exp(-1.0 / (sampleRate * 0.00032));
         reset();
     }
 
@@ -27,6 +27,12 @@ public:
         previousMode = TCMode::type1;
         autoControl = 1.0;
         previousAutoSlope = 0.0;
+    }
+
+    bool isQuiet() const noexcept
+    {
+        return gainReductionDb < 1.0e-9
+            && (previousMode == TCMode::automatic || detectorEnvelope < 1.0e-24);
     }
 
     double process(const double targetDb, const double detectorLinear,
@@ -160,8 +166,9 @@ private:
     {
         // 2026-09-19 MC404 step fit: excess linear control decays with ~102 ms,
         // giving level-dependent release in dB. Ratio normalisation preserves
-        // the measured identical release shape at 2:1 and 4:1. The fast 20 us
-        // peak capture is an approximation, not a measured front-panel attack.
+        // the measured identical release shape at 2:1 and 4:1. The 320 us
+        // peak capture is a joint noise/onset fit (2026-09-23), not a
+        // front-panel attack value. A noise-only 640 us fit worsens BITE onsets.
         // See Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-19.
         const auto targetControl = decibelsToGain(std::min(160.0, targetDb / slope));
         autoControl = targetControl > autoControl
@@ -205,6 +212,13 @@ public:
     {
         fastEnvelope = slowEnvelope = referencePeak = lastTransientNormalised = reliefMemoryDb = 0.0;
         autoGainReductionDb = 0.0;
+    }
+
+    bool isQuiet() const noexcept
+    {
+        return fastEnvelope < 1.0e-24 && slowEnvelope < 1.0e-24
+            && referencePeak < 1.0e-24 && reliefMemoryDb < 1.0e-9
+            && autoGainReductionDb < 1.0e-9;
     }
 
     double getLastTransientNormalised() const noexcept { return lastTransientNormalised; }

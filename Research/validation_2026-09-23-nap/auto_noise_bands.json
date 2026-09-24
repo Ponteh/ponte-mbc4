@@ -1,0 +1,210 @@
+[
+  {
+    "seconds": [
+      8.5,
+      11.5
+    ],
+    "band_hz": [
+      25,
+      70
+    ],
+    "original_attenuation_db": 0.00352328851601672,
+    "ponte_attenuation_db": 0.022769252753657484,
+    "neutral_difference_db": -0.010718873124242655
+  },
+  {
+    "seconds": [
+      8.5,
+      11.5
+    ],
+    "band_hz": [
+      200,
+      500
+    ],
+    "original_attenuation_db": 0.17980332234568674,
+    "ponte_attenuation_db": 0.5978945437633626,
+    "neutral_difference_db": -0.18167974950770063
+  },
+  {
+    "seconds": [
+      8.5,
+      11.5
+    ],
+    "band_hz": [
+      1500,
+      6000
+    ],
+    "original_attenuation_db": 4.741206376807941,
+    "ponte_attenuation_db": 5.996056936371412,
+    "neutral_difference_db": -0.03273066167640407
+  },
+  {
+    "seconds": [
+      8.5,
+      11.5
+    ],
+    "band_hz": [
+      13000,
+      19000
+    ],
+    "original_attenuation_db": 5.8879559845255525,
+    "ponte_attenuation_db": 7.092770964381428,
+    "neutral_difference_db": -0.002319087315884357
+  },
+  {
+    "seconds": [
+      26.5,
+      29.5
+    ],
+    "band_hz": [
+      25,
+      70
+    ],
+    "original_attenuation_db": -0.0002084358977195079,
+    "ponte_attenuation_db": -0.001901602201623161,
+    "neutral_difference_db": -0.010166292422481595
+  },
+  {
+    "seconds": [
+      26.5,
+      29.5
+    ],
+    "band_hz": [
+      200,
+      500
+    ],
+    "original_attenuation_db": 0.018679698557705817,
+    "ponte_attenuation_db": 0.07909054110655647,
+    "neutral_difference_db": -0.18335389554173898
+  },
+  {
+    "seconds": [
+      26.5,
+      29.5
+    ],
+    "band_hz": [
+      1500,
+      6000
+    ],
+    "original_attenuation_db": 0.5558366011658712,
+    "ponte_attenuation_db": 1.7760270993589486,
+    "neutral_difference_db": -0.032701597939945676
+  },
+  {
+    "seconds": [
+      26.5,
+      29.5
+    ],
+    "band_hz": [
+      13000,
+      19000
+    ],
+    "original_attenuation_db": 1.387423413982629,
+    "ponte_attenuation_db": 2.8255131206842554,
+    "neutral_difference_db": -0.002319173319828936
+  },
+  {
+    "seconds": [
+      37.5,
+      40.5
+    ],
+    "band_hz": [
+      25,
+      70
+    ],
+    "original_attenuation_db": 0.0033088206401621395,
+    "ponte_attenuation_db": 0.021521956395812017,
+    "neutral_difference_db": -0.010416943518099322
+  },
+  {
+    "seconds": [
+      37.5,
+      40.5
+    ],
+    "band_hz": [
+      200,
+      500
+    ],
+    "original_attenuation_db": 0.19797999140035033,
+    "ponte_attenuation_db": 0.5981328140042452,
+    "neutral_difference_db": -0.1846311982166376
+  },
+  {
+    "seconds": [
+      37.5,
+      40.5
+    ],
+    "band_hz": [
+      1500,
+      6000
+    ],
+    "original_attenuation_db": 4.780740864357042,
+    "ponte_attenuation_db": 6.038866492665499,
+    "neutral_difference_db": -0.03243480818886248
+  },
+  {
+    "seconds": [
+      37.5,
+      40.5
+    ],
+    "band_hz": [
+      13000,
+      19000
+    ],
+    "original_attenuation_db": 5.86685764119228,
+    "ponte_attenuation_db": 7.063529704682534,
+    "neutral_difference_db": -0.002269038874353811
+  },
+  {
+    "seconds": [
+      48.5,
+      49.5
+    ],
+    "band_hz": [
+      25,
+      70
+    ],
+    "original_attenuation_db": 0.0003468960042937541,
+    "ponte_attenuation_db": -0.000417739824774731,
+    "neutral_difference_db": -0.013258178934401099
+  },
+  {
+    "seconds": [
+      48.5,
+      49.5
+    ],
+    "band_hz": [
+      200,
+      500
+    ],
+    "original_attenuation_db": 0.05424321926346495,
+    "ponte_attenuation_db": 0.12673952620859993,
+    "neutral_difference_db": -0.18109782410364722
+  },
+  {
+    "seconds": [
+      48.5,
+      49.5
+    ],
+    "band_hz": [
+      1500,
+      6000
+    ],
+    "original_attenuation_db": 1.7892692883110164,
+    "ponte_attenuation_db": 3.192565582247296,
+    "neutral_difference_db": -0.032795673550054506
+  },
+  {
+    "seconds": [
+      48.5,
+      49.5
+    ],
+    "band_hz": [
+      13000,
+      19000
+    ],
+    "original_attenuation_db": 2.734609619332589,
+    "ponte_attenuation_db": 4.174521427903663,
+    "neutral_difference_db": -0.002336219836117841
+  }
+]

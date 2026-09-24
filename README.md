@@ -12,7 +12,7 @@ and POC appendix N.
 repeated work; the spectrum FIFO stops when the editor is closed. The header
 shows the installed version and checks public GitHub releases in a background
 worker, with a gray/yellow notification for newer stable versions. Context help
-replaces the header. Oversampling and complete DSP nap remain open.
+replaces the header. This September 18 status is superseded by the September 24 implementation below.
 See [implementation and verification](Research/PERFORMANCE_2026-09-18.md).
 
 **September 19 Auto correction, DSP_MODEL_6:** new original renders support
@@ -105,3 +105,13 @@ ctest --test-dir C:/build/PonteMBC4 -C Release --output-on-failure
 the real editor's SOLO/IN buttons and automation, state persistence, resize,
 meter alignment and audio routing against the sum of selected crossover bands.
 It writes `MC2000_UI_minimum.png` beside the test executable for visual review.
+
+## September 24 candidate: 0.2.3, DSP_MODEL_9
+
+Exact-silence DSP nap preserves tails and wakes on the first nonzero program
+or key sample. Parameter/coefficient caches and selective GUI updates reduce
+redundant work. Auto attack is calibrated jointly against noise and BITE
+onsets (320 us, unchanged 102 ms release); existing Auto presets change sound.
+Full-chain oversampling is not included: measured alias benefits are uneven
+and processing response and CPU cost change. This is a test build, not a
+new public release. See [implementation, measurements and known limits](Research/NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md).

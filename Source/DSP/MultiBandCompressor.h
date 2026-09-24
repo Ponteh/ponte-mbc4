@@ -11,6 +11,7 @@ namespace pontedsp::mc2000::dsp {
 
 struct BandParameters
 {
+    bool operator==(const BandParameters&) const = default;
     bool enabled { true }; // IN: admit this band's input, otherwise mute it.
     bool solo { false };
     double gainDb {};
@@ -25,6 +26,7 @@ struct BandParameters
 
 struct GlobalParameters
 {
+    bool operator==(const GlobalParameters&) const = default;
     double inputGainDb {};
     double outputGainDb {};
     bool phaseInvert {};
@@ -35,6 +37,7 @@ struct GlobalParameters
 
 struct BandMeterSnapshot
 {
+    bool operator==(const BandMeterSnapshot&) const = default;
     float inputDb { -100.0f };
     float outputDb { -100.0f };
     float gainReductionDb {};
@@ -45,7 +48,12 @@ class MultiBandCompressor final
 public:
     static constexpr int maxBands = CrossoverNetwork::maxBands;
     static constexpr int maxChannels = CrossoverNetwork::maxChannels;
-    static constexpr int dspModelVersion = 8;
+    static constexpr int dspModelVersion = 9;
+
+    enum class Activity { active, draining, sleeping };
+    // Audio-thread only. Disabling nap is used by the equivalence harness.
+    void setNapEnabled(bool enabled) noexcept { napEnabled = enabled; activity = Activity::active; }
+    Activity getActivity() const noexcept { return activity; }
 
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
     void reset() noexcept;
@@ -59,6 +67,7 @@ public:
                  int numSamples) noexcept;
 
     double getStaticOutputDb(int band, double inputDb) const noexcept;
+    std::array<double, 3> getStaticCurveParameters(int band) const noexcept;
     double getBandMagnitudeDb(int band, double frequency) const noexcept;
     BandMeterSnapshot getBandMeter(int band) const noexcept;
     std::array<float, 2> getOutputMeterDb() const noexcept;
@@ -70,6 +79,12 @@ public:
     const GlobalParameters& getParameters() const noexcept { return currentParameters; }
 
 private:
+    struct AtomicCurve
+    {
+        std::atomic<double> threshold {}, ratio { 1.0 }, knee {};
+    };
+    std::array<AtomicCurve, maxBands> curves;
+
     struct AtomicBandMeter
     {
         std::atomic<float> inputDb { -100.0f };
@@ -98,6 +113,9 @@ private:
     std::array<MeterPeak, 2> pendingOutputMeters;
     GlobalParameters currentParameters;
     double sampleRate { 48000.0 };
+    double gainSmoothing {}, routeSmoothing {};
+    double inputGainTarget { 1.0 }, outputGainTarget { 1.0 };
+    std::array<double, maxBands> bandGainTargets { 1.0, 1.0, 1.0, 1.0 };
     double inputGainCurrent { 1.0 };
     double outputGainCurrent { 1.0 };
     std::array<double, maxBands> bandGainCurrent { 1.0, 1.0, 1.0, 1.0 };
@@ -107,6 +125,9 @@ private:
     int crossoverUpdateCountdown {};
     int preparedBlockSize {};
     int preparedChannels { 2 };
+    bool napEnabled { true };
+    Activity activity { Activity::active };
+    int previousAudioChannels {}, previousDetectorChannels {};
 };
 
 } // namespace pontedsp::mc2000::dsp

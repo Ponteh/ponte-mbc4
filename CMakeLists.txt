@@ -108,6 +108,10 @@ if (MC2000_BUILD_TESTS)
     target_compile_definitions(MC2000UpdateProbe PRIVATE JUCE_USE_CURL=0)
     target_link_libraries(MC2000UpdateProbe PRIVATE juce::juce_core)
 
+    add_executable(MC2000NapValidation Research/NapValidation.cpp ${MC2000_DSP_SOURCES})
+    target_include_directories(MC2000NapValidation PRIVATE Source)
+    add_test(NAME MC2000NapValidation COMMAND MC2000NapValidation)
+
     add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
     target_include_directories(MC2000Performance PRIVATE Source)
     add_executable(MC2000OriginalPackRender Research/OriginalPackRender.cpp ${MC2000_DSP_SOURCES})
@@ -118,6 +122,10 @@ if (MC2000_BUILD_TESTS)
             "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
             "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
         target_include_directories(MC2000PerformanceBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
+        add_executable(MC2000OriginalPackRenderBaseline Research/OriginalPackRender.cpp
+            "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
+            "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
+        target_include_directories(MC2000OriginalPackRenderBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
     endif()
 
     juce_add_console_app(MC2000BlackBoxAnalysis PRODUCT_NAME "Ponte MBC4 Black Box Analysis")

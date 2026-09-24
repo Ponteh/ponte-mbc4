@@ -12,6 +12,7 @@ public:
     void prepare(const double newSampleRate, const double frequency) noexcept
     {
         sampleRate = newSampleRate;
+        cachedFrequency = -1.0;
         setFrequency(frequency);
         reset();
     }
@@ -19,6 +20,8 @@ public:
     void setFrequency(const double frequency) noexcept
     {
         const auto safe = std::clamp(frequency, 20.0, sampleRate * 0.45);
+        if (safe == cachedFrequency) return;
+        cachedFrequency = safe;
         low1.configure(Biquad::Type::lowPass, sampleRate, safe);
         low2.configure(Biquad::Type::lowPass, sampleRate, safe);
         high1.configure(Biquad::Type::highPass, sampleRate, safe);
@@ -36,6 +39,9 @@ public:
         return low + high;
     }
 
+    bool isQuiet() const noexcept
+    { return low1.isQuiet() && low2.isQuiet() && high1.isQuiet() && high2.isQuiet(); }
+
     void reset() noexcept
     {
         low1.reset(); low2.reset(); high1.reset(); high2.reset();
@@ -43,6 +49,7 @@ public:
 
 private:
     double sampleRate { 48000.0 };
+    double cachedFrequency { -1.0 };
     Biquad low1, low2, high1, high2;
 };
 

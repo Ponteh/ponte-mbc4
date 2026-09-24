@@ -28,6 +28,8 @@ private:
     void positionValueDisplay();
     void updateValueText();
     bool dragging {};
+    bool valueTextDirty { true };
+    double lastFormattedValue {};
     juce::Label name;
     juce::Slider slider;
     juce::Label valueDisplay;
@@ -130,8 +132,10 @@ public:
     ~CrossoverPlot() override;
     void paint(juce::Graphics&) override;
     void updateSpectrum(double elapsedSeconds);
+    void setSpectrumActive(bool active);
     double inputResponseDb(double frequency) const noexcept;
     float displayedSpectrumDb(int bin) const noexcept { return spectrumDb[static_cast<std::size_t>(bin)]; }
+    std::uint64_t performedFftTransforms() const noexcept { return fftTransformCount; }
     static constexpr int spectrumSize = 2048;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
@@ -167,19 +171,24 @@ private:
     std::array<float, fftSize / 2> spectrumDb {};
     int fftInputCount {};
     bool spectrumReady {};
+    bool spectrumActive { true };
+    std::uint64_t fftTransformCount {};
 };
 
 class CompressionPlot final : public juce::Component
 {
 public:
-    explicit CompressionPlot(PonteMC2000AudioProcessor& p) : processor(p) {}
+    explicit CompressionPlot(PonteMC2000AudioProcessor& p) : processor(p) { setDisplayedMeters(displayedMeters); }
     void paint(juce::Graphics&) override;
     void setForegroundBand(int band);
-    void setDisplayedMeters(const std::array<pontedsp::mc2000::dsp::BandMeterSnapshot, 4>& values) { displayedMeters = values; }
+    void setDisplayedMeters(const std::array<pontedsp::mc2000::dsp::BandMeterSnapshot, 4>& values);
     float displayedInputDb(int band) const { return displayedMeters[static_cast<std::size_t>(band)].inputDb; }
 
 private:
     PonteMC2000AudioProcessor& processor;
+    pontedsp::mc2000::parameters::SnapshotReader reader { processor.state };
+    pontedsp::mc2000::parameters::LinkRuntime linkState;
+    pontedsp::mc2000::dsp::GlobalParameters curveParameters;
     int foregroundBand { 0 };
     std::array<pontedsp::mc2000::dsp::BandMeterSnapshot, 4> displayedMeters;
 };

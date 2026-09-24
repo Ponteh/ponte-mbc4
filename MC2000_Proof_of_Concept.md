@@ -4226,3 +4226,39 @@ this is retained as a limitation, not hidden by the BITE improvement.
 Full DSP nap, oversampling decision, broader original BITE validation,
 remaining acquisitions, real-voice/GR-video comparison and final DAW testing
 remain open. No release is published by this work.
+
+## P. DSP_MODEL_9: Auto, nap e ottimizzazioni (24 settembre 2026)
+
+Versione candidata 0.2.3. Il controllo Auto normalizzato conserva la release
+102 ms e usa in salita `a = exp(-1/(Fs*0.00032))`, al posto dei precedenti
+20 us. E' un fit comportamentale congiunto su rumore e transienti: 640 us
+riduce ulteriormente lo scarto del rumore ma peggiora alcuni attacchi BITE.
+La nuova costante migliora 40 degli 80 confronti completi; 39 sono invariati
+entro 2,53e-29 di differenza audio, T045 peggiora ed e' mantenuto diagnostico.
+Nessuna modifica a R1/R2, release Auto, normalizzazione ratio o curva Auto BITE.
+Il cambiamento sonoro intenzionale richiede DSP_MODEL_9; schema dei parametri
+e identita' del plugin invariati. I preset Auto salvati usano il nuovo modello.
+
+Il nap passa da Active a Draining e poi Sleeping solo su zero digitale
+esatto, dopo esaurimento di filtri, GR, BITE e smoothing. Qualsiasi ingresso
+programma/key non nullo, cambio parametro o canali risveglia l'intero blocco.
+Nessuna soglia audio, nessun timeout della release, nessun azzeramento degli
+stati inattivi. Il callback continua a osservare ingressi e parametri.
+Tail dichiarata all'host: 2 s per la coda audio dei filtri, distinta dalla
+memoria di controllo. Latenza di processing invariata: zero campioni.
+
+Cache dei target gain, smoothing e coefficienti LR4, snapshot immutati
+saltati. GUI: repaint delle aree modificate, FFT saltata sulle finestre
+esattamente nulle, FIFO fermata senza editor visibile, testo knob aggiornato
+solo se cambia. Curve STATIC I/O pubblicate tramite atomiche; paint passivo.
+FFT 2048, ballistics e focus 30/100 ms restano invariati.
+
+Oversampling completo: **NO-GO per 0.2.3**. Il prototipo mostra riduzione di
+alcuni alias ma anche variazioni di gain/fase e beneficio non uniforme a 4x;
+il costo CPU cresce circa 2-4x. Non vengono aggiunti parametro o label OS.
+Il prototipo spettrale usa modello 8; il benchmark JUCE FIR/IIR usa modello 9.
+Non e' una conclusione negativa su ogni possibile schema di oversampling.
+
+Risultati, riproduzione, limiti e collaudi ancora aperti nella
+[nota tecnica permanente](Research/NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md)
+e nel [rapporto dei nuovi originali e della voce](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-24/REPORT.md).

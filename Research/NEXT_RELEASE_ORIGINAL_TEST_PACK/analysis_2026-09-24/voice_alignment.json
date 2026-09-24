@@ -1,0 +1,48 @@
+{
+  "source_sha256": "d5f3b6612fb8e91b3b9ba6f9471decc11872cd31ecbf61808ad9aa03ca3e7734",
+  "original_sha256": {
+    "T0voc-27.5,21comp,R1,2.5att,250rel,all.wav": "ad28a17a9551f8d18307f51075a8dcbd870d5a99c9e561c40ecb255db12a3767",
+    "T0voc-27.5,21comp,R1,2.5att,500rel,all.wav": "3302fb180dbb709b815c750c6073a62629d91f41d2f259c08fc8497a39247fba"
+  },
+  "mp3_source": "GAFITA Y CHOMBA_Vocal.mp3",
+  "source_duration_s": 192.05225,
+  "source_offset_s": -0.05,
+  "envelope_correlation": 0.9590353507633804,
+  "native_source_rate": 44100,
+  "comparison_rate": 48000,
+  "video_confirmed": {
+    "crossover_hz": [
+      100,
+      785,
+      10000
+    ],
+    "mode": "R1",
+    "all_IN": true,
+    "solo": false
+  },
+  "limitations": [
+    "No original neutral voice export; MP3 decoder/resampler and host clip gain are additional uncertainties."
+  ],
+  "envelope_drift_checks": [
+    {
+      "at_s": 5,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 15,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 25,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 35,
+      "local_shift_s": 0.0
+    },
+    {
+      "at_s": 45,
+      "local_shift_s": 0.0
+    }
+  ]
+}

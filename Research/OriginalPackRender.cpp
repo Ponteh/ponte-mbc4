@@ -1,3 +1,4 @@
+#include "ResearchNoDenormals.h"
 #include "DSP/MultiBandCompressor.h"
 #include <filesystem>
 #include <fstream>
@@ -10,6 +11,7 @@
 // explicitly supplied by analyse.py. No inference of original plugin settings.
 int main(int argc, char** argv)
 {
+    ResearchNoDenormals noDenormals;
     using namespace pontedsp::mc2000::dsp;
     if (argc != 2) return 1;
     std::ifstream jobs(argv[1]);

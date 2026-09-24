@@ -240,3 +240,11 @@ I numeri sorgente corrispondono alla tabella audio nel README; il nome completo 
 | T088 | `T088_ORIG_MC404_17_ALL_B0_48000Hz_take1.wav` |
 
 Totale: 88 export; ciascuno dura 60 secondi. La sidechain esterna e condizionata alla disponibilita effettiva.
+
+## Stato acquisizioni 2026-09-24
+
+Ricevuti i render nativi 96/192 kHz e la voce; buffer 512 confermato.
+T049-T054: gruppo external-sidechain non eseguibile nell'originale disponibile
+(inclusi i controlli T053/T054). T087/T088 a 96 kHz restano diagnostici
+rispetto al piano a 48 kHz. Non ripetere l'intero pacchetto gia' acquisito.
+[Risultati, caso T045 e verifiche residue](analysis_2026-09-24/REPORT.md).

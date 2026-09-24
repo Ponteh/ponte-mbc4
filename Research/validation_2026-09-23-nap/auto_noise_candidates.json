@@ -1,0 +1,350 @@
+[
+  {
+    "id": "T024",
+    "attack_us": 0,
+    "release_ms": 102,
+    "mae_db": 0.3938609159479393,
+    "active_mae_db": 1.2576083807343084
+  },
+  {
+    "id": "T024",
+    "attack_us": 5,
+    "release_ms": 102,
+    "mae_db": 0.39218528488730164,
+    "active_mae_db": 1.2522607695372299
+  },
+  {
+    "id": "T024",
+    "attack_us": 10,
+    "release_ms": 102,
+    "mae_db": 0.3797058684548497,
+    "active_mae_db": 1.212436226810959
+  },
+  {
+    "id": "T024",
+    "attack_us": 20,
+    "release_ms": 102,
+    "mae_db": 0.3479966894195979,
+    "active_mae_db": 1.1112284321441028,
+    "model8_peak_difference_after_1s": 0.0
+  },
+  {
+    "id": "T024",
+    "attack_us": 40,
+    "release_ms": 102,
+    "mae_db": 0.2991585187060543,
+    "active_mae_db": 0.9552999267279318
+  },
+  {
+    "id": "T024",
+    "attack_us": 80,
+    "release_ms": 102,
+    "mae_db": 0.2389559418969036,
+    "active_mae_db": 0.7630182220155581
+  },
+  {
+    "id": "T024",
+    "attack_us": 160,
+    "release_ms": 102,
+    "mae_db": 0.16942480205719268,
+    "active_mae_db": 0.5409461823449515
+  },
+  {
+    "id": "T024",
+    "attack_us": 320,
+    "release_ms": 102,
+    "mae_db": 0.09190449978213446,
+    "active_mae_db": 0.2933206895165454
+  },
+  {
+    "id": "T024",
+    "attack_us": 640,
+    "release_ms": 102,
+    "mae_db": 0.053249241100761575,
+    "active_mae_db": 0.1700608138743179
+  },
+  {
+    "id": "T024",
+    "attack_us": 1000,
+    "release_ms": 102,
+    "mae_db": 0.07271866600740579,
+    "active_mae_db": 0.2324932145791994
+  },
+  {
+    "id": "T024",
+    "attack_us": 20,
+    "release_ms": 25,
+    "mae_db": 0.22857915974201776,
+    "active_mae_db": 0.7284494272237143
+  },
+  {
+    "id": "T024",
+    "attack_us": 20,
+    "release_ms": 50,
+    "mae_db": 0.2843102903043642,
+    "active_mae_db": 0.9069121199241988
+  },
+  {
+    "id": "T024",
+    "attack_us": 20,
+    "release_ms": 75,
+    "mae_db": 0.3132637138625433,
+    "active_mae_db": 1.0006472215786504
+  },
+  {
+    "id": "T024",
+    "attack_us": 20,
+    "release_ms": 150,
+    "mae_db": 0.4132065923999073,
+    "active_mae_db": 1.2972957401361096
+  },
+  {
+    "id": "T024",
+    "attack_us": 20,
+    "release_ms": 200,
+    "mae_db": 0.4716997981831892,
+    "active_mae_db": 1.439350776136739
+  },
+  {
+    "id": "T002",
+    "attack_us": 0,
+    "release_ms": 102,
+    "mae_db": 0.057004351758995694,
+    "active_mae_db": 0.21067680506095576,
+    "first_10ms_rmse_db": 0.6439049191557276
+  },
+  {
+    "id": "T002",
+    "attack_us": 5,
+    "release_ms": 102,
+    "mae_db": 0.056993396014933036,
+    "active_mae_db": 0.2106363408997393,
+    "first_10ms_rmse_db": 0.643457808139803
+  },
+  {
+    "id": "T002",
+    "attack_us": 10,
+    "release_ms": 102,
+    "mae_db": 0.05685061496464692,
+    "active_mae_db": 0.21010869441803748,
+    "first_10ms_rmse_db": 0.6398327029537948
+  },
+  {
+    "id": "T002",
+    "attack_us": 20,
+    "release_ms": 102,
+    "mae_db": 0.05632310940330371,
+    "active_mae_db": 0.20815825113014622,
+    "first_10ms_rmse_db": 0.6274621321695585,
+    "model8_peak_difference_after_1s": 0.0
+  },
+  {
+    "id": "T002",
+    "attack_us": 40,
+    "release_ms": 102,
+    "mae_db": 0.05485392030000484,
+    "active_mae_db": 0.20272730619949567,
+    "first_10ms_rmse_db": 0.5976237127123338
+  },
+  {
+    "id": "T002",
+    "attack_us": 80,
+    "release_ms": 102,
+    "mae_db": 0.05186088864629621,
+    "active_mae_db": 0.19166292859182174,
+    "first_10ms_rmse_db": 0.5309573970755808
+  },
+  {
+    "id": "T002",
+    "attack_us": 160,
+    "release_ms": 102,
+    "mae_db": 0.04659598073100865,
+    "active_mae_db": 0.17220080302824461,
+    "first_10ms_rmse_db": 0.39931244198224086
+  },
+  {
+    "id": "T002",
+    "attack_us": 320,
+    "release_ms": 102,
+    "mae_db": 0.038042666159566876,
+    "active_mae_db": 0.1405830280935372,
+    "first_10ms_rmse_db": 0.2282854700967376
+  },
+  {
+    "id": "T002",
+    "attack_us": 640,
+    "release_ms": 102,
+    "mae_db": 0.02574323031538111,
+    "active_mae_db": 0.09512024068854764,
+    "first_10ms_rmse_db": 0.411235001400694
+  },
+  {
+    "id": "T002",
+    "attack_us": 1000,
+    "release_ms": 102,
+    "mae_db": 0.01569591667208158,
+    "active_mae_db": 0.05798070707423193,
+    "first_10ms_rmse_db": 0.7340017833436162
+  },
+  {
+    "id": "T002",
+    "attack_us": 20,
+    "release_ms": 25,
+    "mae_db": 0.16903551572971004,
+    "active_mae_db": 0.62148039220302,
+    "first_10ms_rmse_db": 0.5987162952103345
+  },
+  {
+    "id": "T002",
+    "attack_us": 20,
+    "release_ms": 50,
+    "mae_db": 0.13336484416668182,
+    "active_mae_db": 0.48944419742656947,
+    "first_10ms_rmse_db": 0.6137001307256887
+  },
+  {
+    "id": "T002",
+    "attack_us": 20,
+    "release_ms": 75,
+    "mae_db": 0.09222237994056422,
+    "active_mae_db": 0.33759738574667403,
+    "first_10ms_rmse_db": 0.6222991804750982
+  },
+  {
+    "id": "T002",
+    "attack_us": 20,
+    "release_ms": 150,
+    "mae_db": 0.1430296556327285,
+    "active_mae_db": 0.49325031253698576,
+    "first_10ms_rmse_db": 0.6323843405856903
+  },
+  {
+    "id": "T002",
+    "attack_us": 20,
+    "release_ms": 200,
+    "mae_db": 0.2326276409333825,
+    "active_mae_db": 0.7292150597212999,
+    "first_10ms_rmse_db": 0.6351225610030029
+  },
+  {
+    "id": "T010",
+    "attack_us": 0,
+    "release_ms": 102,
+    "mae_db": 0.060819574417210386,
+    "active_mae_db": 0.22460807324415788,
+    "first_10ms_rmse_db": 0.7826032624113315
+  },
+  {
+    "id": "T010",
+    "attack_us": 5,
+    "release_ms": 102,
+    "mae_db": 0.06078995784358203,
+    "active_mae_db": 0.2244986637648044,
+    "first_10ms_rmse_db": 0.7811804971893885
+  },
+  {
+    "id": "T010",
+    "attack_us": 10,
+    "release_ms": 102,
+    "mae_db": 0.06055186353168815,
+    "active_mae_db": 0.22361910939397883,
+    "first_10ms_rmse_db": 0.769573328524095
+  },
+  {
+    "id": "T010",
+    "attack_us": 20,
+    "release_ms": 102,
+    "mae_db": 0.05979049606826188,
+    "active_mae_db": 0.22080660974781774,
+    "first_10ms_rmse_db": 0.733034564304385,
+    "model8_peak_difference_after_1s": 0.0
+  },
+  {
+    "id": "T010",
+    "attack_us": 40,
+    "release_ms": 102,
+    "mae_db": 0.05805307637175967,
+    "active_mae_db": 0.21438879373699798,
+    "first_10ms_rmse_db": 0.655648812049212
+  },
+  {
+    "id": "T010",
+    "attack_us": 80,
+    "release_ms": 102,
+    "mae_db": 0.05446467341485592,
+    "active_mae_db": 0.20113389533532255,
+    "first_10ms_rmse_db": 0.5236044368545812
+  },
+  {
+    "id": "T010",
+    "attack_us": 160,
+    "release_ms": 102,
+    "mae_db": 0.04728032145498395,
+    "active_mae_db": 0.1745962670270967,
+    "first_10ms_rmse_db": 0.3443300138407388
+  },
+  {
+    "id": "T010",
+    "attack_us": 320,
+    "release_ms": 102,
+    "mae_db": 0.03458135794111066,
+    "active_mae_db": 0.12768481507213042,
+    "first_10ms_rmse_db": 0.2569095314261687
+  },
+  {
+    "id": "T010",
+    "attack_us": 640,
+    "release_ms": 102,
+    "mae_db": 0.02263833440544363,
+    "active_mae_db": 0.0835705092458823,
+    "first_10ms_rmse_db": 0.5594060313602672
+  },
+  {
+    "id": "T010",
+    "attack_us": 1000,
+    "release_ms": 102,
+    "mae_db": 0.015595771047538263,
+    "active_mae_db": 0.05755921493730776,
+    "first_10ms_rmse_db": 0.8920640096616327
+  },
+  {
+    "id": "T010",
+    "attack_us": 20,
+    "release_ms": 25,
+    "mae_db": 0.18009076758697792,
+    "active_mae_db": 0.6619475939984208,
+    "first_10ms_rmse_db": 0.7251012337157993
+  },
+  {
+    "id": "T010",
+    "attack_us": 20,
+    "release_ms": 50,
+    "mae_db": 0.1391060229114514,
+    "active_mae_db": 0.5103476842388832,
+    "first_10ms_rmse_db": 0.7303144112098445
+  },
+  {
+    "id": "T010",
+    "attack_us": 20,
+    "release_ms": 75,
+    "mae_db": 0.09573487010341769,
+    "active_mae_db": 0.35036352386145575,
+    "first_10ms_rmse_db": 0.7320882241067143
+  },
+  {
+    "id": "T010",
+    "attack_us": 20,
+    "release_ms": 150,
+    "mae_db": 0.14615483789151684,
+    "active_mae_db": 0.5041302041011038,
+    "first_10ms_rmse_db": 0.7338799685501568
+  },
+  {
+    "id": "T010",
+    "attack_us": 20,
+    "release_ms": 200,
+    "mae_db": 0.23587754200973374,
+    "active_mae_db": 0.7394653613033211,
+    "first_10ms_rmse_db": 0.7343322843045846
+  }
+]

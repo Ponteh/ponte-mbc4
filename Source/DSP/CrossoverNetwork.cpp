@@ -19,6 +19,19 @@ void CrossoverNetwork::reset() noexcept
     }
 }
 
+bool CrossoverNetwork::isQuiet(const int activeChannels) const noexcept
+{
+    for (int i = 0; i < std::min(activeChannels, numChannels); ++i)
+    {
+        const auto& f = filters[static_cast<std::size_t>(i)];
+        for (int j = 0; j < numBands - 1; ++j)
+            if (!f.split[static_cast<std::size_t>(j)].isQuiet()) return false;
+        if (numBands >= 3 && !f.compensation[0].isQuiet()) return false;
+        if (numBands == 4 && (!f.compensation[1].isQuiet() || !f.compensation[2].isQuiet())) return false;
+    }
+    return true;
+}
+
 void CrossoverNetwork::setBandCount(const int count) noexcept
 {
     numBands = std::clamp(count, 2, maxBands);

@@ -7,6 +7,8 @@ void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlock
                                   const int numChannels)
 {
     sampleRate = std::max(1.0, newSampleRate);
+    gainSmoothing = std::exp(-1.0 / (sampleRate * 0.02));
+    routeSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
     preparedBlockSize = std::max(1, maxBlockSize);
     preparedChannels = std::clamp(numChannels, 1, maxChannels);
     crossover.prepare(sampleRate, preparedChannels);
@@ -33,6 +35,7 @@ void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlock
 
 void MultiBandCompressor::reset() noexcept
 {
+    activity = Activity::active;
     crossover.reset();
     detectorCrossover.reset();
     for (auto& state : ballistics) state.reset();
@@ -49,6 +52,8 @@ void MultiBandCompressor::reset() noexcept
 
 void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noexcept
 {
+    if (parameters == currentParameters) return;
+    const auto previous = currentParameters;
     currentParameters = parameters;
     currentParameters.numBands = std::clamp(parameters.numBands, 2, maxBands);
     currentParameters.inputGainDb = clampFinite(parameters.inputGainDb, -24.0, 24.0, 0.0);
@@ -69,6 +74,17 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
         const auto mode = std::clamp(static_cast<int>(band.tcMode), 0, 2);
         band.tcMode = static_cast<TCMode>(mode);
     }
+    if (previous != currentParameters) activity = Activity::active;
+    for (std::size_t i = 0; i < curves.size(); ++i)
+    {
+        curves[i].threshold.store(currentParameters.bands[i].thresholdDb, std::memory_order_relaxed);
+        curves[i].ratio.store(currentParameters.bands[i].ratio, std::memory_order_relaxed);
+        curves[i].knee.store(currentParameters.bands[i].knee, std::memory_order_relaxed);
+    }
+    inputGainTarget = decibelsToGain(currentParameters.inputGainDb);
+    outputGainTarget = decibelsToGain(currentParameters.outputGainDb);
+    for (std::size_t i = 0; i < bandGainTargets.size(); ++i)
+        bandGainTargets[i] = decibelsToGain(currentParameters.bands[i].gainDb);
     crossover.setBandCount(currentParameters.numBands);
     detectorCrossover.setBandCount(currentParameters.numBands);
 }
@@ -103,16 +119,35 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         for (int channel = 0; channel < detectorChannelsToProcess; ++channel)
             if (detectorChannels[channel] == nullptr) return;
 
+    // Inspect raw program AND key. No amplitude gate: even a subnormal wakes us.
+    auto exactSilence = true;
+    for (int channel = 0; exactSilence && channel < channelsToProcess; ++channel)
+        for (int sample = 0; sample < sampleCount; ++sample)
+            if (channels[channel][sample] != 0.0f) { exactSilence = false; break; }
+    for (int channel = 0; exactSilence && channel < detectorChannelsToProcess; ++channel)
+        for (int sample = 0; sample < sampleCount; ++sample)
+            if (detectorChannels[channel][sample] != 0.0f) { exactSilence = false; break; }
+    if (!napEnabled || !exactSilence || channelsToProcess != previousAudioChannels
+        || detectorChannelsToProcess != previousDetectorChannels)
+        activity = Activity::active;
+    previousAudioChannels = channelsToProcess;
+    previousDetectorChannels = detectorChannelsToProcess;
+    if (activity == Activity::sleeping)
+    {
+        // Preserve the coefficient update phase, including across host block sizes.
+        const auto countdown = std::max(1, crossoverUpdateCountdown);
+        crossoverUpdateCountdown = ((countdown - 1 - sampleCount % 16) % 16 + 16) % 16 + 1;
+        // Do not erase pending peaks not yet consumed by the GUI.
+        publishMeters({}, {}, {}, {});
+        return;
+    }
+
     const auto bandsToProcess = currentParameters.numBands;
-    const auto inputTarget = decibelsToGain(currentParameters.inputGainDb);
-    const auto outputTarget = decibelsToGain(currentParameters.outputGainDb);
-    const auto smoothing = std::exp(-1.0 / (sampleRate * 0.02));
-    const auto routingSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
-    const auto crossoverSmoothing = 1.0 - std::exp(-1.0 / (sampleRate * 0.02));
-    std::array<double, maxBands> bandGainTargets;
-    for (int band = 0; band < maxBands; ++band)
-        bandGainTargets[static_cast<std::size_t>(band)] = decibelsToGain(
-            currentParameters.bands[static_cast<std::size_t>(band)].gainDb);
+    const auto inputTarget = inputGainTarget;
+    const auto outputTarget = outputGainTarget;
+    const auto smoothing = gainSmoothing;
+    const auto routingSmoothing = routeSmoothing;
+    const auto crossoverSmoothing = 1.0 - gainSmoothing;
     const auto anySolo = [&]
     {
         for (int band = 0; band < bandsToProcess; ++band)
@@ -232,6 +267,31 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         }
     }
 
+    if (napEnabled && exactSilence)
+    {
+        activity = Activity::draining;
+        auto quiet = crossover.isQuiet(channelsToProcess)
+            && (!useExternalDetector || detectorCrossover.isQuiet(detectorChannelsToProcess))
+            && smoothGain(inputGainCurrent, inputTarget, smoothing) == inputGainCurrent
+            && smoothGain(outputGainCurrent, outputTarget, smoothing) == outputGainCurrent;
+        for (std::size_t i = 0; quiet && i < crossoverCurrent.size(); ++i)
+            quiet = crossoverCurrent[i] + crossoverSmoothing
+                * (currentParameters.crossoverHz[i] - crossoverCurrent[i]) == crossoverCurrent[i];
+        for (int band = 0; quiet && band < bandsToProcess; ++band)
+        {
+            const auto i = static_cast<std::size_t>(band);
+            const auto& p = currentParameters.bands[i];
+            const auto soloTarget = !anySolo || p.solo ? 1.0 : 0.0;
+            quiet = ballistics[i].isQuiet() && biteProcessors[i].isQuiet()
+                && smoothGain(bandGainCurrent[i], bandGainTargets[i], smoothing) == bandGainCurrent[i]
+                && inputMixCurrent[i] == (p.enabled ? 1.0 : 0.0)
+                && (smoothGain(soloMixCurrent[i], soloTarget, routingSmoothing) == soloMixCurrent[i]
+                    || (soloTarget == 0.0 && soloMixCurrent[i] < 1.0e-24));
+        }
+        // Freeze only exhausted active states. Dormant bands/filters retain
+        // exactly the history they would have kept without nap.
+        if (quiet) activity = Activity::sleeping;
+    }
     publishMeters(inputPeaks, outputPeaks, maximumGr, masterPeaks);
 }
 
@@ -287,8 +347,16 @@ void MultiBandCompressor::discardPendingMeterPeaks() noexcept
 double MultiBandCompressor::getStaticOutputDb(const int band, const double inputDb) const noexcept
 {
     if (band < 0 || band >= maxBands) return inputDb;
-    const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
-    return gainComputer.computeOutputDb(inputDb, p.thresholdDb, p.ratio, p.knee);
+    const auto p = getStaticCurveParameters(band);
+    return gainComputer.computeOutputDb(inputDb, p[0], p[1], p[2]);
+}
+
+std::array<double, 3> MultiBandCompressor::getStaticCurveParameters(const int band) const noexcept
+{
+    if (band < 0 || band >= maxBands) return { 0.0, 1.0, 0.0 };
+    const auto& curve = curves[static_cast<std::size_t>(band)];
+    return { curve.threshold.load(std::memory_order_relaxed),
+             curve.ratio.load(std::memory_order_relaxed), curve.knee.load(std::memory_order_relaxed) };
 }
 
 double MultiBandCompressor::getBandMagnitudeDb(const int band, const double frequency) const noexcept

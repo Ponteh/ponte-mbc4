@@ -13,6 +13,7 @@ public:
 
     void prepare(double sampleRate, int channels) noexcept;
     void reset() noexcept;
+    bool isQuiet(int activeChannels) const noexcept;
     void setBandCount(int count) noexcept;
     void setFrequencies(const std::array<double, 3>& frequencies) noexcept;
     void processSample(int channel, double input, std::array<double, maxBands>& bands) noexcept;

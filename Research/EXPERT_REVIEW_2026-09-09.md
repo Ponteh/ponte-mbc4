@@ -516,3 +516,18 @@ in luogo del sollievo transiente condiviso con i modi manuali. R1/R2 BITE,
 rilascio Auto e dinamica visiva invariati. Versione pubblica di prova 0.2.3.
 I nuovi dati non chiudono il confronto su voce reale o sui meter GR compressi.
 [Misure, build/test e limiti](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-23-corrected/REPORT.md).
+
+## Voce e Auto: verifica del 24 settembre 2026
+
+Ricevuta la sorgente vocale MP3 e verificati i render R1 250/500 ms:
+MAE audio 0,134/0,125 dB, contrasto fra le release 0,032 dB. I video mostrano
+tutte le IN attive, diversamente dal primo esempio IN 2/3. Manca il neutro
+originale della voce e rimane da misurare la GR visuale sincronizzata.
+Non si applicano compensazioni al meter per correggere differenze audio.
+
+Auto modello 9 riduce l'errore attivo sul rumore da 1,111 a 0,293 dB e
+migliora i quattro attacchi BITE verificati. Acquisizioni native 96/192 kHz
+ricevute e confrontate; buffer DAW 512 confermato. T045 MC303 ALL conserva
+un'incongruenza per tono e un peggioramento noto, documentati nel rapporto.
+Il confronto sidechain originale e' non eseguibile nel setup disponibile.
+[Misure e limiti aggiornati](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-24/REPORT.md).
