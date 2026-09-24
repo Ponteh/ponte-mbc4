@@ -4262,3 +4262,15 @@ Non e' una conclusione negativa su ogni possibile schema di oversampling.
 Risultati, riproduzione, limiti e collaudi ancora aperti nella
 [nota tecnica permanente](Research/NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md)
 e nel [rapporto dei nuovi originali e della voce](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-24/REPORT.md).
+
+## Q. Verifica tecnica locale finale della 0.2.3
+
+DSP_MODEL_9 e schema invariati. Aggiunti strumenti diagnostici esclusi dal
+VST3: matrice wrapper/DSP, guardie allocazioni e import lock/attese/I/O,
+stress concorrente, profilo GUI/wrapper e verifica stato con tag modello 5.
+2.160 casi e 21.600 callback: errore massimo zero; 1.024 callback concorrenti
+senza violazioni. Suite locale 4/4 PASS. Corretto anche il target nap mancante
+nella build CI. I picchi temporali osservati non sono nascosti e richiedono
+collaudo sul driver/host reale. La semantica audio non cambia in questa revisione.
+[Metodo, dati e limiti](Research/technical_validation_2026-09-24/REPORT.md),
+[prove utente residue](Research/VALIDAZIONE_UTENTE_0.2.3.md).

@@ -1,0 +1,5 @@
+{
+  "cases": 2160, "callbacks": 21600, "installed_import_hooks": 11,
+  "allocations": 0, "frees": 0, "locks": 0, "waits": 0, "io": 0,
+  "max_audio_error": 0, "concurrent_callbacks": 1024, "concurrent_violations": 0, "failures": 0, "passed": true
+}

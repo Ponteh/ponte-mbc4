@@ -115,3 +115,11 @@ onsets (320 us, unchanged 102 ms release); existing Auto presets change sound.
 Full-chain oversampling is not included: measured alias benefits are uneven
 and processing response and CPU cost change. This is a test build, not a
 new public release. See [implementation, measurements and known limits](Research/NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md).
+
+## Verifica tecnica locale conclusiva - 24 settembre 2026
+
+Matrice wrapper/DSP e audit callback, stress concorrente, profilo GUI e
+correzione workflow CI completati; suite locale 4/4 PASS. Nessuna nuova
+legge audio o compensazione del meter. Restano host reale, T045 e confronto
+visuale con l'originale. [Risultati e limiti](Research/technical_validation_2026-09-24/REPORT.md);
+[prove mirate dell'utente](Research/VALIDAZIONE_UTENTE_0.2.3.md).

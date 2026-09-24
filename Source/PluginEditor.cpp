@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include "Parameters.h"
 #include "PontePalette.h"
+#include "Diagnostics.h"
 #include <cmath>
 
 namespace {
@@ -115,6 +116,7 @@ void ParameterKnob::updateValueText()
     if (valueDisplay.isBeingEdited()) return;
     const auto current = slider.getValue();
     if (!valueTextDirty && current == lastFormattedValue) return;
+    MC2000_MEASURE(knobText);
     valueDisplay.setText(slider.getTextFromValue(current), juce::dontSendNotification);
     lastFormattedValue = current;
     valueTextDirty = false;
@@ -620,6 +622,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
     if (frequencies != cachedResponseFrequencies || inputBands != cachedInputBands
         || responseBandCount != cachedResponseBandCount || sampleRate != cachedResponseSampleRate)
     {
+        MC2000_MEASURE(response);
         responseChanged = true;
         for (std::size_t bin = 0; bin < responseDb.size(); ++bin)
             responseDb[bin] = inputResponseDb(static_cast<double>(bin) * sampleRate / fftSize);
@@ -650,7 +653,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
             std::fill(fftWork.begin(), fftWork.end(), 0.0f);
             std::copy(fftInput[channel].begin(), fftInput[channel].end(), fftWork.begin());
             fftWindow.multiplyWithWindowingTable(fftWork.data(), fftSize);
-            fft.performFrequencyOnlyForwardTransform(fftWork.data());
+            { MC2000_MEASURE(fft); fft.performFrequencyOnlyForwardTransform(fftWork.data()); }
             ++fftTransformCount;
             for (int bin = 0; bin < fftSize / 2; ++bin)
             {
@@ -686,6 +689,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
 
 void CrossoverPlot::paint(juce::Graphics& g)
 {
+    MC2000_MEASURE(paint);
     const auto area = getLocalBounds().toFloat();
     const auto plot = area.withTrimmedLeft(34.0f).withTrimmedRight(8.0f)
                           .withTrimmedTop(18.0f).withTrimmedBottom(20.0f);
@@ -838,6 +842,7 @@ void CompressionPlot::setDisplayedMeters(
 
 void CompressionPlot::paint(juce::Graphics& g)
 {
+    MC2000_MEASURE(paint);
     const auto area = getLocalBounds().toFloat();
     const auto plot = area.withTrimmedLeft(32.0f).withTrimmedRight(8.0f)
                           .withTrimmedTop(21.0f).withTrimmedBottom(20.0f);
@@ -1056,6 +1061,7 @@ void PonteMC2000AudioProcessorEditor::paint(juce::Graphics& g)
 
 void PonteMC2000AudioProcessorEditor::resized()
 {
+    MC2000_MEASURE(layout);
     processor.editorWidth.store(getWidth());
     processor.editorHeight.store(getHeight());
     auto area = getLocalBounds().reduced(12);
@@ -1257,6 +1263,7 @@ void PonteMC2000AudioProcessorEditor::updateContextHelp()
 
 void PonteMC2000AudioProcessorEditor::timerCallback()
 {
+    MC2000_MEASURE(guiTick);
     crossoverPlot.setSpectrumActive(isShowing());
     if (!isShowing())
     {

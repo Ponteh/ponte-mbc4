@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Diagnostics.h"
 
 PonteMC2000AudioProcessor::PonteMC2000AudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -36,7 +37,7 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 {
     juce::ignoreUnused(midi);
     juce::ScopedNoDenormals noDenormals;
-    engine.setParameters(parameterReader.read(linkRuntime));
+    { MC2000_MEASURE(snapshot); engine.setParameters(parameterReader.read(linkRuntime)); }
 
     auto mainBuffer = getBusBuffer(buffer, false, 0);
     auto sidechainBuffer = getBusBuffer(buffer, true, 1);
@@ -50,12 +51,14 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         detector[0] = sidechainBuffer.getReadPointer(0);
         if (sidechainBuffer.getNumChannels() > 1) detector[1] = sidechainBuffer.getReadPointer(1);
     }
+    MC2000_MEASURE(dsp);
     engine.process(program.data(), mainBuffer.getNumChannels(), detector.data(),
                    sidechainBuffer.getNumChannels(), mainBuffer.getNumSamples());
 }
 
 void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<float>& buffer) noexcept
 {
+    MC2000_MEASURE(fifo);
     if (spectrumConsumers.load(std::memory_order_acquire) == 0) return;
     const auto channels = buffer.getNumChannels();
     if (channels <= 0) return;
