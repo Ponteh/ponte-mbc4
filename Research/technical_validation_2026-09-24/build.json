@@ -38,6 +38,9 @@
     "Tests\\UpdateCheckProbe.cpp": "4cd4fd7cfa8fd6ad4b94c93dd8ecb8abbb9136b110ee6b47573df459e75aaae3"
   },
   "local_tests": "4/4 PASS, 177.90 s",
-  "remote_ci": "pending",
-  "gui_catalog_sha256": "36fa5ef5b06681b3281b3abdc3fe0f34da031099589238e367da444d90620dc2"
+  "remote_ci": "https://github.com/Ponteh/ponte-mbc4/actions/runs/36048630878",
+  "gui_catalog_sha256": "36fa5ef5b06681b3281b3abdc3fe0f34da031099589238e367da444d90620dc2",
+  "remote_ci_status": "4/4 PASS",
+  "diagnostic_flag_in_vst_project": false,
+  "diagnostic_flag_in_test_project": true
 }

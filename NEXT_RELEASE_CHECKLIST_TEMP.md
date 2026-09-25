@@ -1,6 +1,6 @@
 # Checklist operativa 0.2.3 - stato consolidato
 
-Aggiornata il 24 settembre 2026. Candidata **0.2.3, DSP_MODEL_9**.
+Aggiornata il 25 settembre 2026. Candidata **0.2.3, DSP_MODEL_9**.
 Questa e' la lista operativa: il piano dettagliato e gli stati storici
 rimangono nella storia Git fino al commit `72e474b`. Non confondere una
 funzione implementata con equivalenza perfetta all'originale o collaudo DAW.
@@ -89,7 +89,8 @@ Eliminare questo file soltanto alla chiusura delle voci applicabili.
   instabili nei test CI. Benchmark eseguiti separatamente.
 - [x] Corretto workflow: compilazione target nap, test matrice realtime,
   archiviazione log/JUnit/rapporti anche in caso di errore.
-- [ ] Esecuzione remota GitHub sul commit aggiornato: da registrare dopo push.
+- [x] CI GitHub sul commit `0cad3d5`: build VST3 e **4/4 test PASS**;
+  [risultato remoto](Research/technical_validation_2026-09-24/ci.json).
 - [x] POC, audit, recensione, README, CompanyGUI, dati e script aggiornati.
 - [x] Build VST3 candidata 0.2.3 verificata, pacchetto e hash archiviati.
 - [ ] Collaudo utente e risoluzione/accettazione esplicita dei limiti residui.
@@ -103,5 +104,5 @@ Eliminare questo file soltanto alla chiusura delle voci applicabili.
 - [Solo le prove che richiedono l'utente](Research/VALIDAZIONE_UTENTE_0.2.3.md).
 
 Il lavoro tecnico locale qui elencato e' completato nel perimetro misurato.
-Le caselle residue distinguono host/originale, verifica remota e pubblicazione;
+Le caselle residue riguardano host/originale e pubblicazione;
 non attestano bug gia' dimostrati ne' richiedono di rifare la matrice audio.

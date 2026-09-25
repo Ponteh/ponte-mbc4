@@ -13,7 +13,7 @@ La versione 0.2.3 da sola non distingue le diverse build di prova.
 | Passaggio | Cosa verificare |
 | --- | --- |
 | Voce, batteria e mix; R1/R2/Auto, BITE 1/5/10 | Nessun click, perdita di canali, distorsione inattesa o livello che cambia aprendo la GUI. |
-| Lasciare 15 s di silenzio dopo il segnale, poi un transiente | Primo attacco completo, nessun fade aggiunto o picco vecchio nei meter. Ripetere con Release 2500 ms. |
+| Lasciare 15 s di silenzio dopo il segnale, poi un transiente | Primo attacco completo, nessun fade aggiunto o picco vecchio nei meter. Con Release 2500 ms usare anche una pausa di 100 s: il nap deve attendere la memoria lunga, senza forzarla a zero. |
 | Ingresso live con monitor attivo e trasporto fermo | Il segnale continua a passare; il nap non dipende dal tasto Play. |
 | Play/stop, seek, loop e bypass host | Nessun blocco o coda anomala; meter e spettro ripartono con dati nuovi. |
 | Automatizzare gain, crossover, IN/SOLO e cambio algoritmo | Niente dropout o stato errato, anche dopo il silenzio. |

@@ -48,7 +48,7 @@ Revisione complementare del percorso chiamato:
 
 ## Profilazione GUI e wrapper
 
-Profilo GUI: un warm-up e cinque ripetizioni, 1/4 istanze, editor chiuso,
+Profilo GUI con parametri neutri (ratio 1:1, R1): un warm-up e cinque ripetizioni, 1/4 istanze, editor chiuso,
 esistente ma nascosto, visibile fermo, animato e resize. Timer JUCE reali,
 rete disattivata. Audio sintetico sul thread del test, cronometrato a parte;
 il tempo CPU del thread comprende callback, dispatch e rendering forzato.
@@ -63,7 +63,8 @@ e tempi del thread sono osservazioni Windows; l'allocatore puo' mantenere
 cache senza indicare una perdita di memoria.
 
 Profilo callback: 54 condizioni, Fs 48/96/192 kHz, buffer 64/512/2048,
-R1/R2/Auto, consumer FFT OFF/ON, quattro bande BITE 5; cinque ripetizioni
+R1/R2/Auto, consumer FFT OFF/ON, quattro bande BITE 5, ratio 4:1,
+threshold -30 dB, attack 10 ms, release 250 ms; cinque ripetizioni
 di 64 blocchi dopo warm-up. Riporta mediana, p99 empirico (ordine 63 su 64),
 massimo e deadline N/Fs. Sistema condiviso: le code dello scheduler non
 sono attribuite automaticamente al DSP. Nessuna soglia CPU fragile in CI.
@@ -73,8 +74,9 @@ sono attribuite automaticamente al DSP. Nessuna soglia CPU fragile in CI.
 Corretto il workflow Windows: CTest registrava il nap, ma il comando build
 non compilava MC2000NapValidation. Aggiunto quel target e il nuovo test
 MC2000RealtimeMatrix; log e rapporti diagnostici vengono archiviati anche
-in caso di fallimento. La CI remota va distinta dall'esecuzione locale:
-finche' non gira su GitHub non viene dichiarata PASS.
+in caso di fallimento. CI remota verificata sul commit `0cad3d5`: **build VST3 e 4/4 test PASS**.
+[Job GitHub](https://github.com/Ponteh/ponte-mbc4/actions/runs/36048630878),
+[risultati JUnit e matrice remota](ci.json).
 
 ```powershell
 cmake --build build/MC2000-bite-2026-09-23 --config Release --target MC2000Tests MC2000UITests MC2000NapValidation PonteMC2000_VST3 --parallel 2
