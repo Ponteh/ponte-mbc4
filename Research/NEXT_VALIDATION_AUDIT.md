@@ -139,3 +139,13 @@ meter: mantenuto il modello dei livelli, GR grafica ricalibrata 45/90 ms.
 Nessuna modifica audio. Video muti e meter McDSP IN selezionato limitano
 la latenza assoluta e la verifica OUT per banda. Punto 1 host ancora atteso.
 [Rapporto aggiornato](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
+
+## Conferma del punto 1 e nuova segnalazione GUI
+
+L'utente conferma PASS per tutti gli otto comportamenti del punto 1 della
+guida di validazione. Rimane aperta la scattosita' grafica percepita dopo
+l'ottimizzazione. Il timer principale e' 30 Hz sia prima sia dopo; la
+causa della regressione non e' ancora misurata. Proposta: verificare
+regolarita' dei frame e paint in host, poi valutare animazioni a 60 Hz
+separate dalla misura dei meter, senza cambiare DSP o calibrazione GR.
+Questa e' una proposta, non una modifica implementata.
