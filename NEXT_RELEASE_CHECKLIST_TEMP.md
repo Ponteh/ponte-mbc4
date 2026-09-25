@@ -22,8 +22,10 @@ Eliminare questo file soltanto alla chiusura delle voci applicabili.
   tutte IN; manca un neutro originale e non coincide col primo esempio IN 2/3.
 - [x] Sidechain originale T049-T054: **N/A nel setup disponibile**, non
   acquisita. Sidechain Ponte verificata internamente; nessuna richiesta di rifarla.
-- [ ] Chiarire T045 e verificare il caso esatto della recensione: servono
-  preset/sessione originale e catture mirate dell'utente, non altri 80 export.
+- [x] Analizzati T044/T045 rifatti e voce SOLO 2/3 del 25 settembre:
+  anomalia T045 ridotta a 0,29-0,30 dB MAE attiva, voce a 0,19 dB circa.
+- [ ] Confermare Fs nativo della nuova coppia T044/T045 (file 192 kHz);
+  completare il riferimento neutro/dry della voce per la GR assoluta.
 - [ ] Ascolti su materiale reale e nuove sorgenti indipendenti per estendere
   la validazione. I dati attuali non certificano ogni ratio/knee/BITE originale.
 
@@ -71,7 +73,10 @@ Eliminare questo file soltanto alla chiusura delle voci applicabili.
 - [x] Profilo timer/FFT/risposta/paint/layout/memoria, 1/4 istanze e cinque
   ripetizioni. Ridisegno software completo distinto dai repaint naturali.
 - [ ] Verifica visiva DPI/display reali, resize e interazioni in Ableton.
-- [ ] Confronto GR/IN/OUT/MAIN sincronizzato con l'originale sulla build nuova.
+- [x] Confronto relativo IN/MAIN e GR sui sei video del 25 settembre;
+  salita GR 45 ms e ritorno 90 ms validati su R250/R500, DSP invariato.
+- [ ] Verifica finale della GUI corretta in host; latenza assoluta non
+  misurabile dai video muti. OUT per banda originale non acquisito (IN selezionato).
 
 ## 5. Oversampling
 
@@ -93,6 +98,8 @@ Eliminare questo file soltanto alla chiusura delle voci applicabili.
   [risultato remoto](Research/technical_validation_2026-09-24/ci.json).
 - [x] POC, audit, recensione, README, CompanyGUI, dati e script aggiornati.
 - [x] Build VST3 candidata 0.2.3 verificata, pacchetto e hash archiviati.
+- [x] Implementata la correzione GR dai nuovi video; test e consegna
+  [nel rapporto del 25 settembre](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
 - [ ] Collaudo utente e risoluzione/accettazione esplicita dei limiti residui.
 - [ ] Pubblicazione release quando autorizzata; poi eliminazione di questa
   checklist. L'autorizzazione alla 0.2.2 non pubblica automaticamente la 0.2.3.
@@ -102,6 +109,7 @@ Eliminare questo file soltanto alla chiusura delle voci applicabili.
 - [Verifiche tecniche e loro limiti](Research/technical_validation_2026-09-24/REPORT.md).
 - [Nap, CPU, Auto e oversampling](Research/NAP_CPU_AUTO_OVERSAMPLING_2026-09-24.md).
 - [Solo le prove che richiedono l'utente](Research/VALIDAZIONE_UTENTE_0.2.3.md).
+- [Nuovi render e correzione GR](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
 
 Il lavoro tecnico locale qui elencato e' completato nel perimetro misurato.
 Le caselle residue riguardano host/originale e pubblicazione;

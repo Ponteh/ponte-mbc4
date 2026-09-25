@@ -128,3 +128,14 @@ correzione workflow CI completati; suite locale 4/4 PASS. Nessuna nuova
 legge audio o compensazione del meter. Restano host reale, T045 e confronto
 visuale con l'originale. [Risultati e limiti](technical_validation_2026-09-24/REPORT.md);
 [prove mirate dell'utente](VALIDAZIONE_UTENTE_0.2.3.md).
+
+## Consegna del 25 settembre 2026
+
+T044/T045 rifatti riducono la grande anomalia precedente (MAE attiva circa
+0,29-0,30 dB); WAV 192 kHz, frequenza nativa di questa coppia da confermare.
+Voci SOLO 2/3 confrontate: circa 0,19 dB di scarto medio, senza neutro
+originale/dry WAV. Sei video 60 fps permettono la verifica relativa dei
+meter: mantenuto il modello dei livelli, GR grafica ricalibrata 45/90 ms.
+Nessuna modifica audio. Video muti e meter McDSP IN selezionato limitano
+la latenza assoluta e la verifica OUT per banda. Punto 1 host ancora atteso.
+[Rapporto aggiornato](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).

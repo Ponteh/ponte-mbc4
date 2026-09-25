@@ -1,5 +1,28 @@
 # 0.2.3: prove che richiedono Ableton o l'originale
 
+## Stato dopo la consegna del 25 settembre
+
+Ricevuti e analizzati T044/T045 rifatti, i sei video METER16/17 e le due
+voci SOLO 2/3. **Non rifare queste prove in blocco.**
+[Rapporto e correzione grafica GR](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
+
+- Punto 1: in attesa delle tue conferme, come concordato. Per il collaudo
+  usa la build `Ponte-MBC4-0.2.3-model9-meter-2026-09-25-Windows-x64.zip`.
+- Punto 2: la grande anomalia T045 e' risolta nei nuovi file. Sono a
+  **192 kHz**: conferma se anche il motore DAW era a 192 kHz. Nessun nuovo
+  export richiesto prima di questa conferma.
+- Punto 3: tempi relativi misurati e salita GR corretta; audio video muto.
+  Rimane la verifica finale della nuova build. Per misurare anche latenza
+  assoluta serve audio/PRINT sincronizzato; gli export offline non bastano.
+  Nei video originali e' selezionato IN: se vuoi chiudere anche OUT per
+  banda, occorre una cattura con OUT selezionato, non l'intero pacchetto.
+- Punto 4: confronto SOLO 2/3 effettuato. Per chiudere la GR assoluta della
+  recensione mancano neutro originale ratio 1:1 e dry WAV della stessa clip
+  e dello stesso routing; il precedente MP3 e' gia' stato usato.
+
+Le istruzioni sotto conservano il protocollo completo come riferimento;
+non costituiscono una nuova richiesta di ripetere tutti i passaggi.
+
 Non rifare gli 80 export gia' analizzati. Non servono prove di sidechain
 esterna sul McDSP non disponibile nel tuo setup. I confronti automatici
 Ponte e la diagnostica tecnica sono separati da queste acquisizioni.

@@ -780,9 +780,27 @@ void testVisualMeterBallistics()
     expectNear(slow.update(-2, .033), -2, 0, "fresh peaks attack immediately");
     expect(slow.update(-100, 12) < -99, "level meter drains when audio callbacks stop");
     GainReductionMeterBallistics gr;
-    expectNear(gr.update(10.5, .033), 10.5, 0, "GR plateau has no artificial calibration offset");
+    const auto first = gr.update(10.5, 1.0 / 30);
+    expect(first > 5 && first < 6, "GR has a finite visual attack for short peaks");
+    expectNear(gr.update(10.5, 3), 10.5, 1.e-10, "GR plateau has no artificial calibration offset");
     gr.update(0, 3);
     expect(gr.value() < .001, "GR drains without new audio callbacks");
+    GainReductionMeterBallistics grSlow, grFast, grJitter;
+    for (int n=0; n<6; ++n) grSlow.update(12, 1.0/30);
+    for (int n=0; n<12; ++n) grFast.update(12, 1.0/60);
+    for (const auto dt : {.011,.073,.016,.1}) grJitter.update(12,dt);
+    expectNear(grSlow.value(),grFast.value(),1.e-10,"GR attack is independent of refresh rate for a held target");
+    expectNear(grSlow.value(),grJitter.value(),1.e-10,"GR attack handles elapsed-time jitter");
+    for (int n=0; n<15; ++n) grSlow.update(0,1.0/30);
+    for (int n=0; n<30; ++n) grFast.update(0,1.0/60);
+    grJitter.update(0,.5);
+    expectNear(grSlow.value(),grFast.value(),1.e-10,"GR decay is independent of refresh rate for a held target");
+    expectNear(grSlow.value(),grJitter.value(),1.e-10,"GR decay handles elapsed-time jitter");
+    const auto held=grSlow.value();
+    expectNear(grSlow.update(12,0),held,0,"zero elapsed time does not create a GR peak");
+    expectNear(grSlow.update(12,-1),held,0,"negative elapsed time leaves GR unchanged");
+    grSlow.reset();
+    expectNear(grSlow.value(),0,0,"GR reset clears display history");
 }
 
 } // namespace

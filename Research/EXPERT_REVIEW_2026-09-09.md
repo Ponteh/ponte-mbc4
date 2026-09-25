@@ -539,3 +539,17 @@ correzione workflow CI completati; suite locale 4/4 PASS. Nessuna nuova
 legge audio o compensazione del meter. Restano host reale, T045 e confronto
 visuale con l'originale. [Risultati e limiti](technical_validation_2026-09-24/REPORT.md);
 [prove mirate dell'utente](VALIDAZIONE_UTENTE_0.2.3.md).
+
+## Nuovi video e voce SOLO 2/3 - 25 settembre 2026
+
+I nuovi burst documentano picchi grafici GR troppo alti sulle durate brevi.
+Corretto il solo display: salita 45 ms, ritorno 90 ms, nessun offset GR e
+nessuna modifica audio. Fit R250 e verifica separata R500 migliorano la
+MAE simulata da 0,745/0,652 a 0,239/0,294 dB. IN/MAIN gia' vicini al
+modello, conservati. I video sono muti: resta il limite sulla latenza assoluta.
+
+Voce acquisita con tutte IN e SOLO 2/3: MAE audio 0,196/0,185 dB,
+allineamento stabile; manca neutro originale/dry WAV. T045 rifatto riduce
+la precedente grande anomalia a circa 0,29-0,30 dB. Il punto 1 in host
+resta in attesa delle conferme dell'utente.
+[Rapporto, dati e limiti](NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).

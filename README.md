@@ -123,3 +123,11 @@ correzione workflow CI completati; suite locale 4/4 PASS. Nessuna nuova
 legge audio o compensazione del meter. Restano host reale, T045 e confronto
 visuale con l'originale. [Risultati e limiti](Research/technical_validation_2026-09-24/REPORT.md);
 [prove mirate dell'utente](Research/VALIDAZIONE_UTENTE_0.2.3.md).
+
+## Correzione grafica GR - 25 settembre 2026
+
+Nuovi video originali/Ponte: GR con salita 45 ms e ritorno 90 ms, senza
+offset e senza modifiche audio (0.2.3, DSP_MODEL_9). I render T044/T045
+rifatti e le voci SOLO 2/3 sono analizzati nel
+[rapporto aggiornato](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
+Il collaudo Ableton resta in attesa dell'utente; nessuna release pubblicata.

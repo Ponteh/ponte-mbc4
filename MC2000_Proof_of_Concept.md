@@ -4274,3 +4274,27 @@ nella build CI. I picchi temporali osservati non sono nascosti e richiedono
 collaudo sul driver/host reale. La semantica audio non cambia in questa revisione.
 [Metodo, dati e limiti](Research/technical_validation_2026-09-24/REPORT.md),
 [prove utente residue](Research/VALIDAZIONE_UTENTE_0.2.3.md).
+
+## R. Risposta GR dai video del 25 settembre 2026
+
+La candidata 0.2.3 conserva DSP_MODEL_9. I nuovi METER16 confermano i tempi
+relativi IN/MAIN; METER17 distingue invece un eccesso di picco grafico GR
+nei burst 10/30 ms. L'inseguitore GUI GR usa ora salita 45 ms e discesa
+90 ms, integrate con il tempo effettivamente trascorso. Prima la salita
+era istantanea e la discesa 150 ms. Guadagno statico unitario, nessun offset
+GR; mailbox dei picchi e processamento audio restano invariati.
+
+Fit sulle bande 2/3 a R250, verifica fuori fit a R500: MAE simulata contro
+il display originale 0,745 -> 0,239 dB e 0,652 -> 0,294 dB. E' un modello
+comportamentale, non identificazione del codice McDSP. I video 60 fps sono
+muti: nessuna nuova misura di latenza assoluta. Il meter originale mostra
+IN stereo; OUT per banda non e' stato acquisito separatamente.
+
+T044/T045 rifatti eliminano la precedente anomalia fra bande: MAE attiva
+0,29-0,30 dB, contro 1,05 dB del vecchio T045. I nuovi WAV sono 192 kHz,
+Fs nativo ancora da confermare. Voce con tutte IN e SOLO 2/3: MAE circa
+0,196/0,185 dB per R250/R500; manca un neutro originale per la GR assoluta.
+Questi scarti non giustificano modifiche al DSP Auto/R1.
+
+[Dati, metodo, build e limiti](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
+Il collaudo utente del punto 1 resta in attesa; nessuna release pubblicata.
