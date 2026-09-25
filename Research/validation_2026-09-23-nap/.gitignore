@@ -1,4 +1,0 @@
-# Small measurement tables; raw audio remains excluded by project rules.
-!nap_benchmark.csv
-!oversampling_cost.csv
-!performance_paired.csv
