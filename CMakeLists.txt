@@ -117,51 +117,66 @@ if (MC2000_BUILD_TESTS)
     target_compile_definitions(MC2000UpdateProbe PRIVATE JUCE_USE_CURL=0)
     target_link_libraries(MC2000UpdateProbe PRIVATE juce::juce_core)
 
-    add_executable(MC2000NapValidation Research/NapValidation.cpp ${MC2000_DSP_SOURCES})
-    target_include_directories(MC2000NapValidation PRIVATE Source)
-    add_test(NAME MC2000NapValidation COMMAND MC2000NapValidation)
-
-    add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
-    target_include_directories(MC2000Performance PRIVATE Source)
-    add_executable(MC2000OriginalPackRender Research/OriginalPackRender.cpp ${MC2000_DSP_SOURCES})
-    target_include_directories(MC2000OriginalPackRender PRIVATE Source)
-    set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
-    if (MC2000_BASELINE_SOURCE_DIR)
-        add_executable(MC2000PerformanceBaseline Research/PerformanceBenchmark.cpp
-            "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
-            "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
-        target_include_directories(MC2000PerformanceBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
-        add_executable(MC2000OriginalPackRenderBaseline Research/OriginalPackRender.cpp
-            "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
-            "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
-        target_include_directories(MC2000OriginalPackRenderBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/NapValidation.cpp")
+        add_executable(MC2000NapValidation Research/NapValidation.cpp ${MC2000_DSP_SOURCES})
+        target_include_directories(MC2000NapValidation PRIVATE Source)
+        add_test(NAME MC2000NapValidation COMMAND MC2000NapValidation)
     endif()
 
-    juce_add_console_app(MC2000BlackBoxAnalysis PRODUCT_NAME "Ponte MBC4 Black Box Analysis")
-    target_sources(MC2000BlackBoxAnalysis PRIVATE
-        Research/BlackBoxAnalysis.cpp
-        ${MC2000_DSP_SOURCES})
-    target_include_directories(MC2000BlackBoxAnalysis PRIVATE Source)
-    target_link_libraries(MC2000BlackBoxAnalysis PRIVATE
-        juce::juce_audio_formats
-        juce::juce_core
-        juce::juce_recommended_config_flags)
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/PerformanceBenchmark.cpp")
+        add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
+        target_include_directories(MC2000Performance PRIVATE Source)
+        set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
+        if (MC2000_BASELINE_SOURCE_DIR)
+            add_executable(MC2000PerformanceBaseline Research/PerformanceBenchmark.cpp
+                "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
+                "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
+            target_include_directories(MC2000PerformanceBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
+        endif()
+    endif()
 
-    juce_add_console_app(MC2000ExtendedAnalysis PRODUCT_NAME "Ponte MBC4 Extended Test-Pack Analysis")
-    target_sources(MC2000ExtendedAnalysis PRIVATE
-        Research/ExtendedPackAnalysis.cpp)
-    target_include_directories(MC2000ExtendedAnalysis PRIVATE Source)
-    target_link_libraries(MC2000ExtendedAnalysis PRIVATE
-        juce::juce_audio_formats
-        juce::juce_core
-        juce::juce_recommended_config_flags)
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/OriginalPackRender.cpp")
+        add_executable(MC2000OriginalPackRender Research/OriginalPackRender.cpp ${MC2000_DSP_SOURCES})
+        target_include_directories(MC2000OriginalPackRender PRIVATE Source)
+        if (MC2000_BASELINE_SOURCE_DIR)
+            add_executable(MC2000OriginalPackRenderBaseline Research/OriginalPackRender.cpp
+                "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
+                "${MC2000_BASELINE_SOURCE_DIR}/DSP/CrossoverNetwork.cpp")
+            target_include_directories(MC2000OriginalPackRenderBaseline PRIVATE "${MC2000_BASELINE_SOURCE_DIR}")
+        endif()
+    endif()
 
-    juce_add_console_app(MC2000NextPackAnalysis PRODUCT_NAME "Ponte MBC4 Next Validation-Pack Analysis")
-    target_sources(MC2000NextPackAnalysis PRIVATE
-        Research/NextPackAnalysis.cpp)
-    target_include_directories(MC2000NextPackAnalysis PRIVATE Source)
-    target_link_libraries(MC2000NextPackAnalysis PRIVATE
-        juce::juce_audio_formats
-        juce::juce_core
-        juce::juce_recommended_config_flags)
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/BlackBoxAnalysis.cpp")
+        juce_add_console_app(MC2000BlackBoxAnalysis PRODUCT_NAME "Ponte MBC4 Black Box Analysis")
+        target_sources(MC2000BlackBoxAnalysis PRIVATE
+            Research/BlackBoxAnalysis.cpp
+            ${MC2000_DSP_SOURCES})
+        target_include_directories(MC2000BlackBoxAnalysis PRIVATE Source)
+        target_link_libraries(MC2000BlackBoxAnalysis PRIVATE
+            juce::juce_audio_formats
+            juce::juce_core
+            juce::juce_recommended_config_flags)
+    endif()
+
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/ExtendedPackAnalysis.cpp")
+        juce_add_console_app(MC2000ExtendedAnalysis PRODUCT_NAME "Ponte MBC4 Extended Test-Pack Analysis")
+        target_sources(MC2000ExtendedAnalysis PRIVATE
+            Research/ExtendedPackAnalysis.cpp)
+        target_include_directories(MC2000ExtendedAnalysis PRIVATE Source)
+        target_link_libraries(MC2000ExtendedAnalysis PRIVATE
+            juce::juce_audio_formats
+            juce::juce_core
+            juce::juce_recommended_config_flags)
+    endif()
+
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/NextPackAnalysis.cpp")
+        juce_add_console_app(MC2000NextPackAnalysis PRODUCT_NAME "Ponte MBC4 Next Validation-Pack Analysis")
+        target_sources(MC2000NextPackAnalysis PRIVATE
+            Research/NextPackAnalysis.cpp)
+        target_include_directories(MC2000NextPackAnalysis PRIVATE Source)
+        target_link_libraries(MC2000NextPackAnalysis PRIVATE
+            juce::juce_audio_formats
+            juce::juce_core
+            juce::juce_recommended_config_flags)
+    endif()
 endif()
