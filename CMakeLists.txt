@@ -117,16 +117,31 @@ if (MC2000_BUILD_TESTS)
     target_compile_definitions(MC2000UpdateProbe PRIVATE JUCE_USE_CURL=0)
     target_link_libraries(MC2000UpdateProbe PRIVATE juce::juce_core)
 
-    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/NapValidation.cpp")
-        add_executable(MC2000NapValidation Research/NapValidation.cpp ${MC2000_DSP_SOURCES})
-        target_include_directories(MC2000NapValidation PRIVATE Source)
-        add_test(NAME MC2000NapValidation COMMAND MC2000NapValidation)
-    endif()
+    juce_add_console_app(MC2000NapValidation PRODUCT_NAME "Ponte MBC4 Nap Validation")
+    target_sources(MC2000NapValidation PRIVATE Tests/NapValidation.cpp ${MC2000_DSP_SOURCES})
+    target_include_directories(MC2000NapValidation PRIVATE Source)
+    target_link_libraries(MC2000NapValidation PRIVATE juce::juce_audio_basics)
+    add_test(NAME MC2000NapValidation COMMAND MC2000NapValidation)
+    set_tests_properties(MC2000NapValidation PROPERTIES TIMEOUT 600)
+endif()
+
+# Experiments never participate in the ordinary test/release build. Archived
+# analyzers can be restored individually; no acquisition archive is required.
+option(MC2000_BUILD_RESEARCH "Build optional research benchmarks and analyzers" OFF)
+if (MC2000_BUILD_RESEARCH)
+    set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
+    foreach(benchmark IN ITEMS OversamplingCost NapBenchmark)
+        if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/${benchmark}.cpp")
+            juce_add_console_app(MC2000${benchmark} PRODUCT_NAME "Ponte MBC4 ${benchmark}")
+            target_sources(MC2000${benchmark} PRIVATE Research/${benchmark}.cpp ${MC2000_DSP_SOURCES})
+            target_include_directories(MC2000${benchmark} PRIVATE Source)
+            target_link_libraries(MC2000${benchmark} PRIVATE juce::juce_dsp)
+        endif()
+    endforeach()
 
     if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/PerformanceBenchmark.cpp")
         add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
         target_include_directories(MC2000Performance PRIVATE Source)
-        set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
         if (MC2000_BASELINE_SOURCE_DIR)
             add_executable(MC2000PerformanceBaseline Research/PerformanceBenchmark.cpp
                 "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"

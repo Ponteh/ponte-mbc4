@@ -562,7 +562,6 @@ void testMeterPaintingAndReopen()
 }
 } // namespace
 
-#include "../Research/OversamplingCost.h"
 #include "TechnicalValidation.h"
 
 int main(int argc, char** argv)
@@ -571,7 +570,11 @@ int main(int argc, char** argv)
     if (argc > 1 && std::string(argv[1]) == "--technical-matrix") return technicalValidation::matrix(argc>2?argv[2]:"technical-matrix.json");
     if (argc > 1 && std::string(argv[1]) == "--gui-profile") return technicalValidation::profile(argc>2?argv[2]:"gui-profile.csv");
     if (argc > 1 && std::string(argv[1]) == "--callback-profile") return technicalValidation::callbackProfile(argc>2?argv[2]:"callback-profile.csv");
-    if (argc > 1 && std::string(argv[1]) == "--oversampling-cost") return benchmarkOversamplingCost();
+    if (argc > 1)
+    {
+        std::cerr << "Unknown test option: " << argv[1] << '\n';
+        return 2;
+    }
     testTiming();
     testHeaderVersions();
     testClosedSpectrumAudio();

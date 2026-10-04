@@ -14,13 +14,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -S . -B build -A x64 -DMC2000_BUILD_TESTS=ON
+        run: cmake -S . -B build -A x64 -DMC2000_BUILD_TESTS=ON -DMC2000_BUILD_RESEARCH=OFF
 
       - name: Build tests and VST3
-        run: cmake --build build --config Release --target MC2000Tests MC2000UITests MC2000NapValidation MC2000Performance MC2000OriginalPackRender PonteMC2000_VST3
+        run: cmake --build build --config Release --target MC2000Tests MC2000UITests MC2000NapValidation PonteMC2000_VST3
 
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure --output-junit test-results.xml
+        run: |
+          ctest --test-dir build -C Release --output-on-failure --no-tests=error --output-junit "$pwd/build/test-results.xml"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $cases = @(Select-Xml -Path build/test-results.xml -XPath '//testcase')
+          if ($cases.Count -lt 4) { throw 'Expected DSP, UI, RealtimeMatrix and Nap validation' }
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
