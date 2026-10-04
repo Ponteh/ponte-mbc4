@@ -123,10 +123,10 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     auto exactSilence = true;
     for (int channel = 0; exactSilence && channel < channelsToProcess; ++channel)
         for (int sample = 0; sample < sampleCount; ++sample)
-            if (channels[channel][sample] != 0.0f) { exactSilence = false; break; }
+            if (!exactlyZero(channels[channel][sample])) { exactSilence = false; break; }
     for (int channel = 0; exactSilence && channel < detectorChannelsToProcess; ++channel)
         for (int sample = 0; sample < sampleCount; ++sample)
-            if (detectorChannels[channel][sample] != 0.0f) { exactSilence = false; break; }
+            if (!exactlyZero(detectorChannels[channel][sample])) { exactSilence = false; break; }
     if (!napEnabled || !exactSilence || channelsToProcess != previousAudioChannels
         || detectorChannelsToProcess != previousDetectorChannels)
         activity = Activity::active;
@@ -272,21 +272,24 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         activity = Activity::draining;
         auto quiet = crossover.isQuiet(channelsToProcess)
             && (!useExternalDetector || detectorCrossover.isQuiet(detectorChannelsToProcess))
-            && smoothGain(inputGainCurrent, inputTarget, smoothing) == inputGainCurrent
-            && smoothGain(outputGainCurrent, outputTarget, smoothing) == outputGainCurrent;
+            && exactlyEqual(smoothGain(inputGainCurrent, inputTarget, smoothing), inputGainCurrent)
+            && exactlyEqual(smoothGain(outputGainCurrent, outputTarget, smoothing), outputGainCurrent);
         for (std::size_t i = 0; quiet && i < crossoverCurrent.size(); ++i)
-            quiet = crossoverCurrent[i] + crossoverSmoothing
-                * (currentParameters.crossoverHz[i] - crossoverCurrent[i]) == crossoverCurrent[i];
+            quiet = exactlyEqual(crossoverCurrent[i] + crossoverSmoothing
+                * (currentParameters.crossoverHz[i] - crossoverCurrent[i]),
+                crossoverCurrent[i]);
         for (int band = 0; quiet && band < bandsToProcess; ++band)
         {
             const auto i = static_cast<std::size_t>(band);
             const auto& p = currentParameters.bands[i];
             const auto soloTarget = !anySolo || p.solo ? 1.0 : 0.0;
             quiet = ballistics[i].isQuiet() && biteProcessors[i].isQuiet()
-                && smoothGain(bandGainCurrent[i], bandGainTargets[i], smoothing) == bandGainCurrent[i]
-                && inputMixCurrent[i] == (p.enabled ? 1.0 : 0.0)
-                && (smoothGain(soloMixCurrent[i], soloTarget, routingSmoothing) == soloMixCurrent[i]
-                    || (soloTarget == 0.0 && soloMixCurrent[i] < 1.0e-24));
+                && exactlyEqual(smoothGain(bandGainCurrent[i], bandGainTargets[i], smoothing),
+                                bandGainCurrent[i])
+                && exactlyEqual(inputMixCurrent[i], p.enabled ? 1.0 : 0.0)
+                && (exactlyEqual(smoothGain(soloMixCurrent[i], soloTarget, routingSmoothing),
+                                 soloMixCurrent[i])
+                    || (exactlyZero(soloTarget) && soloMixCurrent[i] < 1.0e-24));
         }
         // Freeze only exhausted active states. Dormant bands/filters retain
         // exactly the history they would have kept without nap.

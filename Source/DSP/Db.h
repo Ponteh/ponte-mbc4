@@ -2,8 +2,23 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <type_traits>
 
 namespace pontedsp::mc2000::dsp {
+
+template <typename T>
+inline bool exactlyEqual(const T lhs, const T rhs) noexcept
+{
+    static_assert(std::is_floating_point_v<T>);
+    return std::memcmp(&lhs, &rhs, sizeof(T)) == 0;
+}
+
+template <typename T>
+inline bool exactlyZero(const T value) noexcept
+{
+    return exactlyEqual(value, T {});
+}
 
 inline double decibelsToGain(const double db) noexcept
 {
@@ -22,4 +37,3 @@ inline double clampFinite(const double value, const double minimum,
 }
 
 } // namespace pontedsp::mc2000::dsp
-

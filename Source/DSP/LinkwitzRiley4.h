@@ -20,7 +20,7 @@ public:
     void setFrequency(const double frequency) noexcept
     {
         const auto safe = std::clamp(frequency, 20.0, sampleRate * 0.45);
-        if (safe == cachedFrequency) return;
+        if (exactlyEqual(safe, cachedFrequency)) return;
         cachedFrequency = safe;
         low1.configure(Biquad::Type::lowPass, sampleRate, safe);
         low2.configure(Biquad::Type::lowPass, sampleRate, safe);

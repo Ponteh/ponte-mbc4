@@ -13,7 +13,7 @@ void benchmarkSilence()
     for(bool enabled : {false,true})
     {
         MultiBandCompressor bench; bench.setNapEnabled(enabled); bench.prepare(48000,512,2);
-        std::fill(a.begin(),a.end(),0); std::fill(b.begin(),b.end(),0);
+        std::fill(a.begin(),a.end(),0.0f); std::fill(b.begin(),b.end(),0.0f);
         bench.process(audio,2,512);
         std::vector<double> times;
         for(int repeat=0;repeat<7;++repeat)

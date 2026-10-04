@@ -20,7 +20,7 @@ public:
         const auto hard = over <= 0.0 ? input : threshold + over / ratio;
         const auto ratioScale = (1.0 - 1.0 / ratio) / 0.75;
 
-        if (ratioScale <= 0.0 || knee == 0.0)
+        if (ratioScale <= 0.0 || exactlyZero(knee))
             return hard;
 
         const auto correction = knee < 0.0 ? negativeKnee(over, -knee)
@@ -58,7 +58,7 @@ private:
             if (i + 1 == Size) return secant(Size - 2);
             const auto before = secant(i - 1);
             const auto after = secant(i);
-            if (before == 0.0 || after == 0.0 || before * after <= 0.0) return 0.0;
+            if (exactlyZero(before) || exactlyZero(after) || before * after <= 0.0) return 0.0;
             const auto hBefore = x[i] - x[i - 1];
             const auto hAfter = x[i + 1] - x[i];
             const auto weight1 = 2.0 * hAfter + hBefore;

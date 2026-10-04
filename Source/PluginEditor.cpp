@@ -2,6 +2,7 @@
 #include "Parameters.h"
 #include "PontePalette.h"
 #include "Diagnostics.h"
+#include "DSP/Db.h"
 #include <cmath>
 
 namespace {
@@ -619,8 +620,12 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
             pontedsp::mc2000::parameters::crossoverId(band))->load();
     displayResponse.setFrequencies(frequencies);
     const auto sampleRate = processor.getProcessingSampleRate();
-    if (frequencies != cachedResponseFrequencies || inputBands != cachedInputBands
-        || responseBandCount != cachedResponseBandCount || sampleRate != cachedResponseSampleRate)
+    const auto frequenciesChanged = !std::equal(
+        frequencies.begin(), frequencies.end(), cachedResponseFrequencies.begin(),
+        [](const double lhs, const double rhs) { return pontedsp::mc2000::dsp::exactlyEqual(lhs, rhs); });
+    if (frequenciesChanged || inputBands != cachedInputBands
+        || responseBandCount != cachedResponseBandCount
+        || !pontedsp::mc2000::dsp::exactlyEqual(sampleRate, cachedResponseSampleRate))
     {
         MC2000_MEASURE(response);
         responseChanged = true;
@@ -648,7 +653,7 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
             // An exactly zero window has a known FFT. Keep overlap/time and
             // visual decay unchanged, but avoid two transforms during silence.
             const auto nonzero = std::any_of(fftInput[channel].begin(), fftInput[channel].end(),
-                [](const float value) { return value != 0.0f; });
+                [](const float value) { return !pontedsp::mc2000::dsp::exactlyZero(value); });
             if (!nonzero) continue;
             std::fill(fftWork.begin(), fftWork.end(), 0.0f);
             std::copy(fftInput[channel].begin(), fftInput[channel].end(), fftWork.begin());
@@ -874,6 +879,7 @@ void CompressionPlot::paint(juce::Graphics& g)
     {
         // Preserve the order of other bands, then paint the edited band on top.
         const auto band = layer == count - 1 ? front : (layer < front ? layer : layer + 1);
+        const auto bandIndex = static_cast<std::size_t>(band);
         const auto enabled = processor.state.getRawParameterValue(
             pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
         const auto solo = processor.state.getRawParameterValue(
@@ -883,24 +889,24 @@ void CompressionPlot::paint(juce::Graphics& g)
         for (int point = 0; point <= 120; ++point)
         {
             const auto input = -60.0 + 60.0 * static_cast<double>(point) / 120.0;
-            const auto output = enabled ? pontedsp::mc2000::dsp::GainComputer().computeOutputDb(input, curveParameters.bands[band].thresholdDb, curveParameters.bands[band].ratio, curveParameters.bands[band].knee) : -100.0;
+            const auto output = enabled ? pontedsp::mc2000::dsp::GainComputer().computeOutputDb(input, curveParameters.bands[bandIndex].thresholdDb, curveParameters.bands[bandIndex].ratio, curveParameters.bands[bandIndex].knee) : -100.0;
             const auto x = plot.getX() + plot.getWidth() * static_cast<float>(point) / 120.0f;
             const auto y = juce::jmap(static_cast<float>(juce::jlimit(-60.0, 0.0, output)),
                                       -60.0f, 0.0f, plot.getBottom(), plot.getY());
             if (point == 0) path.startNewSubPath(x, y); else path.lineTo(x, y);
         }
-        g.setColour(bandColours[static_cast<std::size_t>(band)].withAlpha(active ? 1.0f : 0.28f));
+        g.setColour(bandColours[bandIndex].withAlpha(active ? 1.0f : 0.28f));
         g.strokePath(path, juce::PathStrokeType(1.6f));
 
         if (active)
         {
-            const auto meter = displayedMeters[static_cast<std::size_t>(band)];
+            const auto meter = displayedMeters[bandIndex];
             const auto liveInput = juce::jlimit(-60.0f, 0.0f, meter.inputDb);
             const auto liveOutput = juce::jlimit(-60.0f, 0.0f,
-                static_cast<float>(enabled ? pontedsp::mc2000::dsp::GainComputer().computeOutputDb(liveInput, curveParameters.bands[band].thresholdDb, curveParameters.bands[band].ratio, curveParameters.bands[band].knee) : -100.0));
+                static_cast<float>(enabled ? pontedsp::mc2000::dsp::GainComputer().computeOutputDb(liveInput, curveParameters.bands[bandIndex].thresholdDb, curveParameters.bands[bandIndex].ratio, curveParameters.bands[bandIndex].knee) : -100.0));
             const auto dotX = juce::jmap(liveInput, -60.0f, 0.0f, plot.getX(), plot.getRight());
             const auto dotY = juce::jmap(liveOutput, -60.0f, 0.0f, plot.getBottom(), plot.getY());
-            g.setColour(bandColours[static_cast<std::size_t>(band)].darker(0.3f));
+            g.setColour(bandColours[bandIndex].darker(0.3f));
             g.fillEllipse(dotX - 3.5f, dotY - 3.5f, 7.0f, 7.0f);
         }
     }

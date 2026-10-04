@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     check(engine.getActivity()==MultiBandCompressor::Activity::sleeping,"initial silence did not sleep");
     a[0]=1.e-30f; engine.process(audio,2,512);
     check(a[0]!=0,"tiny first sample lost on wake");
-    engine.reset(); std::fill(a.begin(),a.end(),0); std::fill(b.begin(),b.end(),0);
+    engine.reset(); std::fill(a.begin(),a.end(),0.0f); std::fill(b.begin(),b.end(),0.0f);
     engine.process(audio,2,detector,2,512); key[0]=.5f;
     engine.process(audio,2,detector,2,512);
     check(engine.getActivity()==MultiBandCompressor::Activity::active,"live sidechain failed to keep awake");

@@ -53,7 +53,7 @@ public:
                 previousMode = mode;
                 return 0.0;
             }
-            if (previousMode != mode || previousAutoSlope != slope)
+            if (previousMode != mode || !exactlyEqual(previousAutoSlope, slope))
                 autoControl = decibelsToGain(std::min(160.0, gainReductionDb / slope));
             previousMode = mode;
             previousAutoSlope = slope;
@@ -62,7 +62,7 @@ public:
         }
 
         const auto displayedAttackMs = clampFinite(attackMs, 0.25, 250.0, 10.0);
-        if (displayedAttackMs != cachedAttackMs)
+        if (!exactlyEqual(displayedAttackMs, cachedAttackMs))
         {
             // Same T08 calculation, only when its inputs change.
             const auto attackScale = 0.51 / (1.0 + displayedAttackMs / 800.0);
@@ -96,7 +96,7 @@ public:
             // decays with tau = displayed Release. Ratio scaling beyond 2:1
             // is a model extrapolation, not an original measurement.
             const auto slope = 1.0 - 1.0 / clampFinite(ratio, 1.0, 10.0, 2.0);
-            if (releaseSeconds != cachedR1ReleaseSeconds)
+            if (!exactlyEqual(releaseSeconds, cachedR1ReleaseSeconds))
             {
                 r1ReleaseDelta = std::expm1(-1.0 / (sampleRate * releaseSeconds));
                 cachedR1ReleaseSeconds = releaseSeconds;
@@ -234,7 +234,7 @@ public:
         const auto transientNorm = std::clamp(
             transient / std::max(0.487 * referencePeak, 1.0e-12), 0.0, 1.0);
         lastTransientNormalised = transientNorm;
-        if (biteValue != cachedBite)
+        if (!exactlyEqual(biteValue, cachedBite))
         {
             cachedBite = biteValue;
             biteNorm = controlShape(biteValue);
