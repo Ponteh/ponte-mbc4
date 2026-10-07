@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.24)
-project(PonteMC2000 VERSION 0.2.4 LANGUAGES C CXX)
+project(PonteMC2000 VERSION 0.2.5 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(MSVC)
+    add_compile_options(/EHsc)
+endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(PONTE_COMPANY_NAME "PonteDSP")
@@ -20,7 +23,7 @@ endif()
 
 juce_add_plugin(PonteMC2000
     VERSION ${PROJECT_VERSION}
-    DESCRIPTION "PonteDSP zero-latency multiband compressor"
+    DESCRIPTION "PonteDSP multiband compressor with IIR and linear-phase crossovers"
     COMPANY_NAME "${PONTE_COMPANY_NAME}"
     BUNDLE_ID "it.pontedsp.mbc4"
     PLUGIN_MANUFACTURER_CODE Pont
@@ -45,7 +48,10 @@ if (WIN32)
         APPEND DEPENDS "${mc2000_info_file}")
 endif()
 
+find_package(Threads REQUIRED)
+
 set(MC2000_DSP_SOURCES
+    Source/DSP/LinearPhaseCrossover.cpp
     Source/DSP/CrossoverNetwork.cpp
     Source/DSP/MultiBandCompressor.cpp)
 
@@ -67,6 +73,7 @@ target_compile_definitions(PonteMC2000 PUBLIC
     JUCE_REPORT_APP_USAGE=0)
 
 target_link_libraries(PonteMC2000 PRIVATE
+    Threads::Threads
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_dsp
@@ -84,7 +91,7 @@ if (MC2000_BUILD_TESTS)
         Tests/MC2000Tests.cpp
         ${MC2000_DSP_SOURCES})
     target_include_directories(MC2000Tests PRIVATE Source)
-    target_link_libraries(MC2000Tests PRIVATE juce::juce_core)
+    target_link_libraries(MC2000Tests PRIVATE juce::juce_audio_basics Threads::Threads)
     add_test(NAME MC2000Tests COMMAND MC2000Tests)
 
     juce_add_console_app(MC2000UITests PRODUCT_NAME "Ponte MBC4 UI Tests")
@@ -101,47 +108,60 @@ if (MC2000_BUILD_TESTS)
         MC2000_TECHNICAL_TESTS=1
         JUCE_REPORT_APP_USAGE=0 JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(MC2000UITests PRIVATE
-        juce::juce_audio_utils juce::juce_audio_processors juce::juce_dsp juce::juce_gui_extra)
+        Threads::Threads
+    juce::juce_audio_utils juce::juce_audio_processors juce::juce_dsp juce::juce_gui_extra)
     if (WIN32)
         target_link_libraries(MC2000UITests PRIVATE psapi)
     endif()
     add_test(NAME MC2000UITests COMMAND MC2000UITests)
     if (WIN32)
         add_test(NAME MC2000RealtimeMatrix COMMAND MC2000UITests --technical-matrix)
-        set_tests_properties(MC2000RealtimeMatrix PROPERTIES TIMEOUT 300)
+        # Matrix includes both channel modes and the FIR/layout/bypass audit.
+        set_tests_properties(MC2000RealtimeMatrix PROPERTIES TIMEOUT 900)
     endif()
 
     juce_add_console_app(MC2000UpdateProbe PRODUCT_NAME "Ponte Update Check Probe")
     target_sources(MC2000UpdateProbe PRIVATE Tests/UpdateCheckProbe.cpp)
     target_include_directories(MC2000UpdateProbe PRIVATE Source)
     target_compile_definitions(MC2000UpdateProbe PRIVATE JUCE_USE_CURL=0)
-    target_link_libraries(MC2000UpdateProbe PRIVATE juce::juce_core)
+    target_link_libraries(MC2000UpdateProbe PRIVATE juce::juce_core Threads::Threads)
 
     juce_add_console_app(MC2000NapValidation PRODUCT_NAME "Ponte MBC4 Nap Validation")
     target_sources(MC2000NapValidation PRIVATE Tests/NapValidation.cpp ${MC2000_DSP_SOURCES})
     target_include_directories(MC2000NapValidation PRIVATE Source)
-    target_link_libraries(MC2000NapValidation PRIVATE juce::juce_audio_basics)
+    target_link_libraries(MC2000NapValidation PRIVATE juce::juce_audio_basics Threads::Threads)
     add_test(NAME MC2000NapValidation COMMAND MC2000NapValidation)
     set_tests_properties(MC2000NapValidation PROPERTIES TIMEOUT 600)
+    if(MSVC)
+    foreach(test_target IN ITEMS MC2000Tests MC2000UITests MC2000NapValidation MC2000UpdateProbe)
+        target_link_libraries(${test_target} PRIVATE juce::juce_recommended_config_flags)
+    endforeach()
+    endif()
 endif()
 
 # Experiments never participate in the ordinary test/release build. Archived
 # analyzers can be restored individually; no acquisition archive is required.
 option(MC2000_BUILD_RESEARCH "Build optional research benchmarks and analyzers" OFF)
 if (MC2000_BUILD_RESEARCH)
+    foreach(benchmark IN ITEMS LinearPhaseBenchmark LinearPhaseCompressorBenchmark CompatibilityRender)
+        add_executable(MC2000${benchmark} Research/${benchmark}.cpp ${MC2000_DSP_SOURCES})
+        target_include_directories(MC2000${benchmark} PRIVATE Source)
+        target_link_libraries(MC2000${benchmark} PRIVATE Threads::Threads juce::juce_recommended_config_flags)
+    endforeach()
     set(MC2000_BASELINE_SOURCE_DIR "" CACHE PATH "Frozen baseline Source directory for performance/audio comparisons")
     foreach(benchmark IN ITEMS OversamplingCost NapBenchmark)
         if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/${benchmark}.cpp")
             juce_add_console_app(MC2000${benchmark} PRODUCT_NAME "Ponte MBC4 ${benchmark}")
             target_sources(MC2000${benchmark} PRIVATE Research/${benchmark}.cpp ${MC2000_DSP_SOURCES})
             target_include_directories(MC2000${benchmark} PRIVATE Source)
-            target_link_libraries(MC2000${benchmark} PRIVATE juce::juce_dsp)
+            target_link_libraries(MC2000${benchmark} PRIVATE juce::juce_dsp Threads::Threads)
         endif()
     endforeach()
 
     if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/PerformanceBenchmark.cpp")
         add_executable(MC2000Performance Research/PerformanceBenchmark.cpp ${MC2000_DSP_SOURCES})
         target_include_directories(MC2000Performance PRIVATE Source)
+        target_link_libraries(MC2000Performance PRIVATE Threads::Threads)
         if (MC2000_BASELINE_SOURCE_DIR)
             add_executable(MC2000PerformanceBaseline Research/PerformanceBenchmark.cpp
                 "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"
@@ -153,6 +173,7 @@ if (MC2000_BUILD_RESEARCH)
     if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Research/OriginalPackRender.cpp")
         add_executable(MC2000OriginalPackRender Research/OriginalPackRender.cpp ${MC2000_DSP_SOURCES})
         target_include_directories(MC2000OriginalPackRender PRIVATE Source)
+        target_link_libraries(MC2000OriginalPackRender PRIVATE Threads::Threads)
         if (MC2000_BASELINE_SOURCE_DIR)
             add_executable(MC2000OriginalPackRenderBaseline Research/OriginalPackRender.cpp
                 "${MC2000_BASELINE_SOURCE_DIR}/DSP/MultiBandCompressor.cpp"

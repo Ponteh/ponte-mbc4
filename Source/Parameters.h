@@ -5,12 +5,14 @@
 
 namespace pontedsp::mc2000::parameters {
 
-inline constexpr int stateSchemaVersion = 2;
+inline constexpr int stateSchemaVersion = 3;
 inline constexpr const char* inputGain = "global.inputGainDb";
 inline constexpr const char* outputGain = "global.outputGainDb";
 inline constexpr const char* phaseInvert = "global.phaseInvert";
 inline constexpr const char* bandCount = "global.bandCount";
 inline constexpr const char* linkMaster = "global.linkMaster";
+inline constexpr const char* crossoverMode = "global.crossoverMode";
+inline constexpr const char* channelMode = "global.channelMode";
 
 juce::String crossoverId(int index);
 juce::String bandId(int band, const char* suffix);
@@ -33,7 +35,7 @@ public:
     explicit SnapshotReader(const juce::AudioProcessorValueTreeState&);
     dsp::GlobalParameters read(LinkRuntime&) const noexcept;
 private:
-    std::array<std::atomic<float>*, 5> globals {};
+    std::array<std::atomic<float>*, 7> globals {};
     std::array<std::atomic<float>*, 3> crossovers {};
     std::array<std::array<std::atomic<float>*, 10>, 4> bands {};
 };

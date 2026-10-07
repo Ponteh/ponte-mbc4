@@ -108,7 +108,7 @@ void testEditorAndSolo()
             content.setFont(juce::FontOptions(11.0f, juce::Font::bold));
             juce::TextLayout layout;
             layout.createLayout(content, static_cast<float>(helpHeader->getWidth() - 6));
-            expect(layout.getHeight() <= helpHeader->getHeight() - 4, "complete contextual help fits at minimum editor size");
+            expect(layout.getHeight() <= helpHeader->getHeight() - 4, ("complete contextual help fits at minimum editor size: " + text).toRawUTF8());
         }
         for (auto* child : c.getChildren()) checkHelp(*child);
     };
@@ -563,11 +563,13 @@ void testMeterPaintingAndReopen()
 } // namespace
 
 #include "TechnicalValidation.h"
+#include "CrossoverStateLatencyAndUITests.h"
+#include "LinearPhaseRealtimeValidation.h"
 
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
-    if (argc > 1 && std::string(argv[1]) == "--technical-matrix") return technicalValidation::matrix(argc>2?argv[2]:"technical-matrix.json");
+    if (argc > 1 && std::string(argv[1]) == "--technical-matrix") { const int result = technicalValidation::matrix(argc>2?argv[2]:"technical-matrix.json"); const bool linear = linearPhaseValidation::realtime(); return result != 0 || !linear ? 1 : 0; }
     if (argc > 1 && std::string(argv[1]) == "--gui-profile") return technicalValidation::profile(argc>2?argv[2]:"gui-profile.csv");
     if (argc > 1 && std::string(argv[1]) == "--callback-profile") return technicalValidation::callbackProfile(argc>2?argv[2]:"callback-profile.csv");
     if (argc > 1)
@@ -575,6 +577,7 @@ int main(int argc, char** argv)
         std::cerr << "Unknown test option: " << argv[1] << '\n';
         return 2;
     }
+    testCrossoverModeStateLatencyAndBypass();
     testTiming();
     testHeaderVersions();
     testClosedSpectrumAudio();

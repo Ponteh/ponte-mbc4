@@ -7,17 +7,28 @@ PonteMC2000AudioProcessor::PonteMC2000AudioProcessor()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withInput("Sidechain", juce::AudioChannelSet::stereo(), false)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-      state(*this, nullptr, "PONTE_MC2000_STATE", pontedsp::mc2000::parameters::createLayout())
+      state(*this, &undoManager, "PONTE_MC2000_STATE", pontedsp::mc2000::parameters::createLayout())
 {
 }
 
-void PonteMC2000AudioProcessor::prepareToPlay(const double sampleRate, const int samplesPerBlock)
+void PonteMC2000AudioProcessor::prepareToPlay(const double newSampleRate, const int samplesPerBlock)
 {
+    preparing.store(true, std::memory_order_release);
+    const double sampleRate = pontedsp::mc2000::dsp::clampFinite(newSampleRate,8000.0,384000.0,48000.0);
     spectrumFifo.reset();
     spectrumOverflow.store(false, std::memory_order_relaxed);
-    processingSampleRate.store(sampleRate, std::memory_order_relaxed);
+    if (resetLinkRuntime.exchange(false, std::memory_order_acquire)) linkRuntime = {};
     engine.setParameters(parameterReader.read(linkRuntime));
-    engine.prepare(sampleRate, samplesPerBlock, getTotalNumInputChannels());
+    engine.prepare(sampleRate, samplesPerBlock, getMainBusNumInputChannels());
+    const int latency = engine.getLatencySamples();
+    setLatencySamples(latency);
+    activeCrossoverMode.store(static_cast<int>(engine.getActiveCrossoverMode()), std::memory_order_relaxed);
+    linearTailSeconds.store((pontedsp::mc2000::dsp::LinearPhaseCrossover::profileTaps(sampleRate) - 1 + latency - (pontedsp::mc2000::dsp::LinearPhaseCrossover::profileTaps(sampleRate) - 1) / 2) / sampleRate, std::memory_order_relaxed);
+    for (auto& delay : bypassDelay) delay.assign(static_cast<std::size_t>(latency + 1), 0.0f);
+    for (auto& work : bypassWork) work.resize(static_cast<std::size_t>(std::max(1, samplesPerBlock)));
+    bypassPosition = 0;
+    processingSampleRate.store(sampleRate, std::memory_order_relaxed);
+    preparing.store(false, std::memory_order_release);
 }
 
 bool PonteMC2000AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -37,6 +48,7 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 {
     juce::ignoreUnused(midi);
     juce::ScopedNoDenormals noDenormals;
+    if (resetLinkRuntime.exchange(false, std::memory_order_acquire)) linkRuntime = {};
     { MC2000_MEASURE(snapshot); engine.setParameters(parameterReader.read(linkRuntime)); }
 
     auto mainBuffer = getBusBuffer(buffer, false, 0);
@@ -50,6 +62,15 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     {
         detector[0] = sidechainBuffer.getReadPointer(0);
         if (sidechainBuffer.getNumChannels() > 1) detector[1] = sidechainBuffer.getReadPointer(1);
+    }
+    for (int sample = 0; sample < mainBuffer.getNumSamples(); ++sample)
+    {
+        for (int channel = 0; channel < mainBuffer.getNumChannels(); ++channel)
+        {
+            const float raw = mainBuffer.getSample(channel, sample);
+            bypassDelay[static_cast<std::size_t>(channel)][static_cast<std::size_t>(bypassPosition)] = std::isfinite(raw) ? raw : 0.0f;
+        }
+        bypassPosition = (bypassPosition + 1) % static_cast<int>(bypassDelay[0].size());
     }
     MC2000_MEASURE(dsp);
     engine.process(program.data(), mainBuffer.getNumChannels(), detector.data(),
@@ -120,6 +141,43 @@ int PonteMC2000AudioProcessor::popSpectrumSamples(SpectrumSample* const destinat
     return size1 + size2;
 }
 
+void PonteMC2000AudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+{
+    juce::ignoreUnused(midi);
+    juce::ScopedNoDenormals noDenormals;
+    if (resetLinkRuntime.exchange(false, std::memory_order_acquire)) linkRuntime = {};
+    engine.setParameters(parameterReader.read(linkRuntime));
+    auto main = getBusBuffer(buffer, false, 0);
+    auto key = getBusBuffer(buffer, true, 1);
+    if (bypassDelay[0].empty()) return;
+    const int length = static_cast<int>(bypassDelay[0].size());
+    for (int offset = 0; offset < main.getNumSamples();)
+    {
+        const int count = std::min(main.getNumSamples() - offset, static_cast<int>(bypassWork[0].size()));
+        std::array<float*, 2> program {};
+        std::array<const float*, 2> detector {};
+        for (int channel = 0; channel < main.getNumChannels(); ++channel)
+        {
+            program[static_cast<std::size_t>(channel)] = bypassWork[static_cast<std::size_t>(channel)].data();
+            std::copy_n(main.getReadPointer(channel, offset), count, program[static_cast<std::size_t>(channel)]);
+        }
+        for (int channel = 0; channel < key.getNumChannels(); ++channel) detector[static_cast<std::size_t>(channel)] = key.getReadPointer(channel, offset);
+        // Keep wet history/dynamics warm so returning from bypass loses no transient.
+        engine.process(program.data(), main.getNumChannels(), detector.data(), key.getNumChannels(), count);
+        for (int sample = offset; sample < offset + count; ++sample)
+        {
+            for (int channel = 0; channel < main.getNumChannels(); ++channel)
+            {
+                auto& delay = bypassDelay[static_cast<std::size_t>(channel)];
+                const float raw = main.getSample(channel, sample);
+                delay[static_cast<std::size_t>(bypassPosition)] = std::isfinite(raw) ? raw : 0.0f;
+                main.setSample(channel, sample, delay[static_cast<std::size_t>((bypassPosition + 1) % length)]);
+            }
+            bypassPosition = (bypassPosition + 1) % length;
+        }
+        offset += count;
+    }
+}
 juce::AudioProcessorEditor* PonteMC2000AudioProcessor::createEditor()
 {
     return new PonteMC2000AudioProcessorEditor(*this);
@@ -145,8 +203,27 @@ void PonteMC2000AudioProcessor::setStateInformation(const void* data, const int 
         {
             editorWidth.store(juce::jlimit(1100, 1600, static_cast<int>(restored.getProperty("editorWidth", 1100))));
             editorHeight.store(juce::jlimit(738, 1100, static_cast<int>(restored.getProperty("editorHeight", 738))));
+            // Fill every missing field from parameter defaults, never from the
+            // current instance. Old presets loaded over LP/Dual Mono restore IIR/Stereo.
+            for (auto* parameter : getParameters())
+                if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(parameter))
+                {
+                    auto child = restored.getChildWithProperty("id", ranged->paramID);
+                    const float fallback = ranged->convertFrom0to1(ranged->getDefaultValue());
+                    if (!child.isValid())
+                    {
+                        child = juce::ValueTree("PARAM");
+                        child.setProperty("id", ranged->paramID, nullptr);
+                        restored.addChild(child, -1, nullptr);
+                        child.setProperty("value", fallback, nullptr);
+                    }
+                    const double raw = static_cast<double>(child.getProperty("value", fallback));
+                    const float value = std::isfinite(raw) ? static_cast<float>(raw) : fallback;
+                    child.setProperty("value", ranged->convertFrom0to1(ranged->convertTo0to1(value)), nullptr);
+                }
+            restored.setProperty("schemaVersion", pontedsp::mc2000::parameters::stateSchemaVersion, nullptr);
             state.replaceState(restored);
-            linkRuntime = {};
+            resetLinkRuntime.store(true, std::memory_order_release);
         }
     }
 }

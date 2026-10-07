@@ -66,9 +66,10 @@ inline int matrix(const char* path) {
         layout.outputBuses.set(0,layout.inputBuses[0]);
         layout.inputBuses.set(1,keyChannels==0?juce::AudioChannelSet::disabled():keyChannels==1?juce::AudioChannelSet::mono():juce::AudioChannelSet::stereo());
         check(p.setBusesLayout(layout),"bus layout rejected");
-        for(int bands:{2,3,4})for(int mode:{0,1,2})
+        for(int bands:{2,3,4})for(int mode:{0,1,2})for(int channels:{0,1})
         {
             ++cases;
+            parameter(p,parameters::channelMode,float(channels));
             parameter(p,parameters::bandCount,float(bands-2));
             parameter(p,parameters::linkMaster,0);
             for(int b=0;b<4;++b) {

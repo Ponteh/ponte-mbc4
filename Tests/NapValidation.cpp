@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "LinearPhaseNapValidation.h"
 using namespace pontedsp::mc2000::dsp;
 int main(int argc, char** argv)
 {
@@ -125,6 +126,7 @@ int main(int argc, char** argv)
             for(int i=0;i<512;++i) check(std::abs(double(x[i])-u[i])<1.e-7,"sleep parameter/mode/band change regression");
         }
     }
+    failures += linearPhaseValidation::nap(report);
     report.flush();
     check(report.good(), "could not write nap report");
     std::cout << "failures=" << failures << '\n';

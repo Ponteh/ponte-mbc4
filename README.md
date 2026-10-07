@@ -1,5 +1,38 @@
 # Ponte MBC4
 
+## Release 0.2.5 local candidate — DSP_MODEL_10
+
+The schema 3 choices global.crossoverMode (IIR / Linear Phase) and
+global.channelMode (Stereo / Dual Mono) are implemented. Old states explicitly
+restore IIR/Stereo, including when loaded over a Linear Phase/Dual Mono instance.
+Legacy parameter IDs and host indices are preserved; the choices are appended.
+
+IIR uses the original zero-latency audio path and digital complex response,
+including all-pass compensation and abs(sum(H)). The plot labels its smoothed
+frequency destination. Dual Mono has independent detector, Ballistics and BITE
+state per channel, shared controls and separate L/R GR meter strips (L above R).
+Mono key controls both; stereo key maps L to L and R to R. Band LINK still links
+band parameters. Channel changes transfer state and fade GR over 5 ms.
+
+Linear Phase now runs symmetric complementary FIRs through a partitioned,
+incrementally scheduled FFT. One profile prioritizes 20 Hz quality. At 48 kHz:
+24,577 taps, partition 2,048, **16,384 samples / 341.33 ms** total latency. Program
+and key share the same delay. Native callback bypass retains PDC and warms wet
+history; FIR tails prevent early nap. Kernel design runs on a worker; warm
+history transitions take 20 ms and obsolete requests are discarded.
+
+Crossover mode is nonautomatable. The requested mode is saved immediately,
+but applies only when the host deactivates/reactivates processing and calls
+prepareToPlay. A pending change is shown in the plot; stopping transport alone
+may not reactivate the processor. The graph uses versioned active FIR responses,
+labels a kernel fade and reports samples/ms and sample-rate clamps.
+
+FIR crossover shape differs from LR4 and has pre-ringing. Closely spaced bands
+remain permitted but may lack a flat passband. The crossover's linear phase does
+not make the compressor's time-varying dynamics linear. Measured results and
+remaining platform/DAW/performance gates are in
+[release validation](docs/RELEASE_0.2.5_VALIDATION.md).
+
 **September 23 R1 correction, DSP_MODEL_7 (local 0.2.3 test build):**
 R1 now releases excess linear control with tau equal to the displayed Release.
 Original 250/500 ms probes support this law at ratio 2:1; other ratios remain

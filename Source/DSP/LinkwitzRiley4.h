@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Biquad.h"
+#include "Db.h"
 #include <algorithm>
 #include <utility>
+#include <complex>
 
 namespace pontedsp::mc2000::dsp {
 
@@ -11,7 +13,7 @@ class LinkwitzRiley4 final
 public:
     void prepare(const double newSampleRate, const double frequency) noexcept
     {
-        sampleRate = newSampleRate;
+        sampleRate = clampFinite(newSampleRate, 8000.0, 384000.0, 48000.0);
         cachedFrequency = -1.0;
         setFrequency(frequency);
         reset();
@@ -19,7 +21,7 @@ public:
 
     void setFrequency(const double frequency) noexcept
     {
-        const auto safe = std::clamp(frequency, 20.0, sampleRate * 0.45);
+        const auto safe = clampFinite(frequency, 20.0, sampleRate * 0.45, 100.0);
         if (exactlyEqual(safe, cachedFrequency)) return;
         cachedFrequency = safe;
         low1.configure(Biquad::Type::lowPass, sampleRate, safe);
@@ -37,6 +39,21 @@ public:
     {
         const auto [low, high] = split(input);
         return low + high;
+    }
+
+    std::complex<double> lowPassResponse(const double frequency) const noexcept
+    {
+        return low1.response(frequency, sampleRate) * low2.response(frequency, sampleRate);
+    }
+
+    std::complex<double> highPassResponse(const double frequency) const noexcept
+    {
+        return high1.response(frequency, sampleRate) * high2.response(frequency, sampleRate);
+    }
+
+    std::complex<double> allPassResponse(const double frequency) const noexcept
+    {
+        return lowPassResponse(frequency) + highPassResponse(frequency);
     }
 
     bool isQuiet() const noexcept

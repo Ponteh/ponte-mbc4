@@ -95,6 +95,7 @@ private:
     int band {};
     pontedsp::gui::LevelMeterBallistics inputBallistics, outputBallistics;
     pontedsp::gui::GainReductionMeterBallistics grBallistics;
+    std::array<pontedsp::gui::GainReductionMeterBallistics, 2> channelGrBallistics;
     pontedsp::mc2000::dsp::BandMeterSnapshot snapshot;
 };
 
@@ -167,6 +168,13 @@ private:
     std::array<bool, 4> cachedInputBands {};
     int cachedResponseBandCount {};
     double cachedResponseSampleRate {};
+    int cachedCrossoverMode {-1};
+    unsigned cachedLinearVersion {};
+    std::array<double, 3> activeLinearFrequencies {};
+    pontedsp::mc2000::dsp::LinearPhaseCrossover::Responses linearResponses {};
+    std::array<std::array<double, 181>, 4> bandCurveDb {};
+    bool frequencyClamped {}, kernelPending {};
+    juce::String responseCaption;
     std::array<float, fftSize * 2> fftWork {};
     std::array<float, fftSize / 2> spectrumDb {};
     int fftInputCount {};
@@ -229,15 +237,16 @@ private:
     ContextHeader contextHeader;
     ParameterKnob inputGain, outputGain;
     juce::TextButton phase { "PHASE" };
-    juce::ComboBox bandCount, linkMaster;
-    juce::Label crossoverLabel, bandCountLabel, linkLabel;
+    juce::ComboBox bandCount, linkMaster, crossoverMode, channelMode;
+    juce::Label crossoverLabel, bandCountLabel, linkLabel, crossoverModeLabel, channelModeLabel;
     CrossoverPlot crossoverPlot;
     std::array<std::unique_ptr<CrossoverField>, 3> crossoverFields;
     CompressionPlot compressionPlot;
     OutputMeter outputMeter;
     std::array<std::unique_ptr<BandStrip>, 4> bands;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> phaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> bandCountAttachment, linkAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
+        bandCountAttachment, linkAttachment, crossoverModeAttachment, channelModeAttachment;
     juce::Component* hoverHelpTarget {};
     juce::Point<int> lastMousePosition;
     double hoverHelpStartedMs {};

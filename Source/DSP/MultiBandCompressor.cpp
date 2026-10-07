@@ -6,15 +6,20 @@ namespace pontedsp::mc2000::dsp {
 void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlockSize,
                                   const int numChannels)
 {
-    sampleRate = std::max(1.0, newSampleRate);
+    sampleRate = clampFinite(newSampleRate, 8000.0, 384000.0, 48000.0);
+    activeCrossoverMode = currentParameters.crossoverMode;
+    if (activeCrossoverMode == CrossoverMode::linearPhase) linearCrossover.prepare(sampleRate, currentParameters.crossoverHz); else linearCrossover.stopWorker();
+    channelTransitionLength = std::max(1, static_cast<int>(sampleRate * .005));
     gainSmoothing = std::exp(-1.0 / (sampleRate * 0.02));
     routeSmoothing = std::exp(-1.0 / (sampleRate * 0.005));
     preparedBlockSize = std::max(1, maxBlockSize);
     preparedChannels = std::clamp(numChannels, 1, maxChannels);
     crossover.prepare(sampleRate, preparedChannels);
     detectorCrossover.prepare(sampleRate, maxChannels);
-    for (auto& state : ballistics) state.prepare(sampleRate);
-    for (auto& bite : biteProcessors) bite.prepare(sampleRate);
+    for (auto& channel : ballistics)
+        for (auto& state : channel) state.prepare(sampleRate);
+    for (auto& channel : biteProcessors)
+        for (auto& bite : channel) bite.prepare(sampleRate);
     inputGainCurrent = decibelsToGain(currentParameters.inputGainDb);
     outputGainCurrent = decibelsToGain(currentParameters.outputGainDb);
     for (int band = 0; band < maxBands; ++band)
@@ -37,9 +42,15 @@ void MultiBandCompressor::reset() noexcept
 {
     activity = Activity::active;
     crossover.reset();
+    if (activeCrossoverMode == CrossoverMode::linearPhase) linearCrossover.reset();
+    channelTransitionRemaining = 0; lastAppliedGr = {}; transitionFromGr = {};
+    previousAudioChannels = previousDetectorChannels = 0;
+    for (auto& channel : channelGr) for (auto& gr : channel) gr.store(0, std::memory_order_relaxed);
     detectorCrossover.reset();
-    for (auto& state : ballistics) state.reset();
-    for (auto& bite : biteProcessors) bite.reset();
+    for (auto& channel : ballistics)
+        for (auto& state : channel) state.reset();
+    for (auto& channel : biteProcessors)
+        for (auto& bite : channel) bite.reset();
     for (auto& meter : meters)
     {
         meter.inputDb.store(-100.0f, std::memory_order_relaxed);
@@ -58,6 +69,10 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
     currentParameters.numBands = std::clamp(parameters.numBands, 2, maxBands);
     currentParameters.inputGainDb = clampFinite(parameters.inputGainDb, -24.0, 24.0, 0.0);
     currentParameters.outputGainDb = clampFinite(parameters.outputGainDb, -24.0, 24.0, 0.0);
+    currentParameters.crossoverMode = static_cast<CrossoverMode>(
+        std::clamp(static_cast<int>(parameters.crossoverMode), 0, 1));
+    currentParameters.channelMode = static_cast<ChannelMode>(
+        std::clamp(static_cast<int>(parameters.channelMode), 0, 1));
     auto& x = currentParameters.crossoverHz;
     x[0] = clampFinite(x[0], 20.0, 18000.0, 100.0);
     x[1] = clampFinite(x[1], x[0] + 1.0, 19000.0, 1000.0);
@@ -75,6 +90,27 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
         band.tcMode = static_cast<TCMode>(mode);
     }
     if (previous != currentParameters) activity = Activity::active;
+    if (previous.channelMode != currentParameters.channelMode)
+    {
+        transitionFromGr = lastAppliedGr;
+        channelTransitionRemaining = channelTransitionLength;
+        for (int band = 0; band < maxBands; ++band)
+        {
+            const auto b = static_cast<std::size_t>(band);
+            if (currentParameters.channelMode == ChannelMode::dualMono)
+            {
+                ballistics[1][b] = ballistics[0][b];
+                biteProcessors[1][b] = biteProcessors[0][b];
+            }
+            else if (lastAppliedGr[1][b] > lastAppliedGr[0][b])
+            {
+                ballistics[0][b] = ballistics[1][b];
+                biteProcessors[0][b] = biteProcessors[1][b];
+            }
+        }
+    }
+    if (activeCrossoverMode == CrossoverMode::linearPhase)
+        linearCrossover.requestFrequencies(currentParameters.crossoverHz);
     for (std::size_t i = 0; i < curves.size(); ++i)
     {
         curves[i].threshold.store(currentParameters.bands[i].thresholdDb, std::memory_order_relaxed);
@@ -130,6 +166,11 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     if (!napEnabled || !exactSilence || channelsToProcess != previousAudioChannels
         || detectorChannelsToProcess != previousDetectorChannels)
         activity = Activity::active;
+    if (previousAudioChannels > channelsToProcess)
+    {
+        for (auto& state : ballistics[1]) state.reset();
+        for (auto& state : biteProcessors[1]) state.reset();
+    }
     previousAudioChannels = channelsToProcess;
     previousDetectorChannels = detectorChannelsToProcess;
     if (activity == Activity::sleeping)
@@ -138,6 +179,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         const auto countdown = std::max(1, crossoverUpdateCountdown);
         crossoverUpdateCountdown = ((countdown - 1 - sampleCount % 16) % 16 + 16) % 16 + 1;
         // Do not erase pending peaks not yet consumed by the GUI.
+        for (auto& channel : channelGr) for (auto& gr : channel) gr.store(0, std::memory_order_relaxed);
         publishMeters({}, {}, {}, {});
         return;
     }
@@ -159,6 +201,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     std::array<double, maxBands> outputPeaks {};
     std::array<double, maxBands> maximumGr {};
     std::array<double, 2> masterPeaks {};
+    std::array<std::array<double, maxBands>, maxChannels> channelMaximumGr {};
 
     for (int sample = 0; sample < sampleCount; ++sample)
     {
@@ -171,41 +214,53 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                    - crossoverCurrent[static_cast<std::size_t>(index)]);
         crossoverCurrent[1] = std::max(crossoverCurrent[1], crossoverCurrent[0] + 1.0);
         crossoverCurrent[2] = std::max(crossoverCurrent[2], crossoverCurrent[1] + 1.0);
-        if (--crossoverUpdateCountdown <= 0)
+        if (activeCrossoverMode == CrossoverMode::iir && --crossoverUpdateCountdown <= 0)
         {
             crossover.setFrequencies(crossoverCurrent);
             detectorCrossover.setFrequencies(crossoverCurrent);
             crossoverUpdateCountdown = 16;
         }
 
-        std::array<std::array<double, maxChannels>, maxBands> bandSamples {};
+        std::array<std::array<double, maxChannels>, maxBands> bandSamples {}, detectorBandSamples {};
+        std::array<double, 4> frame {};
         for (int channel = 0; channel < channelsToProcess; ++channel)
         {
-            std::array<double, maxBands> splitBands {};
-            const auto rawInput = static_cast<double>(channels[channel][sample]);
-            const auto finiteInput = std::isfinite(rawInput) ? rawInput : 0.0;
-            crossover.processSample(channel, finiteInput * inputGainCurrent,
-                                    splitBands);
-            for (int band = 0; band < bandsToProcess; ++band)
-                bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] =
-                    splitBands[static_cast<std::size_t>(band)];
+            const double raw = channels[channel][sample];
+            frame[static_cast<std::size_t>(channel)] = std::isfinite(raw) ? raw * inputGainCurrent : 0.0;
         }
-
-        std::array<std::array<double, maxChannels>, maxBands> detectorBandSamples {};
-        if (useExternalDetector)
+        for (int channel = 0; channel < detectorChannelsToProcess; ++channel)
         {
-            for (int channel = 0; channel < detectorChannelsToProcess; ++channel)
-            {
-                std::array<double, maxBands> splitBands {};
-                const auto rawDetector = static_cast<double>(detectorChannels[channel][sample]);
-                const auto finiteDetector = std::isfinite(rawDetector) ? rawDetector : 0.0;
-                detectorCrossover.processSample(channel, finiteDetector, splitBands);
-                for (int band = 0; band < bandsToProcess; ++band)
-                    detectorBandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] =
-                        splitBands[static_cast<std::size_t>(band)];
-            }
+            const double raw = detectorChannels[channel][sample];
+            frame[static_cast<std::size_t>(channel + 2)] = std::isfinite(raw) ? raw : 0.0;
         }
-
+        std::array<std::array<double, maxBands>, 4> split {};
+        if (activeCrossoverMode == CrossoverMode::linearPhase)
+            linearCrossover.processFrame(frame, ((1 << channelsToProcess) - 1) | (((1 << detectorChannelsToProcess) - 1) << 2), bandsToProcess, split);
+        else
+        {
+            for (int channel = 0; channel < channelsToProcess; ++channel)
+                crossover.processSample(channel, frame[static_cast<std::size_t>(channel)], split[static_cast<std::size_t>(channel)]);
+            for (int channel = 0; channel < detectorChannelsToProcess; ++channel)
+                detectorCrossover.processSample(channel, frame[static_cast<std::size_t>(channel + 2)], split[static_cast<std::size_t>(channel + 2)]);
+        }
+        for (int band = 0; band < bandsToProcess; ++band)
+            for (int channel = 0; channel < maxChannels; ++channel)
+            {
+                bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] = split[static_cast<std::size_t>(channel)][static_cast<std::size_t>(band)];
+                detectorBandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] = split[static_cast<std::size_t>(channel + 2)][static_cast<std::size_t>(band)];
+            }
+        const auto transitionGr = [&] (int channel, int band, double gr)
+        {
+            const auto c = static_cast<std::size_t>(channel), b = static_cast<std::size_t>(band);
+            if (channelTransitionRemaining > 0)
+            {
+                const double mix = 1.0 - double(channelTransitionRemaining) / channelTransitionLength;
+                gr = transitionFromGr[c][b] * (1.0 - mix) + gr * mix;
+            }
+            lastAppliedGr[c][b] = gr;
+            channelMaximumGr[c][b] = std::max(channelMaximumGr[c][b], gr);
+            return gr;
+        };
         for (int band = 0; band < bandsToProcess; ++band)
         {
             const auto& p = currentParameters.bands[static_cast<std::size_t>(band)];
@@ -220,40 +275,76 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                 bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] *= inputMix;
                 detectorBandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] *= inputMix;
             }
-            auto detector = 0.0;
             const auto detectorChannelTotal = useExternalDetector
                 ? detectorChannelsToProcess : channelsToProcess;
-            for (int channel = 0; channel < detectorChannelTotal; ++channel)
-                detector = std::max(detector, std::abs(static_cast<double>(
-                    (useExternalDetector ? detectorBandSamples : bandSamples)
-                        [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)])));
-            inputPeaks[static_cast<std::size_t>(band)] = std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
-
-            auto targetGr = 0.0;
-            if (detector > 1.0e-12)
-                targetGr = gainComputer.computeGainReductionDb(gainToDecibels(detector),
-                                                                p.thresholdDb, p.ratio, p.knee);
-            auto gr = ballistics[static_cast<std::size_t>(band)].process(
-                targetGr, detector, p.attackMs, p.releaseMs, p.tcMode, p.ratio);
-            gr = biteProcessors[static_cast<std::size_t>(band)].process(gr, detector, p.bite, p.tcMode);
-            const auto appliedGr = gr;
-            maximumGr[static_cast<std::size_t>(band)] = std::max(
-                maximumGr[static_cast<std::size_t>(band)], appliedGr);
             auto& bandGain = bandGainCurrent[static_cast<std::size_t>(band)];
             bandGain = smoothGain(bandGain, bandGainTargets[static_cast<std::size_t>(band)], smoothing);
             auto& soloMix = soloMixCurrent[static_cast<std::size_t>(band)];
             soloMix = smoothGain(soloMix, !anySolo || p.solo ? 1.0 : 0.0, routingSmoothing);
-            const auto appliedBandGain = bandGain * decibelsToGain(-appliedGr) * soloMix;
-
-            for (int channel = 0; channel < channelsToProcess; ++channel)
+            if (currentParameters.channelMode == ChannelMode::dualMono)
             {
-                auto& value = bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)];
-                value *= appliedBandGain;
-                outputPeaks[static_cast<std::size_t>(band)] = std::max(
-                    outputPeaks[static_cast<std::size_t>(band)], std::abs(value));
+                for (int channel = 0; channel < channelsToProcess; ++channel)
+                {
+                    const auto detectorChannel = useExternalDetector
+                        ? (detectorChannelsToProcess == 1 ? 0 : std::min(channel, detectorChannelTotal - 1))
+                        : channel;
+                    const auto detector = std::abs(static_cast<double>(
+                        (useExternalDetector ? detectorBandSamples : bandSamples)
+                            [static_cast<std::size_t>(band)][static_cast<std::size_t>(detectorChannel)]));
+                    inputPeaks[static_cast<std::size_t>(band)] =
+                        std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
+                    auto targetGr = 0.0;
+                    if (detector > 1.0e-12)
+                        targetGr = gainComputer.computeGainReductionDb(gainToDecibels(detector),
+                                                                        p.thresholdDb, p.ratio, p.knee);
+                    auto gr = ballistics[static_cast<std::size_t>(channel)]
+                        [static_cast<std::size_t>(band)].process(
+                            targetGr, detector, p.attackMs, p.releaseMs, p.tcMode, p.ratio);
+                    gr = biteProcessors[static_cast<std::size_t>(channel)]
+                        [static_cast<std::size_t>(band)].process(gr, detector, p.bite, p.tcMode);
+                    gr = transitionGr(channel, band, gr);
+                    maximumGr[static_cast<std::size_t>(band)] =
+                        std::max(maximumGr[static_cast<std::size_t>(band)], gr);
+                    auto& value = bandSamples[static_cast<std::size_t>(band)]
+                        [static_cast<std::size_t>(channel)];
+                    value *= bandGain * decibelsToGain(-gr) * soloMix;
+                    outputPeaks[static_cast<std::size_t>(band)] = std::max(
+                        outputPeaks[static_cast<std::size_t>(band)], std::abs(value));
+                }
+            }
+            else
+            {
+                auto detector = 0.0;
+                for (int channel = 0; channel < detectorChannelTotal; ++channel)
+                    detector = std::max(detector, std::abs(static_cast<double>(
+                        (useExternalDetector ? detectorBandSamples : bandSamples)
+                            [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)])));
+                inputPeaks[static_cast<std::size_t>(band)] =
+                    std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
+                auto targetGr = 0.0;
+                if (detector > 1.0e-12)
+                    targetGr = gainComputer.computeGainReductionDb(gainToDecibels(detector),
+                                                                    p.thresholdDb, p.ratio, p.knee);
+                auto gr = ballistics[0][static_cast<std::size_t>(band)].process(
+                    targetGr, detector, p.attackMs, p.releaseMs, p.tcMode, p.ratio);
+                gr = biteProcessors[0][static_cast<std::size_t>(band)].process(
+                    gr, detector, p.bite, p.tcMode);
+                maximumGr[static_cast<std::size_t>(band)] =
+                    std::max(maximumGr[static_cast<std::size_t>(band)], gr);
+                const auto appliedBandGain = bandGain * decibelsToGain(-gr) * soloMix;
+                for (int channel = 0; channel < channelsToProcess; ++channel)
+                {
+                    auto& value = bandSamples[static_cast<std::size_t>(band)]
+                        [static_cast<std::size_t>(channel)];
+                    const auto appliedGr = transitionGr(channel, band, gr);
+                    value *= channelTransitionRemaining > 0 ? bandGain * decibelsToGain(-appliedGr) * soloMix : appliedBandGain;
+                    outputPeaks[static_cast<std::size_t>(band)] = std::max(
+                        outputPeaks[static_cast<std::size_t>(band)], std::abs(value));
+                }
             }
         }
 
+        if (channelTransitionRemaining > 0) --channelTransitionRemaining;
         for (int channel = 0; channel < channelsToProcess; ++channel)
         {
             auto output = 0.0;
@@ -270,8 +361,9 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     if (napEnabled && exactSilence)
     {
         activity = Activity::draining;
-        auto quiet = crossover.isQuiet(channelsToProcess)
-            && (!useExternalDetector || detectorCrossover.isQuiet(detectorChannelsToProcess))
+        auto quiet = (activeCrossoverMode == CrossoverMode::linearPhase ? linearCrossover.isQuiet() : (crossover.isQuiet(channelsToProcess)
+            && (!useExternalDetector || detectorCrossover.isQuiet(detectorChannelsToProcess))))
+            && channelTransitionRemaining == 0
             && exactlyEqual(smoothGain(inputGainCurrent, inputTarget, smoothing), inputGainCurrent)
             && exactlyEqual(smoothGain(outputGainCurrent, outputTarget, smoothing), outputGainCurrent);
         for (std::size_t i = 0; quiet && i < crossoverCurrent.size(); ++i)
@@ -283,7 +375,11 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
             const auto i = static_cast<std::size_t>(band);
             const auto& p = currentParameters.bands[i];
             const auto soloTarget = !anySolo || p.solo ? 1.0 : 0.0;
-            quiet = ballistics[i].isQuiet() && biteProcessors[i].isQuiet()
+            quiet = true;
+            for (int channel = 0; channel < (currentParameters.channelMode == ChannelMode::dualMono ? channelsToProcess : 1); ++channel)
+                quiet = quiet && ballistics[static_cast<std::size_t>(channel)][i].isQuiet()
+                    && biteProcessors[static_cast<std::size_t>(channel)][i].isQuiet();
+            quiet = quiet
                 && exactlyEqual(smoothGain(bandGainCurrent[i], bandGainTargets[i], smoothing),
                                 bandGainCurrent[i])
                 && exactlyEqual(inputMixCurrent[i], p.enabled ? 1.0 : 0.0)
@@ -295,6 +391,12 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         // exactly the history they would have kept without nap.
         if (quiet) activity = Activity::sleeping;
     }
+    for (std::size_t c = 0; c < maxChannels; ++c)
+        for (std::size_t b = 0; b < maxBands; ++b)
+        {
+            channelGr[c][b].store(static_cast<float>(channelMaximumGr[c][b]), std::memory_order_relaxed);
+            pendingChannelGr[c][b].value.publish(static_cast<float>(channelMaximumGr[c][b]));
+        }
     publishMeters(inputPeaks, outputPeaks, maximumGr, masterPeaks);
 }
 
@@ -328,7 +430,7 @@ BandMeterSnapshot MultiBandCompressor::consumeBandMeter(const int band) noexcept
 {
     if (band < 0 || band >= maxBands) return {};
     auto& meter = pendingMeters[static_cast<std::size_t>(band)];
-    return { meter.input.consume(), meter.output.consume(), meter.reduction.consume() };
+    return { meter.input.consume(), meter.output.consume(), meter.reduction.consume(), { pendingChannelGr[0][static_cast<std::size_t>(band)].value.consume(), pendingChannelGr[1][static_cast<std::size_t>(band)].value.consume() } };
 }
 
 std::array<float, 2> MultiBandCompressor::consumeOutputMeterDb() noexcept
@@ -345,6 +447,7 @@ void MultiBandCompressor::discardPendingMeterPeaks() noexcept
         meter.reduction.reset();
     }
     for (auto& meter : pendingOutputMeters) meter.reset();
+    for (auto& channel : pendingChannelGr) for (auto& meter : channel) meter.value.reset();
 }
 
 double MultiBandCompressor::getStaticOutputDb(const int band, const double inputDb) const noexcept
@@ -373,7 +476,7 @@ BandMeterSnapshot MultiBandCompressor::getBandMeter(const int band) const noexce
     const auto& meter = meters[static_cast<std::size_t>(band)];
     return { meter.inputDb.load(std::memory_order_relaxed),
              meter.outputDb.load(std::memory_order_relaxed),
-             meter.gainReductionDb.load(std::memory_order_relaxed) };
+             meter.gainReductionDb.load(std::memory_order_relaxed), { channelGr[0][static_cast<std::size_t>(band)].load(std::memory_order_relaxed), channelGr[1][static_cast<std::size_t>(band)].load(std::memory_order_relaxed) } };
 }
 
 std::array<float, 2> MultiBandCompressor::getOutputMeterDb() const noexcept

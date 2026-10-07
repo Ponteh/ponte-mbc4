@@ -29,3 +29,35 @@ does not test ARM execution; an Apple Silicon run is still required for that.
 
 Timing experiments live in `Research`, behind `MC2000_BUILD_RESEARCH=ON`.
 See `Research/README.md` when that optional directory is present.
+
+## Release 0.2.5 coverage
+
+The existing targets also check measured digital IIR response and phase,
+independent direct FIR impulse convolution, FIR curve and group delay, complementary
+reconstruction, worker request coalescing and bounded warm-history transitions.
+Dual Mono channels are compared against independent mono compressors for key
+layouts, band counts and TC/BITE modes. Wrapper/UI checks cover appended parameter
+indices, schema migration, undo/redo, pending mode, latency, oversized native bypass
+and minimum-size selectors. Nap includes FIR tails and right-only wake at four
+rates. The Windows realtime audit adds both channel modes and the FIR backend
+with irregular/oversized blocks and nonfinite inputs. No new mandatory CTest target
+or dependency on Research has been introduced.
+## Where the new checks live
+
+| File | Checks |
+| --- | --- |
+| `CrossoverAndChannelModeTests.h` | Measured IIR response, complementary FIR sum, independent Dual Mono references, channel change and nap |
+| `LinearPhaseCrossoverTests.h` | Direct impulse convolution, FIR magnitude/phase/group delay, worker requests and kernel fade |
+| `CrossoverStateLatencyAndUITests.h` | Host parameter order, legacy migration, undo/redo, session restore, PDC/bypass and minimum GUI |
+| `LinearPhaseNapValidation.h` | FIR tail drainage and right-only wake at four sample rates |
+| `LinearPhaseRealtimeValidation.h` | Audited callbacks, layouts, irregular blocks, native bypass and kernel update with GUI response reads |
+
+These are included by the existing DSP, UI and Nap executables. Their names
+identify the behavior; release numbers belong to validation reports, not test filenames.
+
+IntelliSense must parse this product as C++20: defaulted comparison operators
+and `std::numbers` are C++20 facilities. The workspace and product `.vscode`
+configurations select C++20/MSVC; CMake has always required C++20. On another
+Windows machine update `compilerPath` to the installed MSVC compiler or use
+CMake Tools as the configuration provider. After an IDE cache persists old
+errors, run **C/C++: Reset IntelliSense Database** and reopen the affected file.

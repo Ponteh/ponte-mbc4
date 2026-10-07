@@ -1,5 +1,41 @@
 # Proof of Concept — Multi-Band Compressor ispirato a McDSP MC2000
 
+## Stato release 0.2.5
+
+Il modello di stato 3 conserva i preset precedenti introducendo la distinzione
+tra modalità crossover (`IIR` / `Linear Phase`) e collegamento dei canali
+(`Stereo` / `Dual mono`). I controlli delle bande restano comuni: `linkMaster`
+continua a collegare bande, non canali. In Dual mono ogni canale possiede
+detector, Ballistics e BITE indipendenti; uno sidechain mono pilota entrambi,
+mentre uno stereo è mappato L->L e R->R. Il percorso IIR precedente rimane il
+default.
+
+La risposta grafica IIR usa la risposta complessa degli stessi coefficienti
+digitali e somma H prima del modulo, con clamp condivisi. Il modello DSP 10
+integra inoltre FIR simmetrici complementari a ritardo comune: low-pass
+cumulativi, differenze per le bande intermedie e impulso ritardato meno l'ultimo
+low-pass. La convoluzione FFT partizionata distribuisce il lavoro nel tempo.
+
+Profilo unico orientato alla qualità a 20 Hz: N = 2 ceil(0.256 Fs) + 1;
+P = potenza di due non inferiore a 2048 Fs/48000, minimo 2048;
+latenza totale D + 2P, con D = (N-1)/2. A 48 kHz: 16384 campioni, 341.33 ms.
+La finestra Blackman e il supporto ridotto proporzionalmente a 20/fc mantengono
+un ritardo comune. Nessuna promessa di forma identica all'IIR LR4; bande molto
+strette possono non avere una regione piatta. Il FIR produce pre-ringing.
+
+Progettazione e cache della risposta avvengono fuori dal callback. Quattro slot
+persistenti separano proprietà worker/audio; richieste superate vengono scartate.
+La transizione usa la storia già disponibile e fade di 20 ms. Programma e key
+sono allineati. Bypass mantiene il ritardo e lo stato wet; nap attende storia,
+output differito, code e transizioni. GR L/R indipendenti sono visualizzati in
+Dual mono, con trasferimento degli stati e fade di 5 ms ai cambi di modalità.
+
+Il selettore crossover non è automatizzabile: stato richiesto e attivo sono
+separati; cambio DSP/PDC solo in prepareToPlay a callback fermo. La GUI segnala
+richiesta pendente e necessità di riattivazione nell'host. La sola pausa del
+transport non garantisce tale chiamata. Questo contratto va ancora provato nelle
+DAW reali. Risultati e gate aperti: [validazione 0.2.5](docs/RELEASE_0.2.5_VALIDATION.md).
+
 **Documento tecnico di ricostruzione comportamentale / clean-room POC**  
 **Target principale:** comportamento MC2000 / MC404 di generazione NextGen-v6, con supporto architetturale anche a 2 e 3 bande  
 **Stack prevista:** C++ proprietario + JUCE + foleys_gui_magic + CMake  

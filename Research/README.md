@@ -23,3 +23,14 @@ Nap correctness lives in `Tests/NapValidation.cpp` and is mandatory whenever
 `MC2000_BUILD_TESTS=ON`, with a 600-second timeout and `nap-validation.csv` output.
 The floating-point guard uses JUCE's x86/ARM64 implementation; the test checks
 that denormal suppression is active and that the guard restores previous state.
+
+## Release 0.2.5 experiments
+
+`MC2000LinearPhaseBenchmark`: symmetry, 20 Hz pass/stop regions, complementary
+impulse sum, direct convolution reference and direct/partitioned cost.
+`MC2000LinearPhaseCompressorBenchmark [csv]`: complete compressor with stereo key, four
+sample rates, normal/20-21-22 Hz crossovers, both channel modes and three blocks;
+reports average cost, p99, maximum and deadline. Run with no compiler load.
+`MC2000CompatibilityRender output.raw`: deterministic IIR/Stereo renders for
+comparing an independently compiled frozen 0.2.3 baseline with the candidate.
+These targets are optional and do not alter the mandatory CTest suite.

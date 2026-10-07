@@ -5,7 +5,7 @@ namespace pontedsp::mc2000::dsp {
 
 void CrossoverNetwork::prepare(const double newSampleRate, const int channels) noexcept
 {
-    sampleRate = std::max(1.0, newSampleRate);
+    sampleRate = clampFinite(newSampleRate, 8000.0, 384000.0, 48000.0);
     numChannels = std::clamp(channels, 1, maxChannels);
     updateCoefficients(true);
 }
@@ -39,14 +39,22 @@ void CrossoverNetwork::setBandCount(const int count) noexcept
 
 void CrossoverNetwork::setFrequencies(const std::array<double, 3>& frequencies) noexcept
 {
-    auto next = frequencies;
-    next[0] = std::clamp(next[0], 20.0, 18000.0);
-    next[1] = std::clamp(next[1], next[0] + 1.0, 19000.0);
-    next[2] = std::clamp(next[2], next[1] + 1.0, 20000.0);
+    const auto next = effectiveFrequencies(frequencies, sampleRate);
     if (next == crossoverHz)
         return;
     crossoverHz = next;
     updateCoefficients(false);
+}
+
+std::array<double, 3> CrossoverNetwork::effectiveFrequencies(const std::array<double, 3>& frequencies, double rate) noexcept
+{
+    auto f = frequencies;
+    f[0] = clampFinite(f[0], 20.0, 18000.0, 100.0);
+    f[1] = clampFinite(f[1], f[0] + 1.0, 19000.0, 1000.0);
+    f[2] = clampFinite(f[2], f[1] + 1.0, 20000.0, 10000.0);
+    const double ceiling = .45 * clampFinite(rate, 8000.0, 384000.0, 48000.0);
+    for (auto& value : f) value = std::min(value, ceiling);
+    return f;
 }
 
 void CrossoverNetwork::updateCoefficients(const bool resetState) noexcept
@@ -123,27 +131,40 @@ double CrossoverNetwork::highPassMagnitude(const double frequency, const double 
 
 double CrossoverNetwork::getBandMagnitudeDb(const int band, const double frequency) const noexcept
 {
-    if (band < 0 || band >= numBands)
-        return -160.0;
+    const auto response = getBandResponse(band, frequency);
+    return gainToDecibels(std::abs(response), -160.0);
+}
 
-    double magnitude = 1.0;
+std::complex<double> CrossoverNetwork::getBandResponse(const int band,
+                                                       const double frequency) const noexcept
+{
+    if (band < 0 || band >= numBands || !std::isfinite(frequency))
+        return {};
+    const auto safeFrequency = std::clamp(frequency, 0.0, sampleRate * 0.5);
+    const auto& f = filters[0];
+    const auto low = [&] (const int index) { return f.split[static_cast<std::size_t>(index)]
+        .lowPassResponse(safeFrequency); };
+    const auto high = [&] (const int index) { return f.split[static_cast<std::size_t>(index)]
+        .highPassResponse(safeFrequency); };
+    const auto allPassAt = [&] (const int index) { return f.compensation[static_cast<std::size_t>(index)]
+        .allPassResponse(safeFrequency); };
+    std::complex<double> response { 1.0, 0.0 };
     if (numBands == 2)
-        magnitude = band == 0 ? lowPassMagnitude(frequency, crossoverHz[0])
-                              : highPassMagnitude(frequency, crossoverHz[0]);
+        response = band == 0 ? low(0) : high(0);
     else if (numBands == 3)
     {
-        if (band == 0) magnitude = lowPassMagnitude(frequency, crossoverHz[0]) * lowPassMagnitude(frequency, crossoverHz[1]);
-        if (band == 1) magnitude = highPassMagnitude(frequency, crossoverHz[0]) * lowPassMagnitude(frequency, crossoverHz[1]);
-        if (band == 2) magnitude = highPassMagnitude(frequency, crossoverHz[1]);
+        if (band == 0) response = low(1) * low(0);
+        if (band == 1) response = high(0) * low(1);
+        if (band == 2) response = high(1) * allPassAt(0);
     }
     else
     {
-        if (band == 0) magnitude = lowPassMagnitude(frequency, crossoverHz[0]) * lowPassMagnitude(frequency, crossoverHz[1]) * lowPassMagnitude(frequency, crossoverHz[2]);
-        if (band == 1) magnitude = highPassMagnitude(frequency, crossoverHz[0]) * lowPassMagnitude(frequency, crossoverHz[1]) * lowPassMagnitude(frequency, crossoverHz[2]);
-        if (band == 2) magnitude = highPassMagnitude(frequency, crossoverHz[1]) * lowPassMagnitude(frequency, crossoverHz[2]);
-        if (band == 3) magnitude = highPassMagnitude(frequency, crossoverHz[2]);
+        if (band == 0) response = low(2) * low(1) * low(0);
+        if (band == 1) response = high(0) * low(1) * low(2);
+        if (band == 2) response = high(1) * low(2) * allPassAt(0);
+        if (band == 3) response = high(2) * allPassAt(1) * allPassAt(2);
     }
-    return gainToDecibels(magnitude);
+    return response;
 }
 
 } // namespace pontedsp::mc2000::dsp

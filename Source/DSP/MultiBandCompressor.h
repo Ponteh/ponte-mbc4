@@ -4,10 +4,14 @@
 #include "CrossoverNetwork.h"
 #include "GainComputer.h"
 #include "MeterPeak.h"
+#include "LinearPhaseCrossover.h"
 #include <array>
 #include <atomic>
 
 namespace pontedsp::mc2000::dsp {
+
+enum class CrossoverMode { iir = 0, linearPhase = 1 };
+enum class ChannelMode { stereo = 0, dualMono = 1 };
 
 struct BandParameters
 {
@@ -32,6 +36,8 @@ struct GlobalParameters
     bool phaseInvert {};
     int numBands { 4 };
     std::array<double, 3> crossoverHz { 100.0, 1000.0, 10000.0 };
+    CrossoverMode crossoverMode { CrossoverMode::iir };
+    ChannelMode channelMode { ChannelMode::stereo };
     std::array<BandParameters, 4> bands {};
 };
 
@@ -41,6 +47,7 @@ struct BandMeterSnapshot
     float inputDb { -100.0f };
     float outputDb { -100.0f };
     float gainReductionDb {};
+    std::array<float, 2> channelGainReductionDb {}; // independent block peaks; aggregate is max(L,R)
 };
 
 class MultiBandCompressor final
@@ -48,7 +55,7 @@ class MultiBandCompressor final
 public:
     static constexpr int maxBands = CrossoverNetwork::maxBands;
     static constexpr int maxChannels = CrossoverNetwork::maxChannels;
-    static constexpr int dspModelVersion = 9;
+    static constexpr int dspModelVersion = 10;
 
     enum class Activity { active, draining, sleeping };
     // Audio-thread only. Disabling nap is used by the equivalence harness.
@@ -57,6 +64,12 @@ public:
 
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
     void reset() noexcept;
+    int getLatencySamples() const noexcept { return activeCrossoverMode == CrossoverMode::linearPhase ? linearCrossover.latencySamples() : 0; }
+    CrossoverMode getActiveCrossoverMode() const noexcept { return activeCrossoverMode; }
+    unsigned getLinearResponseVersion() const noexcept { return linearCrossover.getResponseVersion(); }
+    unsigned getLinearSchedulingOverruns() const noexcept { return linearCrossover.getSchedulingOverruns(); }
+    bool isLinearTransitioning() const noexcept { return linearCrossover.isTransitioning(); }
+    bool copyLinearResponse(LinearPhaseCrossover::Responses& r, std::array<double, 3>& f, unsigned& v) const noexcept { return linearCrossover.copyResponse(r, f, v); }
     void setParameters(const GlobalParameters& parameters) noexcept;
     void process(float** channels, int numChannels, int numSamples) noexcept;
     // The optional detector is an external, band-split key signal.  Its level
@@ -98,11 +111,18 @@ private:
                        const std::array<double, maxBands>& maximumGr,
                        const std::array<double, 2>& outputPeaksMaster) noexcept;
 
+    LinearPhaseCrossover linearCrossover;
+    CrossoverMode activeCrossoverMode { CrossoverMode::iir };
+    std::array<std::array<double, maxBands>, maxChannels> lastAppliedGr {}, transitionFromGr {};
+    int channelTransitionRemaining {}, channelTransitionLength {};
+    std::array<std::array<std::atomic<float>, maxBands>, maxChannels> channelGr {};
+    struct PendingChannelReduction { MeterPeak value {0.0f}; };
+    std::array<std::array<PendingChannelReduction, maxBands>, maxChannels> pendingChannelGr;
     CrossoverNetwork crossover;
     CrossoverNetwork detectorCrossover;
     GainComputer gainComputer;
-    std::array<Ballistics, maxBands> ballistics;
-    std::array<BiteProcessor, maxBands> biteProcessors;
+    std::array<std::array<Ballistics, maxBands>, maxChannels> ballistics;
+    std::array<std::array<BiteProcessor, maxBands>, maxChannels> biteProcessors;
     std::array<AtomicBandMeter, maxBands> meters;
     std::array<std::atomic<float>, 2> outputMeters { -100.0f, -100.0f };
     struct PendingBandMeter

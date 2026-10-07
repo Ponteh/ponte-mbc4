@@ -23,7 +23,7 @@ public:
     bool isMidiEffect() const override { return false; }
     // Conservative audio-filter tail at the minimum 20 Hz crossover.
     // Detector release alone is not an audible tail.
-    double getTailLengthSeconds() const override { return 2.0; }
+    double getTailLengthSeconds() const override { return activeCrossoverMode.load(std::memory_order_relaxed) == 1 ? linearTailSeconds.load(std::memory_order_relaxed) : 2.0; }
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
     void setCurrentProgram(int) override {}
@@ -40,8 +40,12 @@ public:
     // Message-thread ownership; the audio thread only reads this counter.
     void addSpectrumConsumer() noexcept { spectrumConsumers.fetch_add(1, std::memory_order_release); }
     void removeSpectrumConsumer() noexcept { spectrumConsumers.fetch_sub(1, std::memory_order_release); }
+    int getActiveCrossoverMode() const noexcept { return activeCrossoverMode.load(std::memory_order_relaxed); }
+    bool isCrossoverModePending() const noexcept { return static_cast<int>(state.getRawParameterValue(pontedsp::mc2000::parameters::crossoverMode)->load()) != getActiveCrossoverMode(); }
+    bool isPreparing() const noexcept { return preparing.load(std::memory_order_acquire); }
     double getProcessingSampleRate() const noexcept { return processingSampleRate.load(std::memory_order_relaxed); }
 
+    juce::UndoManager undoManager;
     juce::AudioProcessorValueTreeState state;
     std::atomic<int> editorWidth { 1100 }, editorHeight { 738 };
 
@@ -56,6 +60,14 @@ private:
     std::array<SpectrumSample, spectrumFifoCapacity> spectrumSamples {};
     std::atomic<bool> spectrumOverflow { false };
     juce::AbstractFifo spectrumFifo { spectrumFifoCapacity };
+    std::atomic<int> activeCrossoverMode {};
+    std::atomic<double> linearTailSeconds {};
+    std::atomic<bool> resetLinkRuntime { false };
+    std::array<std::vector<float>, 2> bypassDelay;
+    int bypassPosition {};
+    std::array<std::vector<float>, 2> bypassWork;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    std::atomic<bool> preparing {};
     std::atomic<double> processingSampleRate { 48000.0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PonteMC2000AudioProcessor)

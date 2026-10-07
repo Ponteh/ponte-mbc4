@@ -1,3 +1,4 @@
+#include "TestNoDenormals.h"
 #include "DSP/CrossoverNetwork.h"
 #include "DSP/Ballistics.h"
 #include "DSP/GainComputer.h"
@@ -805,8 +806,15 @@ void testVisualMeterBallistics()
 
 } // namespace
 
+#include "CrossoverAndChannelModeTests.h"
+#include "LinearPhaseCrossoverTests.h"
+
 int main()
 {
+    TestNoDenormals noDenormals;
+    testMeasuredLinearPhaseResponse();
+    testLinearPhaseKernelUpdates();
+    testCrossoverAndChannelModes();
     testLinkwitzRiley();
     testFourBandFlatSum();
     testGainComputer();

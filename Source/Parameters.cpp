@@ -5,7 +5,8 @@ namespace {
 
 float value(const std::atomic<float>* raw) noexcept
 {
-    return raw != nullptr ? raw->load(std::memory_order_relaxed) : 0.0f;
+    const auto v = raw != nullptr ? raw->load(std::memory_order_relaxed) : 0.0f;
+    return std::isfinite(v) ? v : 0.0f;
 }
 
 juce::NormalisableRange<float> logarithmicRange(const float minimum, const float maximum,
@@ -60,7 +61,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     layout.push_back(std::make_unique<juce::AudioParameterChoice>(
         juce::ParameterID(linkMaster, 1), "Link Master",
         juce::StringArray { "Unlinked", "Master 1", "Master 2", "Master 3", "Master 4" }, 0));
-
     const std::array<float, 3> crossoverDefaults { 100.0f, 1000.0f, 10000.0f };
     for (int crossover = 0; crossover < 3; ++crossover)
         layout.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -100,6 +100,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
             juce::StringArray { "R1", "R2", "Auto" }, 0));
     }
 
+    layout.push_back(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID(crossoverMode, 1), "Crossover Mode",
+        juce::StringArray { "IIR", "Linear Phase" }, 0, juce::AudioParameterChoiceAttributes().withAutomatable(false)));
+    layout.push_back(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID(channelMode, 1), "Channel Mode",
+        juce::StringArray { "Stereo", "Dual Mono" }, 0));
+
     return { layout.begin(), layout.end() };
 }
 
@@ -111,7 +118,8 @@ dsp::GlobalParameters readSnapshot(const juce::AudioProcessorValueTreeState& sta
 
 SnapshotReader::SnapshotReader(const juce::AudioProcessorValueTreeState& state)
 {
-    const std::array<const char*, 5> names { inputGain, outputGain, phaseInvert, bandCount, linkMaster };
+    const std::array<const char*, 7> names {
+        inputGain, outputGain, phaseInvert, bandCount, linkMaster, crossoverMode, channelMode };
     for (std::size_t i = 0; i < globals.size(); ++i) globals[i] = state.getRawParameterValue(names[i]);
     for (int i = 0; i < 3; ++i) crossovers[static_cast<std::size_t>(i)] = state.getRawParameterValue(crossoverId(i));
     for (int band = 0; band < 4; ++band)
@@ -131,7 +139,11 @@ dsp::GlobalParameters SnapshotReader::read(LinkRuntime& runtime) const noexcept
     snapshot.inputGainDb = value(globals[0]);
     snapshot.outputGainDb = value(globals[1]);
     snapshot.phaseInvert = value(globals[2]) > 0.5f;
-    snapshot.numBands = std::clamp(static_cast<int>(value(globals[3])) + 2, 2, 4);
+    snapshot.numBands = std::clamp(static_cast<int>(std::clamp(value(globals[3]),0.0f,2.0f)) + 2, 2, 4);
+    snapshot.crossoverMode = static_cast<dsp::CrossoverMode>(
+        std::clamp(static_cast<int>(std::clamp(value(globals[5]),0.0f,1.0f)), 0, 1));
+    snapshot.channelMode = static_cast<dsp::ChannelMode>(
+        std::clamp(static_cast<int>(std::clamp(value(globals[6]),0.0f,1.0f)), 0, 1));
     for (int crossover = 0; crossover < 3; ++crossover)
         snapshot.crossoverHz[static_cast<std::size_t>(crossover)] = value(crossovers[static_cast<std::size_t>(crossover)]);
     snapshot.crossoverHz[0] = std::clamp(snapshot.crossoverHz[0], 20.0, 18000.0);
@@ -149,10 +161,10 @@ dsp::GlobalParameters SnapshotReader::read(LinkRuntime& runtime) const noexcept
             raw[static_cast<std::size_t>(band)][static_cast<std::size_t>(parameter)] =
                 value(pointers[static_cast<std::size_t>(parameter)]);
         p.tcMode = static_cast<dsp::TCMode>(std::clamp(
-            static_cast<int>(value(pointers[9])), 0, 2));
+            static_cast<int>(std::clamp(value(pointers[9]),0.0f,2.0f)), 0, 2));
     }
 
-    const auto selectedMaster = std::clamp(static_cast<int>(value(globals[4])) - 1, -1, 3);
+    const auto selectedMaster = std::clamp(static_cast<int>(std::clamp(value(globals[4]),0.0f,4.0f)) - 1, -1, 3);
     const auto sourceRaw = raw;
     if (!runtime.initialised || selectedMaster != runtime.masterBand)
     {

@@ -2,6 +2,7 @@
 
 #include "LinkwitzRiley4.h"
 #include <array>
+#include <complex>
 
 namespace pontedsp::mc2000::dsp {
 
@@ -18,9 +19,11 @@ public:
     void setFrequencies(const std::array<double, 3>& frequencies) noexcept;
     void processSample(int channel, double input, std::array<double, maxBands>& bands) noexcept;
 
+    static std::array<double, 3> effectiveFrequencies(const std::array<double, 3>& frequencies, double rate) noexcept;
     static double lowPassMagnitude(double frequency, double crossover) noexcept;
     static double highPassMagnitude(double frequency, double crossover) noexcept;
     double getBandMagnitudeDb(int band, double frequency) const noexcept;
+    std::complex<double> getBandResponse(int band, double frequency) const noexcept;
 
 private:
     struct ChannelFilters

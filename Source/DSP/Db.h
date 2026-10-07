@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+
+#include <cstdint>
 #include <cmath>
 #include <cstring>
 #include <type_traits>
@@ -17,7 +19,17 @@ inline bool exactlyEqual(const T lhs, const T rhs) noexcept
 template <typename T>
 inline bool exactlyZero(const T value) noexcept
 {
-    return exactlyEqual(value, T {});
+    // Ignore the IEEE sign bit so +0 and -0 are both silence. Inspect bits,
+    // rather than comparing in FP, to retain subnormal wake-up with DAZ/FTZ.
+    if constexpr (std::is_same_v<T, float>) {
+        std::uint32_t bits; std::memcpy(&bits, &value, sizeof(bits));
+        return (bits & 0x7fffffffu) == 0;
+    }
+    else {
+        static_assert(std::is_same_v<T, double>);
+        std::uint64_t bits; std::memcpy(&bits, &value, sizeof(bits));
+        return (bits & 0x7fffffffffffffffull) == 0;
+    }
 }
 
 inline double decibelsToGain(const double db) noexcept
