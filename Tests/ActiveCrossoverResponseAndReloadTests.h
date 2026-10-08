@@ -117,6 +117,42 @@ void testMockupLayoutAndLink()
     expect(p.state.getRawParameterValue(parameters::channelMode)->load()==0,"DUAL MONO off restores Stereo");
 }
 
+// Some hosts prepare synchronously from a latency notification, including when
+// automation has already requested a different mode. No audio thread is needed
+// to reproduce recursive acquisition of the processor's configuration mutex.
+void testSynchronousHostPreparation() {
+    using namespace pontedsp::mc2000;
+    PonteMC2000AudioProcessor p;p.prepareToPlay(48000,512);
+    struct Host final : juce::AudioProcessorListener {
+        explicit Host(PonteMC2000AudioProcessor& p):processor(p){}
+        void audioProcessorParameterChanged(juce::AudioProcessor*,int,float) override {}
+        void audioProcessorChanged(juce::AudioProcessor*,const ChangeDetails& details) override {
+            if(!details.latencyChanged)return;
+            ++changes;
+            if(changes==1)set(processor,parameters::crossoverMode,0);
+            try {processor.prepareToPlay(48000,512);}
+            catch(const std::exception& error) {
+                threw=true;
+                std::cerr << "Synchronous host preparation: " << error.what() << '\n';
+            }
+        }
+        PonteMC2000AudioProcessor& processor;int changes{};bool threw{};
+    } host(p);
+    p.addListener(&host);
+    set(p,parameters::bandId(1,"gainDb"),-3);
+    set(p,parameters::crossoverMode,1);
+    p.prepareToPlay(48000,512);
+    p.removeListener(&host);
+    expect(!host.threw && host.changes==2,
+           "host can synchronously prepare through nested latency notifications");
+    expect(p.getActiveCrossoverMode()==0 && p.getLatencySamples()==0
+           && !p.isPreparing() && !p.isCrossoverModePending()
+           && p.getReloadState()==PonteMC2000AudioProcessor::ReloadState::idle,
+           "nested host preparation retains the final requested mode and latency");
+    expect(p.getEngine().getParameters().bands[1].gainDb==-3,
+           "nested host preparation retains the user's band settings");
+}
+
 struct ReloadHostObserver : juce::AudioProcessorListener {
     explicit ReloadHostObserver(PonteMC2000AudioProcessor& p):processor(p),messageThread(std::this_thread::get_id()){}
     void audioProcessorParameterChanged(juce::AudioProcessor*,int,float) override {}

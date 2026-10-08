@@ -67,6 +67,9 @@ The message thread reports the new latency to the host; warm-up and a 10 ms fade
 resume audio. The UI stays visible and settings survive the change. Switching
 is not gap-free: FIR warm-up includes its delay, and the host may interrupt audio
 while updating PDC. Rapid requests converge on the latest choice.
+Host latency notifications are emitted after releasing the configuration mutex,
+so synchronous host reactivation can prepare again, including with a newer mode.
+[Host reactivation regression and validation](docs/HOST_REACTIVATION_2026-10-08.md).
 The graph uses active FIR responses, labels kernel fades and reports samples/ms
 and frequency clamps. PHASE below INPUT/OUTPUT still inverts output polarity;
 there is no separate phase-response display.

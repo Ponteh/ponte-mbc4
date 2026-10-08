@@ -61,17 +61,21 @@ void PonteMC2000AudioProcessor::configureEngine(const double newSampleRate,const
 }
 void PonteMC2000AudioProcessor::prepareToPlay(const double rate,const int block)
 {
-    std::lock_guard<std::mutex> lock(configurationMutex);
-    configurationGeneration.fetch_add(1,std::memory_order_seq_cst);
-    reloadState.store(ReloadState::loading,std::memory_order_seq_cst);
-    preparing.store(true,std::memory_order_release);
-    waitForCallbacks();
-    configureEngine(rate,block,getMainBusNumInputChannels());
+    {
+        std::lock_guard<std::mutex> lock(configurationMutex);
+        configurationGeneration.fetch_add(1,std::memory_order_seq_cst);
+        reloadState.store(ReloadState::loading,std::memory_order_seq_cst);
+        preparing.store(true,std::memory_order_release);
+        waitForCallbacks();
+        configureEngine(rate,block,getMainBusNumInputChannels());
+        reloadGain=1;reloadWarmSamples=0;lastFadeState=ReloadState::idle;
+        prepared.store(true,std::memory_order_release);
+        preparing.store(false,std::memory_order_release);
+        reloadState.store(ReloadState::idle,std::memory_order_seq_cst);
+    }
+    // Hosts may synchronously prepare again from a latency notification, possibly
+    // with a newer requested mode. Finish configuration and release its mutex first.
     setLatencySamples(getActiveLatencySamples());
-    reloadGain=1;reloadWarmSamples=0;lastFadeState=ReloadState::idle;
-    prepared.store(true,std::memory_order_release);
-    preparing.store(false,std::memory_order_release);
-    reloadState.store(ReloadState::idle,std::memory_order_seq_cst);
 }
 bool PonteMC2000AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {

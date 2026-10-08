@@ -573,6 +573,7 @@ void testMeterPaintingAndReopen()
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if (argc > 1 && std::string(argv[1]) == "--host-reactivation") { testSynchronousHostPreparation(); return failures == 0 ? 0 : 1; }
     if (argc > 1 && std::string(argv[1]) == "--sidechain-spectrum") { testSidechainSpectrum(); return failures == 0 ? 0 : 1; }
     if (argc > 1 && std::string(argv[1]) == "--technical-matrix") { const int result = technicalValidation::matrix(argc>2?argv[2]:"technical-matrix.json"); const bool linear = linearPhaseValidation::realtime(); return result != 0 || !linear ? 1 : 0; }
     if (argc > 1 && std::string(argv[1]) == "--gui-profile") return technicalValidation::profile(argc>2?argv[2]:"gui-profile.csv");
@@ -589,6 +590,7 @@ int main(int argc, char** argv)
     run("testStereoBandMeterDisplay", testStereoBandMeterDisplay);
     run("testBandSidechainStateAndUI", testBandSidechainStateAndUI);
     run("testSidechainSpectrum", testSidechainSpectrum);
+    run("testSynchronousHostPreparation", testSynchronousHostPreparation);
     run("testAutomaticCrossoverReload", testAutomaticCrossoverReload);
     run("testCrossoverModeStateLatencyAndBypass", testCrossoverModeStateLatencyAndBypass);
     run("testTiming", testTiming);
