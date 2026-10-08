@@ -36,7 +36,7 @@ int main(int argc, char** argv)
         reference.setNapEnabled(false);
         GlobalParameters p;
         p.crossoverHz = {20,785,10000};
-        for (auto& b : p.bands) { b.thresholdDb=-36; b.ratio=4; b.bite=10; b.attackMs=.25; b.releaseMs=250; b.tcMode=mode; }
+        for (auto& b : p.bands) { b.thresholdDb=-36; b.ratio=4; b.bite=10; b.attackMs=.25; b.releaseMs=250; b.tcMode=mode; b.sidechainSource=block==512?SidechainSource::all:SidechainSource::internal; }
         nap.setParameters(p); reference.setParameters(p);
         nap.prepare(rate,block,2); reference.prepare(rate,block,2);
         std::vector<float> a(block), b(block), c(block), d(block), key(block);
@@ -69,6 +69,9 @@ int main(int argc, char** argv)
     }
     // Empty engine sleeps, all raw inputs wake it, including key and tiny signals.
     MultiBandCompressor engine;
+    GlobalParameters keyRouting;
+    for (auto& band : keyRouting.bands) band.sidechainSource = SidechainSource::all;
+    engine.setParameters(keyRouting);
     engine.prepare(48000,512,2);
     std::vector<float> a(512),b(512),key(512);
     float* audio[]{a.data(),b.data()}; const float* detector[]{key.data(),key.data()};

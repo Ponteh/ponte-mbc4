@@ -469,7 +469,9 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
     configureLabel(title, "BAND " + juce::String(band + 1), 13.0f,
                    juce::Justification::centredLeft);
     title.setColour(juce::Label::textColourId, bandColours[static_cast<std::size_t>(band)]);
-    configureLabel(algorithmLabel, "ALGORITHM", 9.0f, juce::Justification::centredLeft,
+    configureLabel(algorithmLabel, "ALGORITHM", 10.0f, juce::Justification::centredLeft,
+                   pontedsp::gui::Palette::text());
+    configureLabel(sidechainLabel, "SIDECHAIN", 10.0f, juce::Justification::centredLeft,
                    pontedsp::gui::Palette::text());
     addAndMakeVisible(title);
     addAndMakeVisible(link);
@@ -488,9 +490,9 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
         updateLinkDisplay();
     };
     updateLinkDisplay();
-    for (auto* component : std::array<juce::Component*, 12> {
+    for (auto* component : std::array<juce::Component*, 14> {
         &enabled, &solo, &gain, &threshold, &ratio, &knee, &bite, &attack, &release,
-        &algorithmLabel, &timeConstant, &meter })
+        &algorithmLabel, &timeConstant, &sidechainLabel, &sidechain, &meter })
         addAndMakeVisible(*component);
     enabled.setClickingTogglesState(true);
     solo.setClickingTogglesState(true);
@@ -500,6 +502,9 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
     enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         p.state, pontedsp::mc2000::parameters::bandId(band, "enabled"), enabled);
     timeConstant.addItemList({ "R1", "R2", "AUTO" }, 1);
+    sidechain.addItemList({ "NO", "ALL" }, 1);
+    sidechain.setComponentID(pontedsp::mc2000::parameters::bandId(band, "sidechainSource"));
+    setContextHelp(sidechain, "NO: internal detector. ALL: summed DAW sends. Enable the sidechain in your DAW.");
     setContextHelp(enabled, "Enable this band's input. IN off mutes the band independently of SOLO.");
     setContextHelp(solo, "Monitor one or more band outputs without changing their IN settings.");
     setContextHelp(timeConstant, "Choose Pure Peak R1, adaptive release R2, or program-dependent Auto timing.");
@@ -508,6 +513,8 @@ BandStrip::BandStrip(PonteMC2000AudioProcessor& p, const int bandIndex)
         p.state, pontedsp::mc2000::parameters::bandId(band, "solo"), solo);
     timeConstantAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         p.state, pontedsp::mc2000::parameters::bandId(band, "tcMode"), timeConstant);
+    sidechainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        p.state, pontedsp::mc2000::parameters::bandId(band, "sidechainSource"), sidechain);
     addMouseListener(this, true);
 }
 
@@ -557,8 +564,11 @@ void BandStrip::resized()
     auto knobArea = area.removeFromLeft(knobWidth * 7);
     auto meterArea = area.reduced(5, 0);
     auto algorithm = meterArea.removeFromTop(juce::jlimit(18, 27, meterArea.getHeight() / 3));
-    algorithmLabel.setBounds(algorithm.removeFromLeft(82));
-    timeConstant.setBounds(algorithm.reduced(2, 0));
+    algorithmLabel.setBounds(algorithm.removeFromLeft(70));
+    timeConstant.setBounds(algorithm.removeFromLeft(80).reduced(2, 0));
+    algorithm.removeFromLeft(8);
+    sidechainLabel.setBounds(algorithm.removeFromLeft(68));
+    sidechain.setBounds(algorithm.reduced(2, 0));
     meter.setBounds(meterArea);
     for (auto* knob : std::array<ParameterKnob*, 7> {&gain, &threshold, &ratio, &knee, &bite, &attack, &release})
         knob->setBounds(knobArea.removeFromLeft(knobWidth));
@@ -575,9 +585,9 @@ void BandStrip::setActiveVisual(const bool active)
     if (activeVisual == active) return;
     activeVisual = active;
     const auto alpha = active ? 1.0f : 0.38f;
-    for (auto* component : std::array<juce::Component*, 10> {
+    for (auto* component : std::array<juce::Component*, 12> {
         &title, &gain, &threshold, &ratio, &knee, &bite, &attack, &release,
-        &algorithmLabel, &timeConstant })
+        &algorithmLabel, &timeConstant, &sidechainLabel, &sidechain })
         component->setAlpha(alpha);
     meter.setAlpha(alpha);
     enabled.setAlpha(1.0f);
@@ -587,10 +597,18 @@ void BandStrip::setActiveVisual(const bool active)
 
 CrossoverPlot::CrossoverPlot(PonteMC2000AudioProcessor& p) : processor(p)
 {
+    for (int band = 0; band < 4; ++band)
+    {
+        enabledParameters[std::size_t(band)] = p.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "enabled"));
+        keyRouteParameters[std::size_t(band)] = p.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::bandId(band, "sidechainSource"));
+    }
+    for (int cross = 0; cross < 3; ++cross)
+        frequencyParameters[std::size_t(cross)] = p.state.getRawParameterValue(
+            pontedsp::mc2000::parameters::crossoverId(cross));
     processor.addSpectrumConsumer();
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
-    spectrumDb.fill(-100.0f);
-    latestSpectrumDb.fill(-100.0f);
     processor.discardSpectrumSamples();
     updateSpectrum(0.0);
 }
@@ -603,8 +621,9 @@ void CrossoverPlot::setSpectrumActive(const bool active)
     spectrumActive = active;
     if (active) processor.addSpectrumConsumer(); else processor.removeSpectrumConsumer();
     processor.discardSpectrumSamples();
-    fftInputCount = 0;
-    latestSpectrumDb.fill(-100.0f);
+    programSpectrum.clear();
+    keySpectrum.clear();
+    capturedKeyBandMask = 0;
 }
 
 int CrossoverPlot::currentBandCount() const noexcept
@@ -631,51 +650,92 @@ double CrossoverPlot::xToFrequency(const float x) const noexcept
 
 bool CrossoverPlot::bandIsAudible(const int band) const noexcept
 {
-    return band >= 0 && band < currentBandCount() && processor.state.getRawParameterValue(
-        pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
+    return band >= 0 && band < currentBandCount()
+        && enabledParameters[std::size_t(band)]->load(std::memory_order_relaxed) > .5f;
+}
+
+CrossoverPlot::BandResponses CrossoverPlot::spectrumBandResponses(const double frequency) const noexcept
+{
+    BandResponses responses {};
+    if (cachedCrossoverMode == 1)
+    {
+        const auto bin = juce::jlimit(0.0, 1023.0, frequency * fftSize / cachedResponseSampleRate);
+        const int lo = int(bin), hi = std::min(lo + 1, 1023);
+        const double mix = bin - lo;
+        double previous = 0;
+        for (int band = 0; band < responseBandCount; ++band)
+        {
+            const double cumulative = band == responseBandCount - 1 ? 1.0
+                : linearResponses[std::size_t(band)][std::size_t(181 + lo)] * (1 - mix)
+                + linearResponses[std::size_t(band)][std::size_t(181 + hi)] * mix;
+            responses[std::size_t(band)] = cumulative - previous;
+            previous = cumulative;
+        }
+        // All FIR bands share the same phase; it cancels out of the magnitude.
+    }
+    else
+        for (int band = 0; band < responseBandCount; ++band)
+            responses[std::size_t(band)] = displayResponse.bandResponse(band, frequency);
+    return responses;
+}
+
+double CrossoverPlot::selectedResponseDb(const BandResponses& responses, const unsigned mask) noexcept
+{
+    std::complex<double> sum {};
+    for (std::size_t band = 0; band < responses.size(); ++band)
+        if ((mask & (1u << band)) != 0) sum += responses[band];
+    return juce::Decibels::gainToDecibels(std::abs(sum), -100.0);
 }
 
 double CrossoverPlot::inputResponseDb(const double frequency) const noexcept
 {
-    if (cachedCrossoverMode == 1)
-    {
-        const auto bin = juce::jlimit(0.0, 1023.0, frequency * 2048 / cachedResponseSampleRate);
-        const int lo = static_cast<int>(bin), hi = std::min(lo + 1, 1023);
-        const double mix = bin - lo;
-        std::array<double, 3> low;
-        for (std::size_t i = 0; i < 3; ++i) low[i] = linearResponses[i][static_cast<std::size_t>(181 + lo)] * (1 - mix) + linearResponses[i][static_cast<std::size_t>(181 + hi)] * mix;
-        double response = 0, previous = 0;
-        for (int band = 0; band < responseBandCount; ++band)
-        {
-            const double cumulative = band == responseBandCount - 1 ? 1.0 : low[static_cast<std::size_t>(band)];
-            if (inputBands[static_cast<std::size_t>(band)]) response += cumulative - previous;
-            previous = cumulative;
-        }
-        return juce::Decibels::gainToDecibels(std::abs(response), -100.0);
-    }
-    std::complex<double> response {};
+    unsigned mask = 0;
     for (int band = 0; band < responseBandCount; ++band)
-        if (inputBands[static_cast<std::size_t>(band)])
-            response += displayResponse.bandResponse(band, frequency);
-    return juce::Decibels::gainToDecibels(std::abs(response), -100.0);
+        if (inputBands[std::size_t(band)]) mask |= 1u << band;
+    return selectedResponseDb(spectrumBandResponses(frequency), mask);
+}
+
+bool CrossoverPlot::sidechainBandContains(const double frequency) const noexcept
+{
+    if (frequency < 20 || frequency > std::min(20000.0, cachedResponseSampleRate * .5)) return false;
+    const auto& frequencies = cachedCrossoverMode == 1 ? activeLinearFrequencies : displayResponse.frequencies;
+    int band = 0;
+    while (band < responseBandCount - 1 && frequency >= frequencies[std::size_t(band)]) ++band;
+    return (sidechainBandMask & (1u << band)) != 0;
+}
+
+bool CrossoverPlot::sidechainVisibleAtFrequency(const double frequency) const noexcept
+{
+    return spectrumActive && keySpectrum.isReady() && sidechainBandContains(frequency);
 }
 
 void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
 {
-    const auto previousSpectrum = spectrumDb;
-    const auto wasReady = spectrumReady;
+    if (!spectrumActive) return;
+
     PonteMC2000AudioProcessor::ResponseReadAccess read(processor);
     if (!read.allowed || processor.isPreparing()) return;
     auto responseChanged = false;
     responseBandCount = currentBandCount();
 
+    const auto previousKeyMask = sidechainBandMask;
+    sidechainBandMask = 0;
     for (int band = 0; band < 4; ++band)
-        inputBands[static_cast<std::size_t>(band)] = processor.state.getRawParameterValue(
-            pontedsp::mc2000::parameters::bandId(band, "enabled"))->load() > 0.5f;
+    {
+        inputBands[std::size_t(band)] = enabledParameters[std::size_t(band)]->load(std::memory_order_relaxed) > .5f;
+        if (band < responseBandCount && inputBands[std::size_t(band)]
+            && keyRouteParameters[std::size_t(band)]->load(std::memory_order_relaxed) > .5f)
+            sidechainBandMask |= 1u << band;
+    }
+    if (sidechainBandMask != previousKeyMask)
+    {
+        keySpectrum.clear();
+        capturedKeyBandMask = 0;
+        responseChanged = true;
+    }
     std::array<double, 3> frequencies;
     for (int band = 0; band < 3; ++band)
-        frequencies[static_cast<std::size_t>(band)] = processor.state.getRawParameterValue(
-            pontedsp::mc2000::parameters::crossoverId(band))->load();
+        frequencies[std::size_t(band)] = frequencyParameters[std::size_t(band)]->load(std::memory_order_relaxed);
     const auto sampleRate = processor.getProcessingSampleRate();
 
     const auto effective = pontedsp::mc2000::dsp::CrossoverNetwork::effectiveFrequencies(frequencies, sampleRate);
@@ -712,7 +772,14 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
     const auto frequenciesChanged = !std::equal(
         frequencies.begin(), frequencies.end(), cachedResponseFrequencies.begin(),
         [](const double lhs, const double rhs) { return pontedsp::mc2000::dsp::exactlyEqual(lhs, rhs); });
+    if (activeMode != cachedCrossoverMode || cachedResponseSampleRate != sampleRate)
+    {
+        programSpectrum.clear();
+        keySpectrum.clear();
+        capturedKeyBandMask = 0;
+    }
     if (activeMode != cachedCrossoverMode || iirVersion!=cachedIirVersion || linearVersion != cachedLinearVersion || frequenciesChanged || inputBands != cachedInputBands
+        || sidechainBandMask != cachedSidechainBandMask
         || responseBandCount != cachedResponseBandCount
         || !pontedsp::mc2000::dsp::exactlyEqual(sampleRate, cachedResponseSampleRate))
     {
@@ -721,8 +788,17 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
         cachedCrossoverMode = activeMode; cachedLinearVersion = linearVersion;cachedIirVersion=iirVersion;
         cachedLatency=processor.getActiveLatencySamples();
         cachedResponseSampleRate = sampleRate;
+        unsigned programMask = 0;
+        for (int band = 0; band < responseBandCount; ++band)
+            if (inputBands[std::size_t(band)]) programMask |= 1u << band;
         for (std::size_t bin = 0; bin < responseDb.size(); ++bin)
-            responseDb[bin] = inputResponseDb(static_cast<double>(bin) * sampleRate / fftSize);
+        {
+            const auto responses = spectrumBandResponses(double(bin) * sampleRate / fftSize);
+            responseDb[bin] = selectedResponseDb(responses, programMask);
+            if (sidechainBandMask != 0)
+                keyResponseDb[bin] = selectedResponseDb(responses, sidechainBandMask);
+        }
+        cachedSidechainBandMask = sidechainBandMask;
         rebuildMagnitudeCurves();
         cachedResponseFrequencies = frequencies;
         cachedInputBands = inputBands;
@@ -730,59 +806,36 @@ void CrossoverPlot::updateSpectrum(const double elapsedSeconds)
         cachedResponseSampleRate = sampleRate;
     }
     bool discontinuity = false;
-    const auto count = processor.popSpectrumSamples(incoming.data(),
-        static_cast<int>(incoming.size()), discontinuity);
-    if (discontinuity) fftInputCount = 0;
-    std::array<float, fftSize / 2> peaks;
-    peaks.fill(-100.0f);
-    bool newFrame = false;
+    const auto count = spectrumActive ? processor.popSpectrumSamples(incoming.data(),
+        static_cast<int>(incoming.size()), discontinuity) : 0;
+    if (discontinuity)
+    {
+        programSpectrum.discardPartialWindow();
+        keySpectrum.clear();
+        capturedKeyBandMask = 0;
+    }
+    programSpectrum.beginUpdate();
+    if (sidechainBandMask != 0) keySpectrum.beginUpdate();
+    int keySamples = 0;
     for (int sample = 0; sample < count; ++sample)
     {
-        for (std::size_t channel = 0; channel < 2; ++channel)
-            fftInput[channel][static_cast<std::size_t>(fftInputCount)] = incoming[static_cast<std::size_t>(sample)][channel];
-        if (++fftInputCount < fftSize) continue;
-        for (std::size_t channel = 0; channel < 2; ++channel)
+        const auto& frame = incoming[std::size_t(sample)];
+        programSpectrum.push(frame[0], frame[1], fft, fftWindow, fftWork);
+        if (frame.sidechainBandMask != capturedKeyBandMask)
         {
-            // An exactly zero window has a known FFT. Keep overlap/time and
-            // visual decay unchanged, but avoid two transforms during silence.
-            const auto nonzero = std::any_of(fftInput[channel].begin(), fftInput[channel].end(),
-                [](const float value) { return !pontedsp::mc2000::dsp::exactlyZero(value); });
-            if (!nonzero) continue;
-            std::fill(fftWork.begin(), fftWork.end(), 0.0f);
-            std::copy(fftInput[channel].begin(), fftInput[channel].end(), fftWork.begin());
-            fftWindow.multiplyWithWindowingTable(fftWork.data(), fftSize);
-            { MC2000_MEASURE(fft); fft.performFrequencyOnlyForwardTransform(fftWork.data()); }
-            ++fftTransformCount;
-            for (int bin = 0; bin < fftSize / 2; ++bin)
-            {
-                const auto db = juce::Decibels::gainToDecibels(
-                    fftWork[static_cast<std::size_t>(bin)] * (2.0f / fftSize), -100.0f);
-                peaks[static_cast<std::size_t>(bin)] = std::max(peaks[static_cast<std::size_t>(bin)], db);
-            }
+            keySpectrum.clear();
+            capturedKeyBandMask = frame.sidechainBandMask;
         }
-        for (auto& input : fftInput)
-            std::copy(input.begin() + fftSize / 2, input.end(), input.begin());
-        newFrame = true;
-        spectrumReady = true;
-        fftInputCount = fftSize / 2;
+        if (sidechainBandMask != 0 && capturedKeyBandMask == sidechainBandMask)
+        {
+            keySpectrum.push(frame[2], frame[3], fft, fftWindow, fftWork);
+            ++keySamples;
+        }
     }
-    if (count > 0) withoutSpectrumSamplesSeconds = 0.0;
-    if (newFrame) latestSpectrumDb = peaks;
-    else if (count == 0)
-    {
-        latestSpectrumDb.fill(-100.0f);
-        // An empty read can also occur between ordinary host blocks at low
-        // sample rates. Keep partial windows until the gap exceeds two windows.
-        withoutSpectrumSamplesSeconds += elapsedSeconds;
-        const auto gapLimit = std::max(.1, 2.0 * fftSize / processor.getProcessingSampleRate());
-        if (withoutSpectrumSamplesSeconds > gapLimit) fftInputCount = 0;
-    }
-    for (std::size_t bin = 0; bin < spectrumDb.size(); ++bin)
-    {
-        const auto target = latestSpectrumDb[bin] + responseDb[bin];
-        spectrumDb[bin] = static_cast<float>(spectrumBallistics[bin].update(target, elapsedSeconds));
-    }
-    if (responseChanged || wasReady != spectrumReady || spectrumDb != previousSpectrum) repaint();
+    const bool programChanged = programSpectrum.finishUpdate(elapsedSeconds, count, sampleRate, responseDb);
+    const bool keyChanged = sidechainBandMask != 0
+        && keySpectrum.finishUpdate(elapsedSeconds, keySamples, sampleRate, keyResponseDb);
+    if (responseChanged || programChanged || keyChanged) repaint();
 }
 
 juce::Rectangle<float> CrossoverPlot::magnitudeBounds() const noexcept
@@ -881,21 +934,33 @@ void CrossoverPlot::paint(juce::Graphics& g)
     {
         juce::Graphics::ScopedSaveState clipped(g);
         g.reduceClipRegion(plot.expanded(0.0f, 1.0f).toNearestInt());
-        if (spectrumReady)
+        const auto drawSpectrum = [&](const pontedsp::mc2000::ui::StereoSpectrum& spectrum,
+                                      const juce::Colour colour, const bool key)
         {
+            if (!spectrumActive || !spectrum.isReady() || (key && sidechainBandMask == 0)) return;
             juce::Path path;
+            bool continuing = false;
+            const auto& levels = spectrum.displayed();
             for (int pixel = 0; pixel <= juce::roundToInt(plot.getWidth()); ++pixel)
             {
                 const float x = plot.getX() + float(pixel);
-                const double bin = juce::jlimit(0.0, double(fftSize / 2 - 1), xToFrequency(x) * fftSize / cachedResponseSampleRate);
+                const double frequency = xToFrequency(x);
+                // Visual crop only: the detector still uses the real crossover tails.
+                // Separate subpaths prevent bridges across bands set to NO.
+                if (key && !sidechainBandContains(frequency)) { continuing = false; continue; }
+                const double bin = juce::jlimit(0.0, double(fftSize / 2 - 1), frequency * fftSize / cachedResponseSampleRate);
                 const int lo = int(bin), hi = std::min(lo + 1, fftSize / 2 - 1);
-                const float db = juce::jmap(float(bin - lo), spectrumDb[std::size_t(lo)], spectrumDb[std::size_t(hi)]);
+                const float db = juce::jmap(float(bin - lo), levels[std::size_t(lo)], levels[std::size_t(hi)]);
                 const float y = juce::jmap(db, 0.f, -60.f, plot.getY(), plot.getBottom());
-                if (pixel == 0) path.startNewSubPath(x, y); else path.lineTo(x, y);
+                if (continuing) path.lineTo(x, y); else path.startNewSubPath(x, y);
+                continuing = true;
             }
-            g.setColour(pontedsp::gui::Palette::text().withAlpha(.4f));
+            g.setColour(colour);
             g.strokePath(path, juce::PathStrokeType(1));
-        }
+        };
+        drawSpectrum(programSpectrum, pontedsp::gui::Palette::text().withAlpha(.4f), false);
+        drawSpectrum(keySpectrum, pontedsp::gui::Palette::lime().withAlpha(.35f), true);
+
         const auto drawCurve = [&](int curve)
         {
             juce::Path path;
@@ -1145,7 +1210,7 @@ PonteMC2000AudioProcessorEditor::PonteMC2000AudioProcessorEditor(PonteMC2000Audi
     setContextHelp(bandCount, "Choose a two, three or four-band crossover layout.");
     setContextHelp(crossoverMode, "Linear Phase on / IIR off. Mode changes load automatically.");
     setContextHelp(channelMode, "Dual Mono on / Stereo off. Meters: L above R.");
-    setContextHelp(crossoverPlot, "Actual filter magnitude. Spectrum follows IN. SOLO selects outputs.");
+    setContextHelp(crossoverPlot, "Input: grey. Sidechain: lime in selected bands. Actual filter response.");
     setContextHelp(compressionPlot, "View the static input-to-output transfer curve for every active band.");
     setContextHelp(outputMeter, "Monitor final left and right output peak levels.");
     for (auto* component : std::array<juce::Component*, 12> {

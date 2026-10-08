@@ -20,7 +20,7 @@ inline bool realtime() {
         juce::AudioBuffer<float> audio(mainChannels+keyChannels,2048),expected(mainChannels,2048);
         for(int bands:{2,3,4})for(int channels:{0,1})for(int tc:{0,1,2}) {
             technicalValidation::parameter(p,parameters::bandCount,float(bands-2));technicalValidation::parameter(p,parameters::channelMode,float(channels));
-            for(int b=0;b<4;++b){technicalValidation::parameter(p,parameters::bandId(b,"ratio"),4);technicalValidation::parameter(p,parameters::bandId(b,"thresholdDb"),-36);technicalValidation::parameter(p,parameters::bandId(b,"tcMode"),float(tc));technicalValidation::parameter(p,parameters::bandId(b,"bite"),tc==0?1.f:10.f);}
+            for(int b=0;b<4;++b){technicalValidation::parameter(p,parameters::bandId(b,"sidechainSource"),keyChannels>0&&b%2==channels?1.f:0.f);technicalValidation::parameter(p,parameters::bandId(b,"ratio"),4);technicalValidation::parameter(p,parameters::bandId(b,"thresholdDb"),-36);technicalValidation::parameter(p,parameters::bandId(b,"tcMode"),float(tc));technicalValidation::parameter(p,parameters::bandId(b,"bite"),tc==0?1.f:10.f);}
             const int length=p.getLatencySamples()+4096;
             for(int offset=0,step=0;offset<length;++step) {
                 constexpr std::array<int,5> sizes{1,17,64,512,2048};const int n=std::min(sizes[std::size_t(step%5)],length-offset);

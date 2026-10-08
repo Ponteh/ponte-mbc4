@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "PonteLookAndFeel.h"
 #include "UI/ControlFocus.h"
+#include "UI/StereoSpectrum.h"
 #include "UI/MeterBallistics.h"
 #include "UI/ReleaseCheck.h"
 #include <array>
@@ -120,13 +121,13 @@ public:
 private:
     PonteMC2000AudioProcessor& processor;
     int band {};
-    juce::Label title, algorithmLabel;
+    juce::Label title, algorithmLabel, sidechainLabel;
     juce::TextButton enabled { "IN" }, solo { "SOLO" }, link;
     ParameterKnob gain, threshold, ratio, knee, bite, attack, release;
-    juce::ComboBox timeConstant;
+    juce::ComboBox timeConstant, sidechain;
     BandMeter meter;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> enabledAttachment, soloAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> timeConstantAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> timeConstantAttachment, sidechainAttachment;
     bool activeVisual { true };
 };
 
@@ -146,8 +147,11 @@ public:
     void updateSpectrum(double elapsedSeconds);
     void setSpectrumActive(bool active);
     double inputResponseDb(double frequency) const noexcept;
-    float displayedSpectrumDb(int bin) const noexcept { return spectrumDb[static_cast<std::size_t>(bin)]; }
-    std::uint64_t performedFftTransforms() const noexcept { return fftTransformCount; }
+    float displayedSpectrumDb(int bin) const noexcept { return programSpectrum.displayed()[std::size_t(bin)]; }
+    float displayedSidechainSpectrumDb(int bin) const noexcept { return keySpectrum.displayed()[std::size_t(bin)]; }
+    bool sidechainVisibleAtFrequency(double frequency) const noexcept;
+    std::uint64_t performedSidechainFftTransforms() const noexcept { return keySpectrum.performedTransforms(); }
+    std::uint64_t performedFftTransforms() const noexcept { return programSpectrum.performedTransforms() + keySpectrum.performedTransforms(); }
     static constexpr int spectrumSize = 2048;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
@@ -161,20 +165,26 @@ private:
 
     PonteMC2000AudioProcessor& processor;
     int draggedCrossover { -1 };
-    static constexpr int fftOrder = 11;
+    static constexpr int fftOrder = pontedsp::mc2000::ui::StereoSpectrum::fftOrder;
     static constexpr int fftSize = 1 << fftOrder;
     juce::dsp::FFT fft { fftOrder };
     juce::dsp::WindowingFunction<float> fftWindow {
         fftSize, juce::dsp::WindowingFunction<float>::hann, true };
-    std::array<std::array<float, fftSize>, 2> fftInput {};
-    std::array<PonteMC2000AudioProcessor::SpectrumSample, 16384> incoming {};
-    std::array<pontedsp::gui::LevelMeterBallistics, fftSize / 2> spectrumBallistics;
-    std::array<float, fftSize / 2> latestSpectrumDb {};
+    pontedsp::mc2000::ui::StereoSpectrum programSpectrum, keySpectrum;
+    std::vector<PonteMC2000AudioProcessor::SpectrumSample> incoming =
+        std::vector<PonteMC2000AudioProcessor::SpectrumSample>(16384);
+    using BandResponses = std::array<std::complex<double>, 4>;
+    BandResponses spectrumBandResponses(double frequency) const noexcept;
+    static double selectedResponseDb(const BandResponses&, unsigned bandMask) noexcept;
+    bool sidechainBandContains(double frequency) const noexcept;
+    unsigned sidechainBandMask {}, cachedSidechainBandMask {}, capturedKeyBandMask {};
+    std::array<const std::atomic<float>*, 4> enabledParameters {}, keyRouteParameters {};
+    std::array<const std::atomic<float>*, 3> frequencyParameters {};
     pontedsp::mc2000::dsp::CrossoverResponse displayResponse;
     unsigned cachedIirVersion {};
     std::array<bool, 4> inputBands { true, true, true, true };
     int responseBandCount { 4 };
-    double withoutSpectrumSamplesSeconds {};
+    pontedsp::mc2000::ui::StereoSpectrum::Response keyResponseDb {};
     std::array<double, fftSize / 2> responseDb {};
     std::array<double, 3> cachedResponseFrequencies {};
     std::array<bool, 4> cachedInputBands {};
@@ -192,11 +202,7 @@ private:
     bool frequencyClamped {}, kernelPending {};
     juce::String responseCaption;
     std::array<float, fftSize * 2> fftWork {};
-    std::array<float, fftSize / 2> spectrumDb {};
-    int fftInputCount {};
-    bool spectrumReady {};
     bool spectrumActive { true };
-    std::uint64_t fftTransformCount {};
 };
 
 class CompressionPlot final : public juce::Component

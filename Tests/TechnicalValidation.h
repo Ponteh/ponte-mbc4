@@ -75,7 +75,7 @@ inline int matrix(const char* path) {
             for(int b=0;b<4;++b) {
                 parameter(p,parameters::bandId(b,"enabled"),1);
                 parameter(p,parameters::bandId(b,"solo"),0);
-                parameter(p,parameters::bandId(b,"ratio"),4);
+                parameter(p,parameters::bandId(b,"sidechainSource"),keyChannels>0&&b%2==0?1.f:0.f);parameter(p,parameters::bandId(b,"ratio"),4);
                 parameter(p,parameters::bandId(b,"thresholdDb"),-30);
                 parameter(p,parameters::bandId(b,"tcMode"),float(mode));
                 parameter(p,parameters::bandId(b,"bite"),float(1+((bands+mode)%3)*4.5));
@@ -123,12 +123,18 @@ inline int matrix(const char* path) {
     // while a separate audio thread runs audited callbacks. No GUI methods there.
     std::uint64_t concurrentViolations=0;
     {
-        PonteMC2000AudioProcessor p;p.prepareToPlay(48000,512);p.addSpectrumConsumer();
+        PonteMC2000AudioProcessor p;
+        auto keyLayout=p.getBusesLayout();keyLayout.inputBuses.set(1,juce::AudioChannelSet::stereo());
+        check(p.setBusesLayout(keyLayout),"concurrent key bus rejected");
+        parameter(p,parameters::bandId(0,"sidechainSource"),1);
+        parameter(p,parameters::bandId(2,"sidechainSource"),1);
+        p.prepareToPlay(48000,512);p.addSpectrumConsumer();
+        std::uint64_t spectrumViolations=0;
         std::atomic<bool> done{false};
         std::thread producer([&] {
-            juce::AudioBuffer<float> audio(2,512);juce::MidiBuffer events;
+            juce::AudioBuffer<float> audio(4,512);juce::MidiBuffer events;
             for(int b=0;b<1024;++b) {
-                for(int ch=0;ch<2;++ch)for(int i=0;i<512;++i)audio.setSample(ch,i,float(.2*std::sin((b*512+i)*.017)));
+                for(int ch=0;ch<4;++ch)for(int i=0;i<512;++i)audio.setSample(ch,i,float(.2*std::sin((b*512+i)*.017*(ch+1))));
                 { realtimeAudit::Guard guard;p.processBlock(audio,events); }
                 auto c=realtimeAudit::counts;
                 concurrentViolations+=c.allocations+c.frees+c.locks+c.waits+c.io;
@@ -138,11 +144,16 @@ inline int matrix(const char* path) {
         });
         std::array<PonteMC2000AudioProcessor::SpectrumSample,257> spectrum;
         while(!done.load(std::memory_order_acquire)) {
-            bool gap=false;p.popSpectrumSamples(spectrum.data(),257,gap);
+            bool gap=false;const int received=p.popSpectrumSamples(spectrum.data(),257,gap);
+            for(int i=0;i<received;++i) {
+                if(spectrum[std::size_t(i)].sidechainBandMask!=5u)++spectrumViolations;
+                for(float value:spectrum[std::size_t(i)].audio)
+                    if(!std::isfinite(value))++spectrumViolations;
+            }
             for(int b=0;b<4;++b) { p.getEngine().consumeBandMeter(b);p.getEngine().getStaticCurveParameters(b); }
             p.getEngine().consumeOutputMeterDb();std::this_thread::yield();
         }
-        producer.join();p.removeSpectrumConsumer();
+        producer.join();concurrentViolations+=spectrumViolations;p.removeSpectrumConsumer();
     }
     check(concurrentViolations==0,"concurrent callback violation");
     // A synthetic old model tag exercises the actual binary state entry point.

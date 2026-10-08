@@ -2,7 +2,7 @@
 
 ## Stato release 0.2.5
 
-Il modello di stato 3 conserva i preset precedenti introducendo la distinzione
+Il modello di stato 4 conserva i preset precedenti introducendo la distinzione
 tra modalità crossover (`IIR` / `Linear Phase`) e collegamento dei canali
 (`Stereo` / `Dual mono`). I controlli delle bande restano comuni: `linkMaster`
 continua a collegare bande, non canali. In Dual mono ogni canale possiede
@@ -11,7 +11,7 @@ mentre uno stereo è mappato L->L e R->R. Il percorso IIR precedente rimane il
 default.
 
 La risposta grafica IIR usa la risposta complessa degli stessi coefficienti
-digitali e somma H prima del modulo, con clamp condivisi. Il modello DSP 10
+digitali e somma H prima del modulo, con clamp condivisi. Il modello DSP 11
 integra inoltre FIR simmetrici complementari a ritardo comune: low-pass
 cumulativi, differenze per le bande intermedie e impulso ritardato meno l'ultimo
 low-pass. La convoluzione FFT partizionata distribuisce il lavoro nel tempo.
@@ -1737,6 +1737,32 @@ capire se Auto dipende principalmente da:
 ---
 
 ## 26.1 Sidechain esterno
+
+Aggiornamento 0.2.5 (stato 4, DSP 11): ogni banda sceglie NO (default,
+detector interno) oppure ALL (somma audio delle mandate al bus sidechain,
+filtrata nella banda). La scelta persiste ed e indipendente da LINK.
+ALL senza bus attivo usa un key silenzioso; non passa al detector interno.
+Gli stati precedenti privi della scelta tornano a NO, quindi un vecchio
+progetto con sidechain esterno deve selezionare ALL sulle bande interessate.
+
+Il bus standard contiene gia il mix delle mandate: questa implementazione
+non dispone di segnali o nomi separati per FONTE1/FONTE2. Il plugin di invio
+separato proposto non e stato aggiunto, come richiesto dall'utente.
+La descrizione storica sotto vale ora solo per le bande impostate su ALL.
+
+Visualizzazione 0.2.5: al normale spettro grigio del programma si affianca
+lo spettro del key esterno, lime con opacita 35%, nelle sole regioni delle
+bande abilitate su ALL. Le regioni NO interrompono la traccia. Il ritaglio
+e solo grafico: il detector mantiene la risposta reale e le code dei filtri.
+IIR e Linear Phase riutilizzano le risposte dei crossover attivi. Un solo
+analizzatore stereo del mix sidechain serve tutte le bande selezionate;
+FFT, finestra e workspace sono condivisi con il programma sul thread UI.
+L/R sono analizzati separatamente e combinati per magnitudine massima,
+senza cancellazioni tra i due canali; le cancellazioni fra mandate gia
+sommate dalla DAW rimangono. NO, IN disattivato e GUI nascosta evitano le
+FFT sidechain. Il callback copia dati e routing in una FIFO preallocata.
+Il cambio routing scarta finestre precedenti; senza key non viene mostrato
+lo spettro del programma al suo posto. Stato 4 e modello DSP 11 invariati.
 
 **[IMPLEMENTED]/[LIMITED]** il VST3 espone un bus Sidechain opzionale mono o
 stereo. Quando è attivo:

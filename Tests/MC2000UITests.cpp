@@ -566,11 +566,14 @@ void testMeterPaintingAndReopen()
 #include "CrossoverStateLatencyAndUITests.h"
 #include "ActiveCrossoverResponseAndReloadTests.h"
 #include "BandMeterChannelUITests.h"
+#include "BandSidechainStateAndUITests.h"
+#include "SidechainSpectrumTests.h"
 #include "LinearPhaseRealtimeValidation.h"
 
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if (argc > 1 && std::string(argv[1]) == "--sidechain-spectrum") { testSidechainSpectrum(); return failures == 0 ? 0 : 1; }
     if (argc > 1 && std::string(argv[1]) == "--technical-matrix") { const int result = technicalValidation::matrix(argc>2?argv[2]:"technical-matrix.json"); const bool linear = linearPhaseValidation::realtime(); return result != 0 || !linear ? 1 : 0; }
     if (argc > 1 && std::string(argv[1]) == "--gui-profile") return technicalValidation::profile(argc>2?argv[2]:"gui-profile.csv");
     if (argc > 1 && std::string(argv[1]) == "--callback-profile") return technicalValidation::callbackProfile(argc>2?argv[2]:"callback-profile.csv");
@@ -579,23 +582,26 @@ int main(int argc, char** argv)
         std::cerr << "Unknown test option: " << argv[1] << '\n';
         return 2;
     }
-    testActiveIirResponse();
-    testMeasuredAudioAgainstIirPlot();
-    testMockupLayoutAndLink();
-    testStereoBandMeterDisplay();
-    testAutomaticCrossoverReload();
-    testCrossoverModeStateLatencyAndBypass();
-    testTiming();
-    testHeaderVersions();
-    testClosedSpectrumAudio();
-    testCachedParameterRestore();
-    testFocusController();
-    testEditorAndSolo();
-    testKnobEditing();
-    testSoloAudioRouting();
-    testMeterPaintingAndReopen();
-    testSpectrumTimingAndTails();
-    testDotMeterCoherence();
+    const auto run = [](const char* name, auto test) { std::cout << name << std::endl; test(); };
+    run("testActiveIirResponse", testActiveIirResponse);
+    run("testMeasuredAudioAgainstIirPlot", testMeasuredAudioAgainstIirPlot);
+    run("testMockupLayoutAndLink", testMockupLayoutAndLink);
+    run("testStereoBandMeterDisplay", testStereoBandMeterDisplay);
+    run("testBandSidechainStateAndUI", testBandSidechainStateAndUI);
+    run("testSidechainSpectrum", testSidechainSpectrum);
+    run("testAutomaticCrossoverReload", testAutomaticCrossoverReload);
+    run("testCrossoverModeStateLatencyAndBypass", testCrossoverModeStateLatencyAndBypass);
+    run("testTiming", testTiming);
+    run("testHeaderVersions", testHeaderVersions);
+    run("testClosedSpectrumAudio", testClosedSpectrumAudio);
+    run("testCachedParameterRestore", testCachedParameterRestore);
+    run("testFocusController", testFocusController);
+    run("testEditorAndSolo", testEditorAndSolo);
+    run("testKnobEditing", testKnobEditing);
+    run("testSoloAudioRouting", testSoloAudioRouting);
+    run("testMeterPaintingAndReopen", testMeterPaintingAndReopen);
+    run("testSpectrumTimingAndTails", testSpectrumTimingAndTails);
+    run("testDotMeterCoherence", testDotMeterCoherence);
     if (failures == 0) std::cout << "All Ponte MC2000 UI/state tests passed\n";
     return failures == 0 ? 0 : 1;
 }

@@ -77,3 +77,30 @@ BandMeterChannelUITests.h checks unequal L/R levels in both channel and crossove
 modes, shared Stereo GR, independent Dual Mono GR, cached painting and decay.
 It captures all four UI combinations. DSP tests cover peak consumption, silence,
 reset, independent mono references, external keys and an empty R on mono input.
+
+
+## Per-band standard sidechain
+
+- BandSidechainRoutingTests.h: mixed NO/ALL references in both crossover and
+  channel modes; independent L/R detector meters/GR/output; unused-key nap;
+  disconnected ALL stays silent.
+- BandSidechainStateAndUITests.h: default NO, appended automation indices,
+  per-band state recall, legacy migration, malformed values, LINK independence,
+  same-row menus at three editor sizes and all band counts, and audio-sum
+  cancellation through the wrapper.
+- TechnicalValidation.h and LinearPhaseRealtimeValidation.h now exercise mixed
+  internal/external routes when a key bus exists, retaining callback audits.
+## Sidechain input spectrum
+
+SidechainSpectrumTests.h checks independent program/key levels against an
+analytic low-band response, all eight IIR/FIR x Stereo/Dual Mono x mono/stereo
+key combinations, anti-phase L/R, nonadjacent ALL regions, unchanged NO regions,
+IN/SOLO behavior, queued old routing, disconnected keys, hidden/reopened GUI,
+passive painting, decay, and one shared key FFT per mono window (two for stereo)
+even with all four bands set to ALL. It captures the minimum-size mixed-route UI.
+Run it alone with MC2000UITests --sidechain-spectrum; the normal mandatory UI
+suite also runs it.
+
+TechnicalValidation.h additionally audits a concurrent four-channel FIFO
+producer and consumer with a mixed routing mask, finite samples, and all existing
+callback allocation, lock, wait, I/O and audio-equivalence checks.

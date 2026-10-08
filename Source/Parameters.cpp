@@ -107,6 +107,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
         juce::ParameterID(channelMode, 1), "Channel Mode",
         juce::StringArray { "Stereo", "Dual Mono" }, 0));
 
+    // Append new parameters to preserve every existing host automation index.
+    for (int band = 0; band < 4; ++band)
+        layout.push_back(std::make_unique<juce::AudioParameterChoice>(
+            juce::ParameterID(bandId(band, "sidechainSource"), 1),
+            "Band " + juce::String(band + 1) + " Sidechain",
+            juce::StringArray { "NO", "ALL" }, 0));
     return { layout.begin(), layout.end() };
 }
 
@@ -130,6 +136,7 @@ SnapshotReader::SnapshotReader(const juce::AudioProcessorValueTreeState& state)
         pointers[7] = state.getRawParameterValue(bandId(band, "solo"));
         pointers[8] = state.getRawParameterValue(bandId(band, "enabled"));
         pointers[9] = state.getRawParameterValue(bandId(band, "tcMode"));
+        pointers[10] = state.getRawParameterValue(bandId(band, "sidechainSource"));
     }
 }
 
@@ -155,6 +162,7 @@ dsp::GlobalParameters SnapshotReader::read(LinkRuntime& runtime) const noexcept
     {
         auto& p = snapshot.bands[static_cast<std::size_t>(band)];
         const auto& pointers = bands[static_cast<std::size_t>(band)];
+        p.sidechainSource = static_cast<dsp::SidechainSource>(int(std::clamp(value(pointers[10]), 0.0f, 1.0f)));
         p.solo = value(pointers[7]) > 0.5f;
         p.enabled = value(pointers[8]) > 0.5f;
         for (int parameter = 0; parameter < LinkRuntime::linkedParameters; ++parameter)

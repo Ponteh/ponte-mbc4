@@ -1,11 +1,35 @@
 # Ponte MBC4
 
-## Release 0.2.5 local candidate — DSP_MODEL_10
+## Release 0.2.5 local candidate — DSP_MODEL_11
 
 The schema 3 choices global.crossoverMode (IIR / Linear Phase) and
 global.channelMode (Stereo / Dual Mono) are implemented. Old states explicitly
 restore IIR/Stereo, including when loaded over a Linear Phase/Dual Mono instance.
 Legacy parameter IDs and host indices are preserved; the choices are appended.
+
+Schema 4 adds a SIDECHAIN menu beside ALGORITHM for each band. NO is the
+default and keeps the internal detector. ALL uses the DAW's audio sum of the
+external sidechain sends, filtered with the active IIR/FIR crossover; phase
+cancellations between sends remain intact. Routes are independent of LINK,
+persist in projects, and are host automatable. An unavailable ALL input means
+a silent key, with normal release of previous gain reduction. Old states missing
+these fields restore NO: old projects using automatic external detection need
+ALL explicitly on the relevant bands.
+
+With standard sends, this build receives one mono/stereo sidechain bus.
+Individual tracks already mixed into that bus cannot be selected or named
+separately inside the plugin. FONTE1/FONTE2 track choices are not implemented.
+No sender companion plugin was added, following the user's preference.
+
+The crossover graph now overlays the external key spectrum in the existing
+lime colour at 35% opacity, beside the original grey input spectrum. It appears
+only inside enabled bands set to ALL, in IIR and Linear Phase, and breaks across
+NO bands. This visual crop does not remove the real filter tails from the
+detector. Both traces use the active crossover response and shared stereo FFT
+analysis; opposite-phase L/R signals remain visible. One key analysis serves
+all selected bands. Key FFT work stops with NO, disabled IN, or a hidden editor.
+[Sidechain spectrum implementation and validation](docs/SIDECHAIN_SPECTRUM_2026-10-08.md).
+[Implementation and verification](docs/BAND_SIDECHAIN_2026-10-08.md).
 
 IIR uses the original zero-latency audio path and digital complex response,
 including all-pass compensation and abs(sum(H)). The plot follows a coherent

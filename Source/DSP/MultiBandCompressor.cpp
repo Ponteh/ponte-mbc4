@@ -91,6 +91,7 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
         band.releaseMs = clampFinite(band.releaseMs, 25.0, 2500.0, 250.0);
         const auto mode = std::clamp(static_cast<int>(band.tcMode), 0, 2);
         band.tcMode = static_cast<TCMode>(mode);
+        band.sidechainSource = static_cast<SidechainSource>(std::clamp(static_cast<int>(band.sidechainSource), 0, 1));
     }
     if (previous != currentParameters) activity = Activity::active;
     if (previous.channelMode != currentParameters.channelMode)
@@ -152,7 +153,11 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     for (int channel = 0; channel < channelsToProcess; ++channel)
         if (channels[channel] == nullptr) return;
 
-    const auto useExternalDetector = detectorChannels != nullptr && detectorChannelCount > 0;
+    const bool externalSelected = std::any_of(
+        currentParameters.bands.begin(), currentParameters.bands.begin() + currentParameters.numBands,
+        [](const BandParameters& band) { return band.sidechainSource == SidechainSource::all; });
+    // An unused key must not wake NO bands or consume crossover work.
+    const auto useExternalDetector = externalSelected && detectorChannels != nullptr && detectorChannelCount > 0;
     const auto detectorChannelsToProcess = useExternalDetector
         ? std::clamp(detectorChannelCount, 1, maxChannels) : 0;
     if (useExternalDetector)
@@ -175,6 +180,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         for (auto& state : ballistics[1]) state.reset();
         for (auto& state : biteProcessors[1]) state.reset();
     }
+    if (detectorChannelsToProcess != previousDetectorChannels) detectorCrossover.reset();
     previousAudioChannels = channelsToProcess;
     previousDetectorChannels = detectorChannelsToProcess;
     if (activity == Activity::sleeping)
@@ -280,8 +286,9 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                 bandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] *= inputMix;
                 detectorBandSamples[static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)] *= inputMix;
             }
-            const auto detectorChannelTotal = useExternalDetector
-                ? detectorChannelsToProcess : channelsToProcess;
+            const bool useBandExternalDetector = p.sidechainSource == SidechainSource::all;
+            const auto detectorChannelTotal = useBandExternalDetector
+                ? std::max(1, detectorChannelsToProcess) : channelsToProcess;
             auto& bandGain = bandGainCurrent[static_cast<std::size_t>(band)];
             bandGain = smoothGain(bandGain, bandGainTargets[static_cast<std::size_t>(band)], smoothing);
             auto& soloMix = soloMixCurrent[static_cast<std::size_t>(band)];
@@ -290,11 +297,11 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
             {
                 for (int channel = 0; channel < channelsToProcess; ++channel)
                 {
-                    const auto detectorChannel = useExternalDetector
+                    const auto detectorChannel = useBandExternalDetector
                         ? (detectorChannelsToProcess == 1 ? 0 : std::min(channel, detectorChannelTotal - 1))
                         : channel;
                     const auto detector = std::abs(static_cast<double>(
-                        (useExternalDetector ? detectorBandSamples : bandSamples)
+                        (useBandExternalDetector ? detectorBandSamples : bandSamples)
                             [static_cast<std::size_t>(band)][static_cast<std::size_t>(detectorChannel)]));
                     auto& channelInput = channelInputPeaks[static_cast<std::size_t>(channel)][static_cast<std::size_t>(band)];
                     channelInput = std::max(channelInput, detector);
@@ -328,7 +335,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                 for (int channel = 0; channel < detectorChannelTotal; ++channel)
                 {
                     const auto level = std::abs(static_cast<double>(
-                        (useExternalDetector ? detectorBandSamples : bandSamples)
+                        (useBandExternalDetector ? detectorBandSamples : bandSamples)
                             [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)]));
                     detector = std::max(detector, level);
                     if (channel < channelsToProcess)
@@ -341,7 +348,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                 // program has one linked detector even with a stereo key.
                 if (channelsToProcess == 1)
                     channelInputPeaks[0][static_cast<std::size_t>(band)] = std::max(channelInputPeaks[0][static_cast<std::size_t>(band)], detector);
-                else if (useExternalDetector && detectorChannelTotal == 1)
+                else if (useBandExternalDetector && detectorChannelTotal == 1)
                     channelInputPeaks[1][static_cast<std::size_t>(band)] = std::max(channelInputPeaks[1][static_cast<std::size_t>(band)], detector);
                 inputPeaks[static_cast<std::size_t>(band)] =
                     std::max(inputPeaks[static_cast<std::size_t>(band)], detector);

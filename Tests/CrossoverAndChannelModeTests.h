@@ -61,7 +61,7 @@ void testIndependentDualMonoDynamics() {
         MultiBandCompressor stereo,leftMono,rightMono;
         for(auto* engine:{&stereo,&leftMono,&rightMono}) {engine->setNapEnabled(false);engine->setParameters(p);engine->prepare(48000,64,engine==&stereo?2:1);}
         for(int bands:{2,3,4}) for(int keyChannels:{0,1,2}) for(auto tc:{TCMode::type1,TCMode::type2,TCMode::automatic}) {
-            p.numBands=bands;for(auto& band:p.bands){band.thresholdDb=-36;band.ratio=4;band.bite=tc==TCMode::type1?1:10;band.tcMode=tc;}
+            p.numBands=bands;for(auto& band:p.bands){band.thresholdDb=-36;band.ratio=4;band.bite=tc==TCMode::type1?1:10;band.tcMode=tc;band.sidechainSource=keyChannels?SidechainSource::all:SidechainSource::internal;}
             for(auto* engine:{&stereo,&leftMono,&rightMono}){engine->setParameters(p);engine->reset();}
             double error=0;constexpr int block=257;
             std::array<float,block> l,r,lm,rm,kl,kr;

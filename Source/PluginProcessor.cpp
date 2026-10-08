@@ -97,7 +97,7 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 
     auto mainBuffer = getBusBuffer(buffer, false, 0);
     auto sidechainBuffer = getBusBuffer(buffer, true, 1);
-    pushSpectrumSamples(mainBuffer);
+    pushSpectrumSamples(mainBuffer, sidechainBuffer);
     std::array<float*, 2> program { mainBuffer.getWritePointer(0), nullptr };
     if (mainBuffer.getNumChannels() > 1) program[1] = mainBuffer.getWritePointer(1);
 
@@ -122,12 +122,27 @@ void PonteMC2000AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     applyReloadFade(mainBuffer);
 }
 
-void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<float>& buffer) noexcept
+void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<float>& buffer,
+                                                     const juce::AudioBuffer<float>& key) noexcept
 {
     MC2000_MEASURE(fifo);
     if (spectrumConsumers.load(std::memory_order_acquire) == 0) return;
     const auto channels = buffer.getNumChannels();
     if (channels <= 0) return;
+
+    unsigned keyMask = 0;
+    const auto& parameters = engine.getParameters();
+    if (key.getNumChannels() > 0)
+        for (int band = 0; band < parameters.numBands; ++band)
+            if (parameters.bands[std::size_t(band)].enabled
+                && parameters.bands[std::size_t(band)].sidechainSource
+                    == pontedsp::mc2000::dsp::SidechainSource::all)
+                keyMask |= 1u << band;
+    const float* left = buffer.getReadPointer(0);
+    const float* right = buffer.getReadPointer(std::min(1, channels - 1));
+    const float* keyLeft = keyMask != 0 ? key.getReadPointer(0) : nullptr;
+    const float* keyRight = keyMask != 0 ? key.getReadPointer(std::min(1, key.getNumChannels() - 1)) : nullptr;
+    const auto finite = [](float value) noexcept { return std::isfinite(value) ? value : 0.0f; };
 
     int start1 {}, size1 {}, start2 {}, size2 {};
     spectrumFifo.prepareToWrite(buffer.getNumSamples(), start1, size1, start2, size2);
@@ -135,10 +150,11 @@ void PonteMC2000AudioProcessor::pushSpectrumSamples(const juce::AudioBuffer<floa
     {
         for (int sample = 0; sample < count; ++sample)
         {
-            const auto left = buffer.getSample(0, sourceStart + sample);
-            const auto right = buffer.getSample(std::min(1, channels - 1), sourceStart + sample);
-            spectrumSamples[static_cast<std::size_t>(fifoStart + sample)] = {
-                std::isfinite(left) ? left : 0.0f, std::isfinite(right) ? right : 0.0f };
+            const int position = sourceStart + sample;
+            spectrumSamples[std::size_t(fifoStart + sample)] = {
+                { finite(left[position]), finite(right[position]),
+                  keyLeft ? finite(keyLeft[position]) : 0.0f,
+                  keyRight ? finite(keyRight[position]) : 0.0f }, keyMask };
         }
     };
     writeRange(start1, size1, 0);

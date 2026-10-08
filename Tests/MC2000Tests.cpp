@@ -463,7 +463,9 @@ void testExternalSidechain()
     MultiBandCompressor internalDetector;
     MultiBandCompressor externalDetector;
     internalDetector.setParameters(parameters);
-    externalDetector.setParameters(parameters);
+    auto externalParameters = parameters;
+    for (auto& band : externalParameters.bands) band.sidechainSource = SidechainSource::all;
+    externalDetector.setParameters(externalParameters);
     internalDetector.prepare(sampleRate, blockSize, 2);
     externalDetector.prepare(sampleRate, blockSize, 2);
 
@@ -533,7 +535,9 @@ void testExternalSidechainAcrossTimeConstants()
         MultiBandCompressor internalDetector;
         MultiBandCompressor externalDetector;
         internalDetector.setParameters(parameters);
-        externalDetector.setParameters(parameters);
+        auto externalParameters = parameters;
+    for (auto& band : externalParameters.bands) band.sidechainSource = SidechainSource::all;
+    externalDetector.setParameters(externalParameters);
         internalDetector.prepare(sampleRate, blockSize, 2);
         externalDetector.prepare(sampleRate, blockSize, 2);
 
@@ -740,7 +744,7 @@ void testInputMuteTransition()
     using namespace pontedsp::mc2000::dsp;
     MultiBandCompressor engine;
     GlobalParameters parameters;
-    for (auto& band : parameters.bands) band.enabled = false;
+    for (auto& band : parameters.bands) { band.enabled = false; band.sidechainSource = SidechainSource::all; }
     parameters.bands[0].enabled = true;
     parameters.bands[0].solo = true;
     engine.setParameters(parameters);
@@ -824,6 +828,7 @@ void testVisualMeterBallistics()
 } // namespace
 
 #include "CrossoverAndChannelModeTests.h"
+#include "BandSidechainRoutingTests.h"
 #include "LinearPhaseCrossoverTests.h"
 
 int main()
@@ -832,6 +837,7 @@ int main()
     testMeasuredLinearPhaseResponse();
     testLinearPhaseKernelUpdates();
     testCrossoverAndChannelModes();
+    testPerBandSidechainRouting();
     testLinkwitzRiley();
     testFourBandFlatSum();
     testGainComputer();

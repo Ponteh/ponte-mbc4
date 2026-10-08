@@ -12,6 +12,7 @@ namespace pontedsp::mc2000::dsp {
 
 enum class CrossoverMode { iir = 0, linearPhase = 1 };
 enum class ChannelMode { stereo = 0, dualMono = 1 };
+enum class SidechainSource { internal = 0, all = 1 };
 
 struct BandParameters
 {
@@ -26,6 +27,7 @@ struct BandParameters
     double attackMs { 10.0 };
     double releaseMs { 250.0 };
     TCMode tcMode { TCMode::type1 };
+    SidechainSource sidechainSource { SidechainSource::internal };
 };
 
 struct GlobalParameters
@@ -57,7 +59,7 @@ class MultiBandCompressor final
 public:
     static constexpr int maxBands = CrossoverNetwork::maxBands;
     static constexpr int maxChannels = CrossoverNetwork::maxChannels;
-    static constexpr int dspModelVersion = 10;
+    static constexpr int dspModelVersion = 11;
 
     enum class Activity { active, draining, sleeping };
     // Audio-thread only. Disabling nap is used by the equivalence harness.
@@ -75,9 +77,9 @@ public:
     bool copyIirResponse(CrossoverResponse& response, unsigned& version) const noexcept;
     void setParameters(const GlobalParameters& parameters) noexcept;
     void process(float** channels, int numChannels, int numSamples) noexcept;
-    // The optional detector is an external, band-split key signal.  Its level
-    // controls gain reduction only; program audio is always taken from
-    // `channels`.  A null or empty detector uses normal program detection.
+    // The external key is the host's audio sum of all sidechain sends.
+    // Each band chooses internal (NO) or external (ALL) detection independently.
+    // A missing ALL key is silence; it never falls back to program detection.
     void process(float** channels, int numChannels,
                  const float* const* detectorChannels, int detectorNumChannels,
                  int numSamples) noexcept;

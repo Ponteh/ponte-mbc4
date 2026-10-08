@@ -36,7 +36,12 @@ public:
 
     pontedsp::mc2000::dsp::MultiBandCompressor& getEngine() noexcept { return engine; }
     const pontedsp::mc2000::dsp::MultiBandCompressor& getEngine() const noexcept { return engine; }
-    using SpectrumSample = std::array<float, 2>;
+    struct SpectrumSample
+    {
+        std::array<float, 4> audio {}; // program L/R, external key L/R
+        unsigned sidechainBandMask {}; // capture-time routing; zero for unavailable/unused key
+        float operator[](std::size_t index) const noexcept { return audio[index]; }
+    };
     int popSpectrumSamples(SpectrumSample* destination, int maximumSamples, bool& discontinuity) noexcept;
     void discardSpectrumSamples() noexcept;
     // Message-thread ownership; the audio thread only reads this counter.
@@ -93,13 +98,14 @@ private:
     double reloadGain {1};
     int reloadWarmSamples {};
     pontedsp::mc2000::parameters::SnapshotReader parameterReader { state };
-    void pushSpectrumSamples(const juce::AudioBuffer<float>&) noexcept;
+    void pushSpectrumSamples(const juce::AudioBuffer<float>& program, const juce::AudioBuffer<float>& key) noexcept;
 
     static constexpr int spectrumFifoCapacity = 32768;
     std::atomic<int> spectrumConsumers {};
     pontedsp::mc2000::dsp::MultiBandCompressor engine;
     pontedsp::mc2000::parameters::LinkRuntime linkRuntime;
-    std::array<SpectrumSample, spectrumFifoCapacity> spectrumSamples {};
+    // Allocate once during construction, never resize in a callback.
+    std::vector<SpectrumSample> spectrumSamples = std::vector<SpectrumSample>(spectrumFifoCapacity);
     std::atomic<bool> spectrumOverflow { false };
     juce::AbstractFifo spectrumFifo { spectrumFifoCapacity };
     std::atomic<int> activeCrossoverMode {};
