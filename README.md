@@ -8,9 +8,20 @@ restore IIR/Stereo, including when loaded over a Linear Phase/Dual Mono instance
 Legacy parameter IDs and host indices are preserved; the choices are appended.
 
 IIR uses the original zero-latency audio path and digital complex response,
-including all-pass compensation and abs(sum(H)). The plot labels its smoothed
-frequency destination. Dual Mono has independent detector, Ballistics and BITE
-state per channel, shared controls and separate L/R GR meter strips (L above R).
+including all-pass compensation and abs(sum(H)). The plot follows a coherent
+snapshot of the coefficients actually applied in audio, including smoothing.
+The magnitude plot occupies the whole crossover box in both modes. The phase
+display, selector, legend and phase/group-delay tooltips have been withdrawn.
+Curves below -60 dB are clipped, retaining the actual attenuation rather than
+inventing coloured plateaus on the plot boundary. The logarithmic IIR grid has
+1,025 points. The white curve is the complex sum of selected IN bands, before
+dynamics; LR4 can reconstruct a flat magnitude.
+Dual Mono has independent detector, Ballistics and BITE
+state per channel and shared controls. Every band has separate L/R IN, OUT and
+GR strips in both Stereo and Dual Mono (L above R). Both channels retain the
+same band colour for IN/OUT and the original red for GR; the label stays GR.
+Stereo GR is shared; Dual Mono GR is independent. IN retains its detector-level
+meaning, including external key mapping. A mono audio layout leaves R empty.
 Mono key controls both; stereo key maps L to L and R to R. Band LINK still links
 band parameters. Channel changes transfer state and fade GR over 5 ms.
 
@@ -21,17 +32,24 @@ and key share the same delay. Native callback bypass retains PDC and warms wet
 history; FIR tails prevent early nap. Kernel design runs on a worker; warm
 history transitions take 20 ms and obsolete requests are discarded.
 
-Crossover mode is nonautomatable. The requested mode is saved immediately,
-but applies only when the host deactivates/reactivates processing and calls
-prepareToPlay. A pending change is shown in the plot; stopping transport alone
-may not reactivate the processor. The graph uses versioned active FIR responses,
-labels a kernel fade and reports samples/ms and sample-rate clamps.
-
+The LINEAR PHASE button selects Linear Phase when on and IIR when off.
+DUAL MONO selects Dual Mono when on and Stereo when off. Both sit in the
+same header row as CROSSOVER and MODE. IN/SOLO are adjacent in each band,
+with LINK 1/2/3/4 underneath, selecting the existing relative-link master. The requested choice
+is persistent and nonautomatable. A 10 ms audio fade closes the old path; a worker
+prepares filters and preallocated buffers while callbacks return silence without
+waiting. The existing header reports Loading IIR -> Linear Phase (or the reverse).
+The message thread reports the new latency to the host; warm-up and a 10 ms fade
+resume audio. The UI stays visible and settings survive the change. Switching
+is not gap-free: FIR warm-up includes its delay, and the host may interrupt audio
+while updating PDC. Rapid requests converge on the latest choice.
+The graph uses active FIR responses, labels kernel fades and reports samples/ms
+and frequency clamps. PHASE below INPUT/OUTPUT still inverts output polarity;
+there is no separate phase-response display.
 FIR crossover shape differs from LR4 and has pre-ringing. Closely spaced bands
 remain permitted but may lack a flat passband. The crossover's linear phase does
 not make the compressor's time-varying dynamics linear. Measured results and
-remaining platform/DAW/performance gates are in
-[release validation](docs/RELEASE_0.2.5_VALIDATION.md).
+remaining platform/DAW/performance.
 
 **September 23 R1 correction, DSP_MODEL_7 (local 0.2.3 test build):**
 R1 now releases excess linear control with tau equal to the displayed Release.

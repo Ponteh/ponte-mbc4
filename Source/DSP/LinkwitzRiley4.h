@@ -4,6 +4,7 @@
 #include "Db.h"
 #include <algorithm>
 #include <utility>
+#include <array>
 #include <complex>
 
 namespace pontedsp::mc2000::dsp {
@@ -56,6 +57,8 @@ public:
         return lowPassResponse(frequency) + highPassResponse(frequency);
     }
 
+    std::array<Biquad::Coefficients,4> coefficients() const noexcept
+    { return {low1.coefficients(),low2.coefficients(),high1.coefficients(),high2.coefficients()}; }
     bool isQuiet() const noexcept
     { return low1.isQuiet() && low2.isQuiet() && high1.isQuiet() && high2.isQuiet(); }
 

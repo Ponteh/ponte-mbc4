@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LinkwitzRiley4.h"
+#include "CrossoverResponse.h"
 #include <array>
 #include <complex>
 
@@ -19,6 +20,8 @@ public:
     void setFrequencies(const std::array<double, 3>& frequencies) noexcept;
     void processSample(int channel, double input, std::array<double, maxBands>& bands) noexcept;
 
+    CrossoverResponse responseSnapshot() const noexcept;
+    unsigned responseRevision() const noexcept { return revision; }
     static std::array<double, 3> effectiveFrequencies(const std::array<double, 3>& frequencies, double rate) noexcept;
     static double lowPassMagnitude(double frequency, double crossover) noexcept;
     static double highPassMagnitude(double frequency, double crossover) noexcept;
@@ -39,6 +42,7 @@ private:
     double sampleRate { 48000.0 };
     int numChannels { 2 };
     int numBands { 4 };
+    unsigned revision {};
 };
 
 } // namespace pontedsp::mc2000::dsp

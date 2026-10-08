@@ -4334,3 +4334,19 @@ Questi scarti non giustificano modifiche al DSP Auto/R1.
 
 [Dati, metodo, build e limiti](Research/NEXT_RELEASE_ORIGINAL_TEST_PACK/analysis_2026-09-25/REPORT.md).
 Il collaudo utente del punto 1 resta in attesa; nessuna release pubblicata.
+
+## UI and crossover reconfiguration update - 2026-10-08
+
+Supersedes the previous manual host-reactivation requirement for 0.2.5.
+The processor now prepares the selected backend off the audio thread after a
+10 ms fade, gates callbacks during loading, reports latency on the message
+thread and warms/fades back in. A one-click IIR / LINEAR PHASE button and the
+existing status box expose the change. The UI stays visible; audio can briefly
+pause while FIR/PDC changes. Settings and parameter identities are preserved.
+
+The IIR graph uses published active biquad coefficients, including smoothing
+and all-pass sections. It displays unwrapped phase in a separate panel with
+explicit reported-latency removal, plus hover group delay; values below -80 dB
+are omitted. LR4 unity magnitude and phase alignment are real properties, not
+placeholder drawings. PHASE polarity inversion retains its original meaning.
+[Implementation and validation](docs/CROSSOVER_PHASE_AND_RELOAD_2026-10-08.md).

@@ -36,6 +36,7 @@ void MultiBandCompressor::prepare(const double newSampleRate, const int maxBlock
     detectorCrossover.setFrequencies(crossoverCurrent);
     crossoverUpdateCountdown = 0;
     reset();
+    publishIirResponse();
 }
 
 void MultiBandCompressor::reset() noexcept
@@ -56,6 +57,8 @@ void MultiBandCompressor::reset() noexcept
         meter.inputDb.store(-100.0f, std::memory_order_relaxed);
         meter.outputDb.store(-100.0f, std::memory_order_relaxed);
         meter.gainReductionDb.store(0.0f, std::memory_order_relaxed);
+        for (auto& value : meter.channelInputDb) value.store(-100.0f, std::memory_order_relaxed);
+        for (auto& value : meter.channelOutputDb) value.store(-100.0f, std::memory_order_relaxed);
     }
     for (auto& meter : outputMeters) meter.store(-100.0f, std::memory_order_relaxed);
     discardPendingMeterPeaks();
@@ -123,6 +126,7 @@ void MultiBandCompressor::setParameters(const GlobalParameters& parameters) noex
         bandGainTargets[i] = decibelsToGain(currentParameters.bands[i].gainDb);
     crossover.setBandCount(currentParameters.numBands);
     detectorCrossover.setBandCount(currentParameters.numBands);
+    publishIirResponse();
 }
 
 double MultiBandCompressor::smoothGain(const double current, const double target,
@@ -180,7 +184,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
         crossoverUpdateCountdown = ((countdown - 1 - sampleCount % 16) % 16 + 16) % 16 + 1;
         // Do not erase pending peaks not yet consumed by the GUI.
         for (auto& channel : channelGr) for (auto& gr : channel) gr.store(0, std::memory_order_relaxed);
-        publishMeters({}, {}, {}, {});
+        publishMeters({}, {}, {}, {}, {}, {});
         return;
     }
 
@@ -202,6 +206,7 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
     std::array<double, maxBands> maximumGr {};
     std::array<double, 2> masterPeaks {};
     std::array<std::array<double, maxBands>, maxChannels> channelMaximumGr {};
+    std::array<std::array<double, maxBands>, maxChannels> channelInputPeaks {}, channelOutputPeaks {};
 
     for (int sample = 0; sample < sampleCount; ++sample)
     {
@@ -291,6 +296,8 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                     const auto detector = std::abs(static_cast<double>(
                         (useExternalDetector ? detectorBandSamples : bandSamples)
                             [static_cast<std::size_t>(band)][static_cast<std::size_t>(detectorChannel)]));
+                    auto& channelInput = channelInputPeaks[static_cast<std::size_t>(channel)][static_cast<std::size_t>(band)];
+                    channelInput = std::max(channelInput, detector);
                     inputPeaks[static_cast<std::size_t>(band)] =
                         std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
                     auto targetGr = 0.0;
@@ -308,17 +315,34 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                     auto& value = bandSamples[static_cast<std::size_t>(band)]
                         [static_cast<std::size_t>(channel)];
                     value *= bandGain * decibelsToGain(-gr) * soloMix;
+                    const auto level = std::abs(value);
+                    auto& channelOutput = channelOutputPeaks[static_cast<std::size_t>(channel)][static_cast<std::size_t>(band)];
+                    channelOutput = std::max(channelOutput, level);
                     outputPeaks[static_cast<std::size_t>(band)] = std::max(
-                        outputPeaks[static_cast<std::size_t>(band)], std::abs(value));
+                        outputPeaks[static_cast<std::size_t>(band)], level);
                 }
             }
             else
             {
                 auto detector = 0.0;
                 for (int channel = 0; channel < detectorChannelTotal; ++channel)
-                    detector = std::max(detector, std::abs(static_cast<double>(
+                {
+                    const auto level = std::abs(static_cast<double>(
                         (useExternalDetector ? detectorBandSamples : bandSamples)
-                            [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)])));
+                            [static_cast<std::size_t>(band)][static_cast<std::size_t>(channel)]));
+                    detector = std::max(detector, level);
+                    if (channel < channelsToProcess)
+                    {
+                        auto& channelInput = channelInputPeaks[static_cast<std::size_t>(channel)][static_cast<std::size_t>(band)];
+                        channelInput = std::max(channelInput, level);
+                    }
+                }
+                // A mono external key feeds both program channels; a mono
+                // program has one linked detector even with a stereo key.
+                if (channelsToProcess == 1)
+                    channelInputPeaks[0][static_cast<std::size_t>(band)] = std::max(channelInputPeaks[0][static_cast<std::size_t>(band)], detector);
+                else if (useExternalDetector && detectorChannelTotal == 1)
+                    channelInputPeaks[1][static_cast<std::size_t>(band)] = std::max(channelInputPeaks[1][static_cast<std::size_t>(band)], detector);
                 inputPeaks[static_cast<std::size_t>(band)] =
                     std::max(inputPeaks[static_cast<std::size_t>(band)], detector);
                 auto targetGr = 0.0;
@@ -338,8 +362,11 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
                         [static_cast<std::size_t>(channel)];
                     const auto appliedGr = transitionGr(channel, band, gr);
                     value *= channelTransitionRemaining > 0 ? bandGain * decibelsToGain(-appliedGr) * soloMix : appliedBandGain;
+                    const auto level = std::abs(value);
+                    auto& channelOutput = channelOutputPeaks[static_cast<std::size_t>(channel)][static_cast<std::size_t>(band)];
+                    channelOutput = std::max(channelOutput, level);
                     outputPeaks[static_cast<std::size_t>(band)] = std::max(
-                        outputPeaks[static_cast<std::size_t>(band)], std::abs(value));
+                        outputPeaks[static_cast<std::size_t>(band)], level);
                 }
             }
         }
@@ -397,13 +424,16 @@ void MultiBandCompressor::process(float** channels, const int channelCount,
             channelGr[c][b].store(static_cast<float>(channelMaximumGr[c][b]), std::memory_order_relaxed);
             pendingChannelGr[c][b].value.publish(static_cast<float>(channelMaximumGr[c][b]));
         }
-    publishMeters(inputPeaks, outputPeaks, maximumGr, masterPeaks);
+    publishIirResponse();
+    publishMeters(inputPeaks, outputPeaks, maximumGr, masterPeaks, channelInputPeaks, channelOutputPeaks);
 }
 
 void MultiBandCompressor::publishMeters(const std::array<double, maxBands>& inputPeaks,
                                         const std::array<double, maxBands>& outputPeaks,
                                         const std::array<double, maxBands>& maximumGr,
-                                        const std::array<double, 2>& masterPeaks) noexcept
+                                        const std::array<double, 2>& masterPeaks,
+                                        const std::array<std::array<double, maxBands>, maxChannels>& channelInputPeaks,
+                                        const std::array<std::array<double, maxBands>, maxChannels>& channelOutputPeaks) noexcept
 {
     for (int band = 0; band < maxBands; ++band)
     {
@@ -415,6 +445,16 @@ void MultiBandCompressor::publishMeters(const std::array<double, maxBands>& inpu
         pending.input.publish(meter.inputDb.load(std::memory_order_relaxed));
         pending.output.publish(meter.outputDb.load(std::memory_order_relaxed));
         pending.reduction.publish(static_cast<float>(maximumGr[static_cast<std::size_t>(band)]));
+        for (std::size_t channel = 0; channel < maxChannels; ++channel)
+        {
+            const auto b = static_cast<std::size_t>(band);
+            const auto input = static_cast<float>(gainToDecibels(channelInputPeaks[channel][b], -100.0));
+            const auto output = static_cast<float>(gainToDecibels(channelOutputPeaks[channel][b], -100.0));
+            meter.channelInputDb[channel].store(input, std::memory_order_relaxed);
+            meter.channelOutputDb[channel].store(output, std::memory_order_relaxed);
+            pending.channelInput[channel].publish(input);
+            pending.channelOutput[channel].publish(output);
+        }
     }
     for (int channel = 0; channel < 2; ++channel)
     {
@@ -430,7 +470,10 @@ BandMeterSnapshot MultiBandCompressor::consumeBandMeter(const int band) noexcept
 {
     if (band < 0 || band >= maxBands) return {};
     auto& meter = pendingMeters[static_cast<std::size_t>(band)];
-    return { meter.input.consume(), meter.output.consume(), meter.reduction.consume(), { pendingChannelGr[0][static_cast<std::size_t>(band)].value.consume(), pendingChannelGr[1][static_cast<std::size_t>(band)].value.consume() } };
+    return { meter.input.consume(), meter.output.consume(), meter.reduction.consume(),
+             { pendingChannelGr[0][static_cast<std::size_t>(band)].value.consume(), pendingChannelGr[1][static_cast<std::size_t>(band)].value.consume() },
+             { meter.channelInput[0].consume(), meter.channelInput[1].consume() },
+             { meter.channelOutput[0].consume(), meter.channelOutput[1].consume() } };
 }
 
 std::array<float, 2> MultiBandCompressor::consumeOutputMeterDb() noexcept
@@ -445,6 +488,8 @@ void MultiBandCompressor::discardPendingMeterPeaks() noexcept
         meter.input.reset();
         meter.output.reset();
         meter.reduction.reset();
+        for (auto& channel : meter.channelInput) channel.reset();
+        for (auto& channel : meter.channelOutput) channel.reset();
     }
     for (auto& meter : pendingOutputMeters) meter.reset();
     for (auto& channel : pendingChannelGr) for (auto& meter : channel) meter.value.reset();
@@ -476,7 +521,10 @@ BandMeterSnapshot MultiBandCompressor::getBandMeter(const int band) const noexce
     const auto& meter = meters[static_cast<std::size_t>(band)];
     return { meter.inputDb.load(std::memory_order_relaxed),
              meter.outputDb.load(std::memory_order_relaxed),
-             meter.gainReductionDb.load(std::memory_order_relaxed), { channelGr[0][static_cast<std::size_t>(band)].load(std::memory_order_relaxed), channelGr[1][static_cast<std::size_t>(band)].load(std::memory_order_relaxed) } };
+             meter.gainReductionDb.load(std::memory_order_relaxed),
+             { channelGr[0][static_cast<std::size_t>(band)].load(std::memory_order_relaxed), channelGr[1][static_cast<std::size_t>(band)].load(std::memory_order_relaxed) },
+             { meter.channelInputDb[0].load(std::memory_order_relaxed), meter.channelInputDb[1].load(std::memory_order_relaxed) },
+             { meter.channelOutputDb[0].load(std::memory_order_relaxed), meter.channelOutputDb[1].load(std::memory_order_relaxed) } };
 }
 
 std::array<float, 2> MultiBandCompressor::getOutputMeterDb() const noexcept
@@ -486,3 +534,34 @@ std::array<float, 2> MultiBandCompressor::getOutputMeterDb() const noexcept
 }
 
 } // namespace pontedsp::mc2000::dsp
+
+namespace pontedsp::mc2000::dsp {
+void MultiBandCompressor::publishIirResponse() noexcept {
+    if(lastIirRevision==crossover.responseRevision())return;
+    lastIirRevision=crossover.responseRevision();
+    const auto r=crossover.responseSnapshot();
+    iirResponseVersion.fetch_add(1,std::memory_order_seq_cst);
+    iirResponseData[0].store(r.sampleRate,std::memory_order_seq_cst);
+    for(std::size_t i=0;i<3;++i)iirResponseData[i+1].store(r.frequencies[i],std::memory_order_seq_cst);
+    std::size_t at=4;
+    for(const auto& section:r.sections)for(const auto& c:section)
+        for(double value:{c.b0,c.b1,c.b2,c.a1,c.a2})iirResponseData[at++].store(value,std::memory_order_seq_cst);
+    iirResponseBands.store(r.bands,std::memory_order_seq_cst);
+    iirResponseVersion.fetch_add(1,std::memory_order_seq_cst);
+}
+bool MultiBandCompressor::copyIirResponse(CrossoverResponse& output,unsigned& version) const noexcept {
+    for(int attempt=0;attempt<3;++attempt){
+        const auto before=iirResponseVersion.load(std::memory_order_seq_cst);
+        if(before==0 || (before&1u))continue;
+        CrossoverResponse r;r.sampleRate=iirResponseData[0].load(std::memory_order_seq_cst);
+        for(std::size_t i=0;i<3;++i)r.frequencies[i]=iirResponseData[i+1].load(std::memory_order_seq_cst);
+        std::size_t at=4;
+        for(auto& section:r.sections)for(auto& c:section){
+            c.b0=iirResponseData[at++].load(std::memory_order_seq_cst);c.b1=iirResponseData[at++].load(std::memory_order_seq_cst);c.b2=iirResponseData[at++].load(std::memory_order_seq_cst);c.a1=iirResponseData[at++].load(std::memory_order_seq_cst);c.a2=iirResponseData[at++].load(std::memory_order_seq_cst);
+        }
+        r.bands=iirResponseBands.load(std::memory_order_seq_cst);
+        if(before!=iirResponseVersion.load(std::memory_order_seq_cst))continue;
+        output=r;version=before;return true;
+    }return false;
+}
+}

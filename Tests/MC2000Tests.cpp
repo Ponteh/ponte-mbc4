@@ -678,6 +678,11 @@ void testMeterCapture()
                 expected[band].inputDb = std::max(expected[band].inputDb, raw.inputDb);
                 expected[band].outputDb = std::max(expected[band].outputDb, raw.outputDb);
                 expected[band].gainReductionDb = std::max(expected[band].gainReductionDb, raw.gainReductionDb);
+                for (std::size_t ch = 0; ch < 2; ++ch) {
+                    expected[band].channelInputDb[ch] = std::max(expected[band].channelInputDb[ch], raw.channelInputDb[ch]);
+                    expected[band].channelOutputDb[ch] = std::max(expected[band].channelOutputDb[ch], raw.channelOutputDb[ch]);
+                    expected[band].channelGainReductionDb[ch] = std::max(expected[band].channelGainReductionDb[ch], raw.channelGainReductionDb[ch]);
+                }
             }
             const auto rawMaster = engine.getOutputMeterDb();
             for (int ch = 0; ch < 2; ++ch) master[ch] = std::max(master[ch], rawMaster[ch]);
@@ -690,14 +695,26 @@ void testMeterCapture()
             expectNear(captured.inputDb, expected[band].inputDb, 0.0, "IN retains every block peak");
             expectNear(captured.outputDb, expected[band].outputDb, 0.0, "OUT retains every block peak");
             expectNear(captured.gainReductionDb, expected[band].gainReductionDb, 0.0, "GR retains every block peak");
+            for (std::size_t ch = 0; ch < 2; ++ch) {
+                expectNear(captured.channelInputDb[ch], expected[band].channelInputDb[ch], 0.0, "Each IN channel retains every block peak");
+                expectNear(captured.channelOutputDb[ch], expected[band].channelOutputDb[ch], 0.0, "Each OUT channel retains every block peak");
+                expectNear(captured.channelGainReductionDb[ch], expected[band].channelGainReductionDb[ch], 0.0, "Each GR channel retains every block peak");
+            }
             const auto empty = engine.consumeBandMeter(band);
+            expect(empty.channelInputDb == std::array<float,2>{-100,-100} && empty.channelOutputDb == std::array<float,2>{-100,-100}
+                   && empty.channelGainReductionDb == std::array<float,2>{0,0}, "Both channel mailboxes return their floors after consumption");
             expect(empty.inputDb == -100 && empty.outputDb == -100 && empty.gainReductionDb == 0,
                    "consumed band mailbox returns silence until another audio block");
         }
+        expectNear(expected[1].channelInputDb[0] - expected[1].channelInputDb[1], 12.0412, .001, "Stereo IN channels preserve asymmetric levels");
+        expectNear(expected[1].channelOutputDb[0] - expected[1].channelOutputDb[1], 12.0412, .001, "Stereo OUT channels preserve asymmetric levels with linked GR");
+        expect(expected[1].channelGainReductionDb[0] == expected[1].channelGainReductionDb[1], "Stereo GR is shared by both channel meters");
         expect(engine.consumeOutputMeterDb() == master, "both MAIN peaks survive intervening silence");
         expectNear(master[0] - master[1], 12.0412, .001, "stereo MAIN channels stay independent");
         expect(engine.getOutputMeterDb()[0] < -90, "raw analysis getter still reflects the latest block");
         engine.reset();
+        const auto resetMeter = engine.consumeBandMeter(1);
+        expect(resetMeter.channelInputDb == std::array<float,2>{-100,-100} && resetMeter.channelOutputDb == std::array<float,2>{-100,-100}, "Reset clears both channels of IN and OUT");
         expect(engine.consumeOutputMeterDb()[0] == -100 && engine.getBandMeter(1).gainReductionDb == 0,
                "reset clears raw readings and pending peaks");
     }

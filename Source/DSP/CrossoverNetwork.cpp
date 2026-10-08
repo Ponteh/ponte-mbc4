@@ -34,7 +34,8 @@ bool CrossoverNetwork::isQuiet(const int activeChannels) const noexcept
 
 void CrossoverNetwork::setBandCount(const int count) noexcept
 {
-    numBands = std::clamp(count, 2, maxBands);
+    const int next = std::clamp(count, 2, maxBands);
+    if (next != numBands) { numBands = next; ++revision; }
 }
 
 void CrossoverNetwork::setFrequencies(const std::array<double, 3>& frequencies) noexcept
@@ -59,6 +60,7 @@ std::array<double, 3> CrossoverNetwork::effectiveFrequencies(const std::array<do
 
 void CrossoverNetwork::updateCoefficients(const bool resetState) noexcept
 {
+    ++revision;
     for (auto& channel : filters)
     {
         for (int i = 0; i < 3; ++i)
@@ -135,36 +137,13 @@ double CrossoverNetwork::getBandMagnitudeDb(const int band, const double frequen
     return gainToDecibels(std::abs(response), -160.0);
 }
 
-std::complex<double> CrossoverNetwork::getBandResponse(const int band,
-                                                       const double frequency) const noexcept
+CrossoverResponse CrossoverNetwork::responseSnapshot() const noexcept
 {
-    if (band < 0 || band >= numBands || !std::isfinite(frequency))
-        return {};
-    const auto safeFrequency = std::clamp(frequency, 0.0, sampleRate * 0.5);
-    const auto& f = filters[0];
-    const auto low = [&] (const int index) { return f.split[static_cast<std::size_t>(index)]
-        .lowPassResponse(safeFrequency); };
-    const auto high = [&] (const int index) { return f.split[static_cast<std::size_t>(index)]
-        .highPassResponse(safeFrequency); };
-    const auto allPassAt = [&] (const int index) { return f.compensation[static_cast<std::size_t>(index)]
-        .allPassResponse(safeFrequency); };
-    std::complex<double> response { 1.0, 0.0 };
-    if (numBands == 2)
-        response = band == 0 ? low(0) : high(0);
-    else if (numBands == 3)
-    {
-        if (band == 0) response = low(1) * low(0);
-        if (band == 1) response = high(0) * low(1);
-        if (band == 2) response = high(1) * allPassAt(0);
-    }
-    else
-    {
-        if (band == 0) response = low(2) * low(1) * low(0);
-        if (band == 1) response = high(0) * low(1) * low(2);
-        if (band == 2) response = high(1) * low(2) * allPassAt(0);
-        if (band == 3) response = high(2) * allPassAt(1) * allPassAt(2);
-    }
-    return response;
+    CrossoverResponse result;result.sampleRate=sampleRate;result.bands=numBands;
+    result.frequencies=crossoverHz;
+    for(std::size_t i=0;i<3;++i){result.sections[i]=filters[0].split[i].coefficients();result.sections[i+3]=filters[0].compensation[i].coefficients();}
+    return result;
 }
-
+std::complex<double> CrossoverNetwork::getBandResponse(int band,double frequency) const noexcept
+{ return responseSnapshot().bandResponse(band,frequency); }
 } // namespace pontedsp::mc2000::dsp

@@ -41,7 +41,7 @@ void testCrossoverModeStateLatencyAndBypass() {
     set(parameters::channelMode,1);
     {
         auto editor=std::unique_ptr<juce::AudioProcessorEditor>(p.createEditor());editor->setSize(1100,738);
-        auto* crossover=find<juce::ComboBox>(*editor,parameters::crossoverMode);auto* channels=find<juce::ComboBox>(*editor,parameters::channelMode);
+        auto* crossover=find<juce::TextButton>(*editor,parameters::crossoverMode);auto* channels=find<juce::TextButton>(*editor,parameters::channelMode);
         expect(crossover && channels && editor->getLocalBounds().contains(crossover->getBounds()) && editor->getLocalBounds().contains(channels->getBounds()),"New selectors fit inside the minimum editor");
         expect(crossover && channels && !crossover->getBounds().intersects(channels->getBounds()),"New selectors cannot overlap");
         auto picture=juce::File::getSpecialLocation(juce::File::currentExecutableFile).getParentDirectory().getChildFile("MC2000_UI_linear_dual.png");
@@ -51,6 +51,7 @@ void testCrossoverModeStateLatencyAndBypass() {
     }
     CrossoverPlot plot(p);plot.setSize(500,200);plot.updateSpectrum(.033);
     expect(std::abs(plot.inputResponseDb(1000)) < 1.e-9,"FIR graphical unity sum uses published kernels");
+    expect(!find<juce::TextButton>(plot,"crossoverPhaseView"),"Linear Phase has no phase panel or selector");
     set(parameters::crossoverMode,0);expect(p.isCrossoverModePending(),"GUI distinguishes requested and active crossover");
     auto restoredInstance=std::make_unique<PonteMC2000AudioProcessor>(); auto& restored=*restoredInstance;juce::MemoryBlock current;p.getStateInformation(current);restored.setStateInformation(current.getData(),int(current.getSize()));restored.prepareToPlay(96000,64);
     expect(restored.getLatencySamples()==0,"Reopened session applies its saved requested mode");

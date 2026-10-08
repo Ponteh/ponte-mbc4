@@ -61,3 +61,19 @@ configurations select C++20/MSVC; CMake has always required C++20. On another
 Windows machine update `compilerPath` to the installed MSVC compiler or use
 CMake Tools as the configuration provider. After an IDE cache persists old
 errors, run **C/C++: Reset IntelliSense Database** and reopen the affected file.
+
+## Active response, automatic reload and mockup layout (2026-10-08)
+
+ActiveCrossoverResponseAndReloadTests.h checks every IIR curve point against
+active coefficients at four sample rates and follows actual smoothing.
+An independent wrapper-audio impulse measurement compares 33 frequencies per
+band and saves iir-ui-measured-response.csv. It does not evaluate the filter
+formula for its measured reference. Mockup layout checks cover one header row,
+band LINK controls, resizing, and complete removal of the phase display.
+Concurrent reload tests retain callback auditing, native bypass, rapid requests,
+message-thread latency notification and host reactivation.
+
+BandMeterChannelUITests.h checks unequal L/R levels in both channel and crossover
+modes, shared Stereo GR, independent Dual Mono GR, cached painting and decay.
+It captures all four UI combinations. DSP tests cover peak consumption, silence,
+reset, independent mono references, external keys and an empty R on mono input.

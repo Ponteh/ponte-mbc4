@@ -564,6 +564,8 @@ void testMeterPaintingAndReopen()
 
 #include "TechnicalValidation.h"
 #include "CrossoverStateLatencyAndUITests.h"
+#include "ActiveCrossoverResponseAndReloadTests.h"
+#include "BandMeterChannelUITests.h"
 #include "LinearPhaseRealtimeValidation.h"
 
 int main(int argc, char** argv)
@@ -577,6 +579,11 @@ int main(int argc, char** argv)
         std::cerr << "Unknown test option: " << argv[1] << '\n';
         return 2;
     }
+    testActiveIirResponse();
+    testMeasuredAudioAgainstIirPlot();
+    testMockupLayoutAndLink();
+    testStereoBandMeterDisplay();
+    testAutomaticCrossoverReload();
     testCrossoverModeStateLatencyAndBypass();
     testTiming();
     testHeaderVersions();

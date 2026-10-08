@@ -13,7 +13,7 @@ void testMeasuredIirCrossoverResponse() {
         for(std::size_t i=0;i<6;++i) {oscillator[i]=1;increment[i]=std::polar(1.,-2*std::numbers::pi*frequencies[i]/rate);}
         for(int n=0;n<int(rate*1.5);++n) {
             std::array<double,4> split;network.processSample(0,n==0?1.:0.,split);
-            for(std::size_t i=0;i<6;++i) {for(int b=0;b<bands;++b) measured[std::size_t(b)][i]+=split[std::size_t(b)]*oscillator[i];oscillator[i]*=increment[i];}
+            for(std::size_t i=0;i<6;++i) {for(int b=0;b<bands;++b) {measured[std::size_t(b)][i]+=split[std::size_t(b)]*oscillator[i];}oscillator[i]*=increment[i];}
         }
         for(std::size_t i=0;i<6;++i) {
             std::complex<double> actualSum {}, expectedSum {};
@@ -81,6 +81,14 @@ void testIndependentDualMonoDynamics() {
                 for(int i=0;i<count;++i)error=std::max({error,std::abs(double(l[std::size_t(i)])-lm[std::size_t(i)]),std::abs(double(r[std::size_t(i)])-rm[std::size_t(i)])});
             }
             expect(error<2.e-6,"Each Dual Mono channel equals its independent mono compressor, including mapped key and BITE/TC");
+            for(int band=0;band<bands;++band) {
+                const auto channelMeter=stereo.getBandMeter(band), monoLeft=leftMono.getBandMeter(band), monoRight=rightMono.getBandMeter(band);
+                expectNear(channelMeter.channelInputDb[0],monoLeft.inputDb,1.e-4,"Left IN equals the independent mono detector meter");
+                expectNear(channelMeter.channelInputDb[1],monoRight.inputDb,1.e-4,"Right IN equals the independent mono detector meter");
+                expectNear(channelMeter.channelOutputDb[0],monoLeft.outputDb,1.e-4,"Left OUT equals the independent mono output meter");
+                expectNear(channelMeter.channelOutputDb[1],monoRight.outputDb,1.e-4,"Right OUT equals the independent mono output meter");
+                expect(monoLeft.channelInputDb[1]==-100 && monoLeft.channelOutputDb[1]==-100 && monoLeft.channelGainReductionDb[1]==0,"Mono layouts leave the absent right channel empty");
+            }
             const auto meter=stereo.getBandMeter(1);expectNear(meter.gainReductionDb,std::max(meter.channelGainReductionDb[0],meter.channelGainReductionDb[1]),1.e-5,"Dual Mono aggregate GR is max(L,R)");
         }
     }
@@ -112,7 +120,18 @@ void testRawSilenceDetection() {
     right[0]=tinyFloat;engine.process(audio,2,64);
     expect(engine.getActivity()!=MultiBandCompressor::Activity::sleeping,"Raw right-channel subnormal wakes nap even with DAZ/FTZ");
 }
+void testActiveCoefficientPublication() {
+    using namespace pontedsp::mc2000::dsp;
+    MultiBandCompressor e;e.prepare(48000,64,2);e.setNapEnabled(false);
+    CrossoverResponse before,after;unsigned v0=0,v1=0;
+    expect(e.copyIirResponse(before,v0),"Prepared IIR publishes actual coefficients");
+    auto p=e.getParameters();p.crossoverHz={500,2000,8000};e.setParameters(p);
+    std::array<float,1> l{.2f},r{.1f};float* audio[]{l.data(),r.data()};e.process(audio,2,1);
+    expect(e.copyIirResponse(after,v1)&&v1!=v0&&after.frequencies[0]>100&&after.frequencies[0]<500,"Coefficient publication tracks active smoothing without changing its audio law");
+    expect(std::abs(after.bandResponse(0,130)-before.bandResponse(0,130))>1.e-6,"Applied coefficient change updates the complex response deterministically");
+}
 void testCrossoverAndChannelModes() {
+    testActiveCoefficientPublication();
     testRawSilenceDetection();
     testMeasuredIirCrossoverResponse();testLinearPhaseReconstruction();testIndependentDualMonoDynamics();testChannelModeTransitionAndNap();
 }

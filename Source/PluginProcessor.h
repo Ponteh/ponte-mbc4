@@ -3,15 +3,17 @@
 #include "DSP/MultiBandCompressor.h"
 #include "Parameters.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <mutex>
+#include <thread>
 
-class PonteMC2000AudioProcessor final : public juce::AudioProcessor
+class PonteMC2000AudioProcessor final : public juce::AudioProcessor, private juce::Timer, private juce::AsyncUpdater
 {
 public:
     PonteMC2000AudioProcessor();
-    ~PonteMC2000AudioProcessor() override = default;
+    ~PonteMC2000AudioProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override {}
+    void releaseResources() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override;
 
@@ -41,15 +43,55 @@ public:
     void addSpectrumConsumer() noexcept { spectrumConsumers.fetch_add(1, std::memory_order_release); }
     void removeSpectrumConsumer() noexcept { spectrumConsumers.fetch_sub(1, std::memory_order_release); }
     int getActiveCrossoverMode() const noexcept { return activeCrossoverMode.load(std::memory_order_relaxed); }
-    bool isCrossoverModePending() const noexcept { return static_cast<int>(state.getRawParameterValue(pontedsp::mc2000::parameters::crossoverMode)->load()) != getActiveCrossoverMode(); }
+    int getRequestedCrossoverMode() const noexcept { return static_cast<int>(pontedsp::mc2000::dsp::clampFinite(requestedCrossoverMode->load(),0.0,1.0,0.0)); }
+    bool isCrossoverModePending() const noexcept { return getRequestedCrossoverMode()!=getActiveCrossoverMode(); }
+    enum class ReloadState { idle, fadingOut, loading, notifyingHost, fadingIn, failed };
+    ReloadState getReloadState() const noexcept { return reloadState.load(std::memory_order_seq_cst); }
+    bool isCrossoverReloading() const noexcept { return getReloadState()!=ReloadState::idle; }
+    juce::String getCrossoverReloadMessage() const;
+    int getActiveLatencySamples() const noexcept { return activeLatency.load(std::memory_order_acquire); }
     bool isPreparing() const noexcept { return preparing.load(std::memory_order_acquire); }
     double getProcessingSampleRate() const noexcept { return processingSampleRate.load(std::memory_order_relaxed); }
 
+    struct ResponseReadAccess {
+        explicit ResponseReadAccess(PonteMC2000AudioProcessor& p) noexcept : owner(p) {
+            owner.callbackReaders.fetch_add(1,std::memory_order_seq_cst);
+            const auto stage=owner.getReloadState();
+            allowed=stage==ReloadState::idle || stage==ReloadState::fadingOut || stage==ReloadState::fadingIn;
+        }
+        ~ResponseReadAccess(){owner.callbackReaders.fetch_sub(1,std::memory_order_seq_cst);}
+        PonteMC2000AudioProcessor& owner;bool allowed {};
+    };
     juce::UndoManager undoManager;
     juce::AudioProcessorValueTreeState state;
     std::atomic<int> editorWidth { 1100 }, editorHeight { 738 };
 
 private:
+    void timerCallback() override;
+    void handleAsyncUpdate() override;
+    void configureEngine(double rate,int block,int channels);
+    void reloadCrossover(unsigned generation);
+    void waitForCallbacks();
+    void applyReloadFade(juce::AudioBuffer<float>&) noexcept;
+    struct CallbackAccess {
+        explicit CallbackAccess(PonteMC2000AudioProcessor& p) noexcept : owner(p) {
+            owner.callbackReaders.fetch_add(1,std::memory_order_seq_cst);
+            const auto stage=owner.getReloadState();
+            allowed=owner.prepared.load(std::memory_order_acquire) && (stage==ReloadState::idle || stage==ReloadState::fadingOut || stage==ReloadState::fadingIn);
+        }
+        ~CallbackAccess(){owner.callbackReaders.fetch_sub(1,std::memory_order_seq_cst);}
+        PonteMC2000AudioProcessor& owner;bool allowed {};
+    };
+    std::atomic<ReloadState> reloadState {ReloadState::idle};
+    std::atomic<unsigned> callbackReaders {}, configurationGeneration {};
+    std::atomic<bool> stopReload {}, reloadFinished {true}, prepared {false};
+    std::atomic<int> preparedBlock {1}, preparedMainChannels {2}, activeLatency {}, reloadSourceMode {}, reloadTargetMode {};
+    std::atomic<float>* requestedCrossoverMode {};
+    std::mutex configurationMutex;
+    std::thread reloadThread;
+    ReloadState lastFadeState {ReloadState::idle};
+    double reloadGain {1};
+    int reloadWarmSamples {};
     pontedsp::mc2000::parameters::SnapshotReader parameterReader { state };
     void pushSpectrumSamples(const juce::AudioBuffer<float>&) noexcept;
 

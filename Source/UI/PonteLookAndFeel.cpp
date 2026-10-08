@@ -91,11 +91,13 @@ void PonteLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& but
 
 void PonteLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button, bool, bool)
 {
-    g.setFont(juce::FontOptions(12.5f, juce::Font::bold));
+    const bool compact = button.getProperties().contains("pontedspButtonFontSize");
+    const float fontSize = compact ? float(button.getProperties()["pontedspButtonFontSize"]) : 12.5f;
+    g.setFont(juce::FontOptions(fontSize, juce::Font::bold));
     g.setColour(button.getToggleState()
         ? (static_cast<bool>(button.getProperties()["pontedspOutlineActive"]) ? Palette::lime() : Palette::ink())
         : Palette::text());
-    g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(8, 3),
+    g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(compact ? 4 : 8, 3),
                      juce::Justification::centred, 1);
 }
 

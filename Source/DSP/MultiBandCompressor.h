@@ -48,6 +48,8 @@ struct BandMeterSnapshot
     float outputDb { -100.0f };
     float gainReductionDb {};
     std::array<float, 2> channelGainReductionDb {}; // independent block peaks; aggregate is max(L,R)
+    std::array<float, 2> channelInputDb { -100.0f, -100.0f };
+    std::array<float, 2> channelOutputDb { -100.0f, -100.0f };
 };
 
 class MultiBandCompressor final
@@ -70,6 +72,7 @@ public:
     unsigned getLinearSchedulingOverruns() const noexcept { return linearCrossover.getSchedulingOverruns(); }
     bool isLinearTransitioning() const noexcept { return linearCrossover.isTransitioning(); }
     bool copyLinearResponse(LinearPhaseCrossover::Responses& r, std::array<double, 3>& f, unsigned& v) const noexcept { return linearCrossover.copyResponse(r, f, v); }
+    bool copyIirResponse(CrossoverResponse& response, unsigned& version) const noexcept;
     void setParameters(const GlobalParameters& parameters) noexcept;
     void process(float** channels, int numChannels, int numSamples) noexcept;
     // The optional detector is an external, band-split key signal.  Its level
@@ -92,6 +95,11 @@ public:
     const GlobalParameters& getParameters() const noexcept { return currentParameters; }
 
 private:
+    void publishIirResponse() noexcept;
+    std::atomic<unsigned> iirResponseVersion {};
+    std::array<std::atomic<double>,124> iirResponseData {};
+    std::atomic<int> iirResponseBands {4};
+    unsigned lastIirRevision {~0u};
     struct AtomicCurve
     {
         std::atomic<double> threshold {}, ratio { 1.0 }, knee {};
@@ -103,13 +111,17 @@ private:
         std::atomic<float> inputDb { -100.0f };
         std::atomic<float> outputDb { -100.0f };
         std::atomic<float> gainReductionDb {};
+        std::array<std::atomic<float>, 2> channelInputDb { -100.0f, -100.0f };
+        std::array<std::atomic<float>, 2> channelOutputDb { -100.0f, -100.0f };
     };
 
     static double smoothGain(double current, double target, double coefficient) noexcept;
     void publishMeters(const std::array<double, maxBands>& inputPeaks,
                        const std::array<double, maxBands>& outputPeaks,
                        const std::array<double, maxBands>& maximumGr,
-                       const std::array<double, 2>& outputPeaksMaster) noexcept;
+                       const std::array<double, 2>& outputPeaksMaster,
+                       const std::array<std::array<double, maxBands>, maxChannels>& channelInputPeaks,
+                       const std::array<std::array<double, maxBands>, maxChannels>& channelOutputPeaks) noexcept;
 
     LinearPhaseCrossover linearCrossover;
     CrossoverMode activeCrossoverMode { CrossoverMode::iir };
@@ -128,6 +140,7 @@ private:
     struct PendingBandMeter
     {
         MeterPeak input, output, reduction { 0.0f };
+        std::array<MeterPeak, 2> channelInput, channelOutput;
     };
     std::array<PendingBandMeter, maxBands> pendingMeters;
     std::array<MeterPeak, 2> pendingOutputMeters;

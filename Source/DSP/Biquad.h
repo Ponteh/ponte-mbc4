@@ -56,6 +56,12 @@ public:
 
     void reset() noexcept { z1 = z2 = 0.0; }
 
+    Coefficients coefficients() const noexcept { return {b0,b1,b2,a1,a2}; }
+    static std::complex<double> response(const Coefficients& c, const double frequency, const double rate) noexcept
+    {
+        const auto z = std::polar(1.0, -2.0 * 3.14159265358979323846 * frequency / rate);
+        return (c.b0 + c.b1*z + c.b2*z*z) / (1.0 + c.a1*z + c.a2*z*z);
+    }
     std::complex<double> response(const double frequency, const double rate) const noexcept
     {
         const auto omega = 2.0 * 3.14159265358979323846 * frequency / rate;

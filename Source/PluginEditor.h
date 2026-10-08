@@ -41,6 +41,8 @@ class ContextHeader final : public juce::Component, private juce::Timer
 public:
     ContextHeader();
     void setHelpText(const juce::String& text);
+    void setStatusText(const juce::String& text);
+    bool isShowingStatus() const noexcept { return statusText.isNotEmpty(); }
     void setBandCount(int count);
     void setLatestVersion(const juce::String& version);
     juce::String versionText() const;
@@ -52,7 +54,7 @@ private:
     juce::SharedResourcePointer<pontedsp::gui::ReleaseCheck> releaseCheck;
     juce::String availableVersion;
     bool yellow {};
-    juce::String helpText;
+    juce::String helpText, statusText;
     int bandCount { 4 };
 };
 
@@ -96,6 +98,7 @@ private:
     pontedsp::gui::LevelMeterBallistics inputBallistics, outputBallistics;
     pontedsp::gui::GainReductionMeterBallistics grBallistics;
     std::array<pontedsp::gui::GainReductionMeterBallistics, 2> channelGrBallistics;
+    std::array<pontedsp::gui::LevelMeterBallistics, 2> channelInputBallistics, channelOutputBallistics;
     pontedsp::mc2000::dsp::BandMeterSnapshot snapshot;
 };
 
@@ -106,6 +109,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void setActiveVisual(bool active);
+    void updateLinkDisplay();
     void updateMeters(double elapsedSeconds) { meter.update(elapsedSeconds); }
     pontedsp::mc2000::dsp::BandMeterSnapshot displayedMeters() const noexcept { return meter.displayedValues(); }
     void mouseDown(const juce::MouseEvent&) override;
@@ -117,7 +121,7 @@ private:
     PonteMC2000AudioProcessor& processor;
     int band {};
     juce::Label title, algorithmLabel;
-    juce::TextButton enabled { "IN" }, solo { "SOLO" };
+    juce::TextButton enabled { "IN" }, solo { "SOLO" }, link;
     ParameterKnob gain, threshold, ratio, knee, bite, attack, release;
     juce::ComboBox timeConstant;
     BandMeter meter;
@@ -126,12 +130,19 @@ private:
     bool activeVisual { true };
 };
 
-class CrossoverPlot final : public juce::Component
+class CrossoverPlot final : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     explicit CrossoverPlot(PonteMC2000AudioProcessor&);
     ~CrossoverPlot() override;
     void paint(juce::Graphics&) override;
+    void mouseMove(const juce::MouseEvent&) override;
+    void mouseExit(const juce::MouseEvent&) override { setTooltip({}); }
+    void setForegroundBand(int band) { if(foregroundBand!=band){foregroundBand=band;repaint();} }
+    static constexpr int curvePointCount = 1025;
+    double curvePointFrequency(int point) const noexcept;
+    double displayedMagnitudeDb(int band,int point) const noexcept { return bandCurveDb[std::size_t(band)][std::size_t(point)]; }
+    std::complex<double> bandResponse(int band,double frequency) const noexcept;
     void updateSpectrum(double elapsedSeconds);
     void setSpectrumActive(bool active);
     double inputResponseDb(double frequency) const noexcept;
@@ -159,7 +170,8 @@ private:
     std::array<PonteMC2000AudioProcessor::SpectrumSample, 16384> incoming {};
     std::array<pontedsp::gui::LevelMeterBallistics, fftSize / 2> spectrumBallistics;
     std::array<float, fftSize / 2> latestSpectrumDb {};
-    pontedsp::mc2000::dsp::CrossoverNetwork displayResponse;
+    pontedsp::mc2000::dsp::CrossoverResponse displayResponse;
+    unsigned cachedIirVersion {};
     std::array<bool, 4> inputBands { true, true, true, true };
     int responseBandCount { 4 };
     double withoutSpectrumSamplesSeconds {};
@@ -167,12 +179,16 @@ private:
     std::array<double, 3> cachedResponseFrequencies {};
     std::array<bool, 4> cachedInputBands {};
     int cachedResponseBandCount {};
-    double cachedResponseSampleRate {};
+    double cachedResponseSampleRate {48000};
     int cachedCrossoverMode {-1};
     unsigned cachedLinearVersion {};
     std::array<double, 3> activeLinearFrequencies {};
     pontedsp::mc2000::dsp::LinearPhaseCrossover::Responses linearResponses {};
-    std::array<std::array<double, 181>, 4> bandCurveDb {};
+    std::array<std::array<double, curvePointCount>, 4> bandCurveDb {};
+    std::array<double,curvePointCount> sumCurveDb {};
+    int foregroundBand {}, cachedLatency {};
+    juce::Rectangle<float> magnitudeBounds() const noexcept;
+    void rebuildMagnitudeCurves();
     bool frequencyClamped {}, kernelPending {};
     juce::String responseCaption;
     std::array<float, fftSize * 2> fftWork {};
@@ -235,18 +251,21 @@ private:
     PonteMC2000AudioProcessor& processor;
     pontedsp::gui::PonteLookAndFeel lookAndFeel;
     ContextHeader contextHeader;
+    juce::TooltipWindow graphTooltip {this,250};
     ParameterKnob inputGain, outputGain;
     juce::TextButton phase { "PHASE" };
-    juce::ComboBox bandCount, linkMaster, crossoverMode, channelMode;
-    juce::Label crossoverLabel, bandCountLabel, linkLabel, crossoverModeLabel, channelModeLabel;
+    juce::ComboBox bandCount;
+    juce::TextButton channelMode {"DUAL MONO"};
+    juce::TextButton crossoverMode {"LINEAR PHASE"};
+    juce::Label crossoverLabel, bandCountLabel;
     CrossoverPlot crossoverPlot;
     std::array<std::unique_ptr<CrossoverField>, 3> crossoverFields;
     CompressionPlot compressionPlot;
     OutputMeter outputMeter;
     std::array<std::unique_ptr<BandStrip>, 4> bands;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> phaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> phaseAttachment, crossoverModeAttachment, channelModeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
-        bandCountAttachment, linkAttachment, crossoverModeAttachment, channelModeAttachment;
+        bandCountAttachment;
     juce::Component* hoverHelpTarget {};
     juce::Point<int> lastMousePosition;
     double hoverHelpStartedMs {};
